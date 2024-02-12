@@ -1,18 +1,16 @@
 <template>
     <div >
         <h2>Payments this month</h2>
-        <ul v-if="!isLoading">
-            <li v-for="(payment, index) in payments" :key="index"
-                class="">
-                <PaymentCard 
-                    :amount="payment.amount" 
-                    :description="payment.description" 
-                    :title="payment.title" 
-                    :dueDate="payment.dueDate"
-                    :id="payment.payment_id"
-                />
-            </li>
-        </ul>
+        <div class="p-3" v-if="!isLoading">
+            <PaymentCard 
+                v-for="(payment, index) in payments" :key="index"
+                :amount="payment.amount" 
+                :description="payment.description" 
+                :title="payment.title" 
+                :dueDate="payment.dueDate"
+                :id="payment.payment_id"
+            />
+        </div>
         <div v-else class="flex justify-center m-10 p-10">
             <Loader size="10"/>
         </div>
@@ -27,17 +25,37 @@
 // the subscription.
 const isLoading = ref(true)
 const payments = ref([])
+const { $dayjs } = useNuxtApp();
 
 
 const indexStore = useIndexStore();
 const { getTracker: tracker } = storeToRefs(indexStore)
-payments.value = tracker && tracker.value.payments ? tracker.value.payments : [];
+payments.value = tracker && tracker.value.payments ? orderPayments(tracker.value.payments) : [];
 isLoading.value = false
 
+// ----- Define Methods ---------
+function orderPayments(items) {
+    // Sort the array
+    items.sort((a, b) => {
+        // Sort by isCompleted (false first)
+        if (a.isPaid !== b.isPaid) {
+            return a.isPaid ? 1 : -1;
+        }
+
+        // If isCompleted is the same, sort by dueDate
+        const dueDateA = $dayjs(a.dueDate, { format: 'MM/DD/YYYY' });
+        const dueDateB = $dayjs(b.dueDate, { format: 'MM/DD/YYYY' });
+
+        return dueDateA - dueDateB;
+    });
+
+    return items
+}
+
+// ----- Define Watchers ---------
 watch(tracker, (newValue) => {
-    console.log(newValue)
-    payments.value = newValue.payments ? newValue.payments : [];
-})
+    payments.value = newValue.payments ? orderPayments(newValue.payments) : [];
+}, {deep: true})
 
 // ----- Define Methods ---------
 useHead({

@@ -1,10 +1,9 @@
 <template>
     <div>
         <h2>Select to edit</h2>
-        <ul v-if="!isLoading">
-            <li v-for="(payment, index) in payments" :key="index"
-                class="">
+        <div class="p-3" v-if="!isLoading">
                 <PaymentCard 
+                    v-for="(payment, index) in payments" :key="index"
                     :amount="payment.amount" 
                     :description="payment.description" 
                     :title="payment.title" 
@@ -12,8 +11,7 @@
                     :id="payment.id"
                     edit
                 />
-            </li>
-        </ul>
+        </div>
         <div v-else class="flex justify-center m-10 p-10">
             <Loader size="10"/>
         </div>

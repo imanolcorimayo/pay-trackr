@@ -14,3 +14,7 @@ export const validatePayment = (payment: any) => {
         return 'Invalid payment time period. We fixed it to the default.';
     }
 }
+
+export const formatPrice = (price: Number) => {
+    return price.toLocaleString('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 2 });
+}

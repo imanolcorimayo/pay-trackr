@@ -92,17 +92,6 @@ h2 {
     padding-bottom: 6px;
 }
 
-ul {
-    padding: 10px;
-}
-
-li {
-    border: 2px solid rgba(255, 255, 255, 0.35);
-    padding: 5px 12px;
-    border-radius: 6px;
-    margin-bottom: 12px;
-}
-
 .done {
     text-decoration: line-through;
 }
