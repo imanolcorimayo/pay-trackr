@@ -167,6 +167,7 @@ export const useIndexStore = defineStore('index', {
             const db = useFirestore();
             // If last payment the logic should change
             const isLastPayment = this.$state.payments.length == 1;
+            const isLastTrackerPayment = this.$state.tracker.payments.length == 1;
 
             try {
                 // Remove first from main payment object
@@ -186,7 +187,7 @@ export const useIndexStore = defineStore('index', {
                 const tracker = Object.assign({}, this.$state.tracker)
 
                 // Only update when there is more than one payment
-                if(!isLastPayment && this.$state.tracker.id) {
+                if(!isLastTrackerPayment && this.$state.tracker.id) {
                     const paymentsInTracker = tracker.payments.map(e => e.payment_id);
                     const index = paymentsInTracker.indexOf(id);
                     if (index > -1 && !tracker.payments[index].isPaid) {
