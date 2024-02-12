@@ -26,7 +26,7 @@
     
             <div class="w-full self-start mt-3">
                 <span class="font-bold text-lg">{{ title }}</span>
-                <p class="mt-2">{{ description }}</p>
+                <p class="mt-2 text-sm max-h-16 overflow-y-auto scrollbar-hide">{{ description }}</p>
             </div>
             <div v-if="!edit">
                 <button class="w-16 m-2">Mark Paid</button>
