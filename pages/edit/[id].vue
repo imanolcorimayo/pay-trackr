@@ -11,8 +11,8 @@
                 autocomplete="off">
             <ClientOnly>
                 <label>Next Due Date</label>
-                <input id="valid-until" name="dueDate" placeholder="mm/dd/yyyy" autocomplete="off"
-                    v-model="payment.dueDate" required @click="showPicker" />
+                <input id="valid-until" name="dueDate" placeholder="mm/dd/yyyy" autocomplete="off" v-model="payment.dueDate"
+                    required @click="showPicker" />
                 <div v-if="pickerVisible" ref="picker" class="relative">
                     <VDatePicker expanded v-model="date" />
                 </div>
@@ -33,12 +33,9 @@
 </template>
 
 <script setup>
-import { collection } from 'firebase/firestore'
-import { doc, updateDoc, getDoc } from "firebase/firestore";
 
 // used for the firestore refs
 const { $dayjs } = useNuxtApp()
-const db = useFirestore()
 const disableButton = ref(false);
 const sending = ref(false);
 const route = useRoute()
@@ -50,21 +47,26 @@ const payment = ref({
     timePeriod: 'monthly'
 })
 
-const paymentRef = doc(db, "payment", route.params.id);
-// Retrieve information to verify information
-const document = await getDoc(paymentRef);
-
-if (document.exists()) {
-  payment.value = document.data();
-} else {
-  // docSnap.data() will be undefined in this case
-  console.log("No such document!");
-  useToast("error", "This payment does not exists.")
-  await navigateTo("/");
-}
 const pickerVisible = ref(false)
 const picker = ref(null)
 const date = ref(new Date())
+
+// ----- Define Pinia Vars ------------
+const indexStore = useIndexStore()
+const { getPayments: payments } = storeToRefs(indexStore)
+
+// Get specific payment
+const filteredPayment = payments.value.filter(el => el.id == route.params.id)
+if (!filteredPayment.length) {
+    console.log("No such document!");
+    useToast("error", "This payment does not exists.")
+    showError({
+        statusCode: 404,
+        statusMessage: "Page Not Found"
+    })
+} else {
+    payment.value = Object.assign({}, filteredPayment[0]);
+}
 
 // ----- Define Methods && Events ---------
 onClickOutside(picker, event => {
@@ -77,14 +79,14 @@ async function editPayment() {
     sending.value = true;
 
     const validate = validatePayment(payment.value);
-    if(typeof validate == 'string') {
+    if (typeof validate == 'string') {
         useToast('error', validate)
         disableButton.value = false;
         sending.value = false;
     }
 
     // save data in firebase
-    const result = await editDoc();
+    const result = await indexStore.editPayment(payment.value, route.params.id);
     if (!result) {
         useToast('error', 'Something went wrong, please try again')
         // Un-Block add button
@@ -96,17 +98,6 @@ async function editPayment() {
     disableButton.value = false;
     sending.value = false;
     useToast('success', 'Payment edited successfully. Click to go home.', { onClick: "goHome", autoClose: 2000 })
-}
-async function editDoc() {
-    try {
-        // Update doc using paymentRef
-        await updateDoc(paymentRef, payment.value);
-
-        return true
-    } catch (error) {
-        console.error(error)
-        return false
-    }
 }
 
 // Calendar methods

@@ -9,7 +9,7 @@ interface General {
 
 interface Tracker {
     payments: Array<any>;
-    id: string;
+    id?: string;
     user_id: string;
     createdAt: string;
 }
@@ -98,7 +98,7 @@ export const useIndexStore = defineStore('index', {
 
             this.$state = {
                 payments: payments,
-                tracker: tracker,
+                tracker: Object.assign({}, tracker),
             };
         },
         async addPayment(payment: any) {
@@ -122,7 +122,7 @@ export const useIndexStore = defineStore('index', {
                     payment
                 ];
 
-                let tracker = this.$state.tracker;
+                let tracker = Object.assign({}, this.$state.tracker) ;
 
                 if(tracker.id === "") {
                     // Add this to the tracker object and update it if exist or create it
@@ -142,13 +142,18 @@ export const useIndexStore = defineStore('index', {
                     const paymentTracker = createPaymentTracker(payment);
                     tracker.payments.push(paymentTracker)
 
-                    // Update in firebase
-                    const trackerRef = doc(db, "tracker", tracker.id);
-                    // Update doc using paymentRef
-                    await updateDoc(trackerRef, tracker);
-
                     // Update Pinia state
-                    this.$state.tracker = tracker;
+                    this.$state.tracker = Object.assign({}, tracker) ;
+
+                    // Update in firebase
+                    if (!this.$state.tracker.id) {
+                        console.log("Error: Tracker id does not exist");
+                        return false;
+                    }
+                    const trackerRef = doc(db, "tracker", this.$state.tracker.id);
+                    // Update doc using paymentRef
+                    delete tracker.id; // We remove the id as it's not needed on the firebase object
+                    await updateDoc(trackerRef, tracker);
                 }
 
                 return true;
@@ -178,26 +183,29 @@ export const useIndexStore = defineStore('index', {
                 }
 
                 // Update payment tracker
-                const tracker = this.$state.tracker
+                const tracker = Object.assign({}, this.$state.tracker)
 
                 // Only update when there is more than one payment
-                if(!isLastPayment) {
+                if(!isLastPayment && this.$state.tracker.id) {
                     const paymentsInTracker = tracker.payments.map(e => e.payment_id);
                     const index = paymentsInTracker.indexOf(id);
                     if (index > -1 && !tracker.payments[index].isPaid) {
                         tracker.payments.splice(index, 1);
                     }
-
+                    
                     // Update tracker in firebase
-                    const trackerRef = doc(db, "tracker", tracker.id);
-                    await updateDoc(trackerRef, tracker);
-    
+                    const trackerRef = doc(db, "tracker", this.$state.tracker.id);
+                    
                     // Update tracker in Pinia
-                    this.$state.tracker = tracker;
+                    this.$state.tracker = Object.assign({}, tracker) ;
+
+                    delete tracker.id;
+                    await updateDoc(trackerRef, tracker);
+
                     return true;
-                } else if(!tracker.payments[0].isPaid) {
+                } else if(!tracker.payments[0].isPaid && this.$state.tracker.id) {
                     // Delete document directly
-                    await deleteDoc(doc(db, 'tracker', tracker.id))
+                    await deleteDoc(doc(db, "tracker", this.$state.tracker.id))
 
                     // Update tracker in Pinia
                     this.$state.tracker = Object.assign({}, defaultObject.tracker);
@@ -208,8 +216,40 @@ export const useIndexStore = defineStore('index', {
                 return false
             }
         },
-        editPayment(payments: Array<any>) {
-            this.$state.payments = payments
+        async editPayment(payment: any, id: string) {
+            const db = useFirestore()
+            const paymentRef = doc(db, "payment", id);
+            const payIndex = this.$state.payments.map(el => el.id).indexOf(id);
+            const trackerPayIndex = this.$state.tracker.payments.map(el => el.payment_id).indexOf(id);
+
+            try {
+                // Update doc using paymentRef
+                await updateDoc(paymentRef, payment);
+                this.$state.payments[payIndex] = Object.assign(payment)
+
+                // Update only if not paid yet
+                if(!this.$state.tracker.payments[trackerPayIndex].isPaid) {
+                    const trackerPayment = createPaymentTracker(payment);
+                    // Update in Pinia
+                    this.$state.tracker.payments[trackerPayIndex] = trackerPayment;
+
+                    // Update in firebase
+                    if (!this.$state.tracker.id) {
+                        console.log("Error: Tracker id does not exist");
+                        return false;
+                    }
+                    const customTrackerForFirebase = Object.assign({}, this.$state.tracker);
+                    delete customTrackerForFirebase.id;
+                    const trackerRef = doc(db, "tracker", this.$state.tracker.id);
+                    await updateDoc(trackerRef, customTrackerForFirebase);
+                }
+
+                return true
+            } catch (error) {
+                console.error(error)
+                return false
+            }
+
         },
         editTracker(tracker: Tracker) {
             this.$state.tracker = tracker
