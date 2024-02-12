@@ -33,7 +33,6 @@
 </template>
 
 <script setup>
-import { deleteDoc, doc } from 'firebase/firestore';
 
 const props = defineProps({
     description: {  
@@ -65,7 +64,7 @@ const props = defineProps({
     }
 })
 
-const db = useFirestore()
+const indexStore = useIndexStore()
 const confirmDialogue = ref(null)
 
 // ----- Define methods ------------
@@ -77,6 +76,21 @@ async function removePay() {
     // Confirm dialogue
     const confirmed = await confirmDialogue.value.openDialog();
 
-    confirmed && await deleteDoc(doc(db, 'payment', props.id))
+    if(!confirmed) {
+        return;
+    } 
+
+    const removed = indexStore.removePayment(props.id);
+    const toastMessage = {
+        type: "success",
+        message: "Payment removed successfully"
+    };
+    if(!removed) {
+        toastMessage = {
+            type: 'error',
+            message: "Something went wrong, please try again or contact the support team."
+        } ;
+    }
+    useToast(toastMessage.type, toastMessage.message);
 }
 </script>

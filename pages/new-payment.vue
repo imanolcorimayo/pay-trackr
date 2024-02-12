@@ -35,9 +35,6 @@
 </template>
 
 <script setup>
-import { collection } from 'firebase/firestore'
-import { addDoc, serverTimestamp } from "firebase/firestore";
-
 // used for the firestore refs
 const { $dayjs } = useNuxtApp()
 const db = useFirestore()
@@ -76,7 +73,7 @@ async function addPayment() {
     }
 
     // save data in firebase
-    const result = await saveData();
+    const result = await indexStore.addPayment(payment.value);
     if (!result) {
         useToast('error', 'Something went wrong, please try again')
         // Un-Block add button
@@ -97,20 +94,6 @@ async function addPayment() {
     disableButton.value = false;
     sending.value = false;
     useToast('success', 'Payment saved successfully. Click to go home.', { onClick: "goHome", autoClose: 2000 })
-}
-async function saveData() {
-    try {
-        await addDoc(collection(db, "payment"), {
-            ...payment.value,
-            createdAt: serverTimestamp(),
-            user_id: user.value.uid
-        });
-
-        return true
-    } catch (error) {
-        console.error(error)
-        return false
-    }
 }
 
 // Calendar methods

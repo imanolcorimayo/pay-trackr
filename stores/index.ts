@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
-import { collection, query, where, getDocs, addDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, query, where, getDocs, addDoc, serverTimestamp, doc, updateDoc, deleteDoc } from 'firebase/firestore';
+import type { User } from 'firebase/auth';
 
 interface General {
     payments: Array<any>;
@@ -26,7 +27,7 @@ const defaultObject = {
 }
 export const useIndexStore = defineStore('index', {
     state: (): General => {
-        return defaultObject;
+        return Object.assign({}, defaultObject) ;
     },
     getters: {
         getPayments: (state) => state.payments,
@@ -66,8 +67,6 @@ export const useIndexStore = defineStore('index', {
                 return;
             }
 
-
-
             const currentMonthStart = $dayjs().startOf('month');
             const currentMonthEnd = $dayjs().endOf('month');
 
@@ -88,31 +87,12 @@ export const useIndexStore = defineStore('index', {
 
             // If no tacker but payments, then create trackers per this month per each payment
             if (tracker.id === "") {
-                tracker = {
-                    user_id: user.value.uid,
-                    // @ts-ignore
-                    createdAt: serverTimestamp(),
-                    payments: []
-                }
-                for (let i = 0; i < payments.length; i++) {
-                    // Update payments month
-                    const parsedDate = $dayjs(payments[i].dueDate, { format: 'MM/DD/YYYY' });
-                    const updatedDate = parsedDate.month($dayjs().month());
-                    const updatedDateString = updatedDate.format('MM/DD/YYYY');
-
-                    // Send some data twice to save a log history
-                    tracker.payments.push({
-                        payment_id: payments[i].id,
-                        dueDate: updatedDateString,
-                        isPaid: false,
-                        title: payments[i].title,
-                        description: payments[i].description,
-                        amount: payments[i].amount
-                    })
-                }
+                tracker = createTrackerObject(user as Ref<User>, payments);
 
                 // Post tracker object on Firestore
-                await addDoc(collection(db, "tracker"), tracker);
+                const newTracker = await addDoc(collection(db, "tracker"), tracker);
+                // Add the id in case it's the first time the document is created
+                tracker.id = newTracker.id
             }
 
 
@@ -121,8 +101,114 @@ export const useIndexStore = defineStore('index', {
                 tracker: tracker,
             };
         },
+        async addPayment(payment: any) {
+            const user = useCurrentUser();
+            const db = useFirestore();
 
-        addPayment(payments: Array<any>) {
+            if (!user || !user.value) {
+                return 'Login first to be able to add payments';
+            }
+
+            try {
+                const newPayment = await addDoc(collection(db, "payment"), {
+                    ...payment,
+                    createdAt: serverTimestamp(),
+                    user_id: user.value.uid
+                });
+                payment.id = newPayment.id;
+
+                this.$state.payments = [
+                    ...this.$state.payments,
+                    payment
+                ];
+
+                let tracker = this.$state.tracker;
+
+                if(tracker.id === "") {
+                    // Add this to the tracker object and update it if exist or create it
+                    tracker = createTrackerObject(user as Ref<User>, this.$state.payments);
+
+                    // Post tracker object on Firestore
+                    const newTracker = await addDoc(collection(db, "tracker"), tracker);
+                    // Add the id in case it's the first time the document is created
+                    tracker.id = newTracker.id
+                    // Update Pinia state
+                    this.$state.tracker = tracker;
+
+                    return true;
+                } 
+                // Update current tracker object
+                else {
+                    const paymentTracker = createPaymentTracker(payment);
+                    tracker.payments.push(paymentTracker)
+
+                    // Update in firebase
+                    const trackerRef = doc(db, "tracker", tracker.id);
+                    // Update doc using paymentRef
+                    await updateDoc(trackerRef, tracker);
+
+                    // Update Pinia state
+                    this.$state.tracker = tracker;
+                }
+
+                return true;
+
+            } catch (error) {
+                console.error(error)
+                return false
+            }
+        },
+        async removePayment(id: string) {
+            const db = useFirestore();
+            // If last payment the logic should change
+            const isLastPayment = this.$state.payments.length == 1;
+
+            try {
+                // Remove first from main payment object
+                await deleteDoc(doc(db, 'payment', id))
+                // Update Pinia
+                if (!isLastPayment) {
+                    const paymentIds = this.$state.payments.map(e => e.id);
+                    const index = paymentIds.indexOf(id);
+                    if (index > -1) {
+                        this.$state.payments.splice(index, 1);
+                    }
+                } else {
+                    this.$state.payments = [];
+                }
+
+                // Update payment tracker
+                const tracker = this.$state.tracker
+
+                // Only update when there is more than one payment
+                if(!isLastPayment) {
+                    const paymentsInTracker = tracker.payments.map(e => e.payment_id);
+                    const index = paymentsInTracker.indexOf(id);
+                    if (index > -1 && !tracker.payments[index].isPaid) {
+                        tracker.payments.splice(index, 1);
+                    }
+
+                    // Update tracker in firebase
+                    const trackerRef = doc(db, "tracker", tracker.id);
+                    await updateDoc(trackerRef, tracker);
+    
+                    // Update tracker in Pinia
+                    this.$state.tracker = tracker;
+                    return true;
+                } else if(!tracker.payments[0].isPaid) {
+                    // Delete document directly
+                    await deleteDoc(doc(db, 'tracker', tracker.id))
+
+                    // Update tracker in Pinia
+                    this.$state.tracker = Object.assign({}, defaultObject.tracker);
+                    return true;
+                }
+            } catch (error) {
+                console.error(error)
+                return false
+            }
+        },
+        editPayment(payments: Array<any>) {
             this.$state.payments = payments
         },
         editTracker(tracker: Tracker) {
@@ -130,3 +216,40 @@ export const useIndexStore = defineStore('index', {
         },
     }
 })
+
+
+function createTrackerObject(user:Ref<User>, payments: Array<any>):Tracker {
+
+    const tracker: Tracker = {
+        user_id: user.value.uid,
+        // @ts-ignore
+        createdAt: serverTimestamp(),
+        payments: []
+    }
+    for (let i = 0; i < payments.length; i++) {
+        tracker.payments.push(createPaymentTracker(payments[i]))
+    }
+
+    return tracker;
+
+}
+
+function createPaymentTracker(payment: any) {
+    const { $dayjs } = useNuxtApp();
+
+    // Update payment month
+    const parsedDate = $dayjs(payment.dueDate, { format: 'MM/DD/YYYY' });
+    const updatedDate = parsedDate.month($dayjs().month());
+    const updatedDateString = updatedDate.format('MM/DD/YYYY');
+    
+    // Send some data twice to save a log history
+    return {
+        payment_id: payment.id,
+        dueDate: updatedDateString,
+        isPaid: false,
+        title: payment.title,
+        description: payment.description,
+        amount: payment.amount
+    }
+
+}
