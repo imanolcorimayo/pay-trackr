@@ -251,8 +251,24 @@ export const useIndexStore = defineStore('index', {
             }
 
         },
-        editTracker(tracker: Tracker) {
-            this.$state.tracker = tracker
+        async editIsPaid(id: string, value: Boolean) {
+            const db = useFirestore()
+            const trackerPayIndex = this.$state.tracker.payments.map(el => el.payment_id).indexOf(id);
+            const tracker = Object.assign({}, this.$state.tracker);
+
+            if(!this.$state.tracker.id) {
+                return false;
+            }
+            // Update Pinia
+            tracker.payments[trackerPayIndex].isPaid = value;
+            this.$state.tracker.payments[trackerPayIndex].isPaid = value;
+
+            // Update firebase
+            const trackerRef = doc(db, "tracker", this.$state.tracker.id);
+            delete tracker.id;
+            await updateDoc(trackerRef, tracker);
+
+            return true;
         },
     }
 })

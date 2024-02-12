@@ -126,3 +126,10 @@ input[type=number] {
 .scrollbar-hide::-webkit-scrollbar {
   display: none;
 }
+
+@media (max-width: 768px) {
+    #__nuxt {
+        padding-left: 7px;
+        padding-right: 7px;
+    } 
+}

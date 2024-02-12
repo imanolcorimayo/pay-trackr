@@ -1,7 +1,7 @@
 <template>
     <div>
         <h2>Select to edit</h2>
-        <div class="p-3" v-if="!isLoading">
+        <div class="p-3 sm:px-0" v-if="!isLoading">
                 <PaymentCard 
                     v-for="(payment, index) in payments" :key="index"
                     :amount="payment.amount" 

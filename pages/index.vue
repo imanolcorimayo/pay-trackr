@@ -1,7 +1,7 @@
 <template>
     <div >
         <h2>Payments this month</h2>
-        <div class="p-3" v-if="!isLoading">
+        <div class="p-3 px-0 sm:px-3" v-if="!isLoading">
             <PaymentCard 
                 v-for="(payment, index) in payments" :key="index"
                 :amount="payment.amount" 
@@ -9,6 +9,7 @@
                 :title="payment.title" 
                 :dueDate="payment.dueDate"
                 :id="payment.payment_id"
+                :isPaid="payment.isPaid"
             />
         </div>
         <div v-else class="flex justify-center m-10 p-10">

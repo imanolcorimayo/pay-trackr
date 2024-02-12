@@ -1,5 +1,5 @@
 <template>
-    <div class="border-2 border-solid border-white p-0 border-opacity-35 rounded-md mb-4">
+    <div v-if="!isLoading" class="border-2 border-solid border-white p-0 border-opacity-35 rounded-md mb-4 overflow-hidden">
         <div v-if="isPaid && !edit" class="px-2 py-1 text-xs font-bold text-white shadow-md border-white" style="background-color: #4caf50;">
             Paid
         </div>
@@ -29,13 +29,17 @@
                 <p class="mt-2 text-sm max-h-16 overflow-y-auto scrollbar-hide">{{ description }}</p>
             </div>
             <div v-if="!edit">
-                <button class="w-16 m-2">Mark Paid</button>
+                <button v-if="!isPaid" class="w-16 m-2" @click="markAsPaid(true)">Mark Paid</button>
+                <button v-else class="w-16 m-2 hover:bg-red-300" @click="markAsPaid(false)">Unpaid</button>
             </div>
             <div v-else>
                 <NuxtLink :to="`/edit/${id}`" class="w-16 m-2 as-button block text-center">Edit</NuxtLink>
                 <button class="w-16 m-2 bg-red-300" @click="removePay()">Remove</button>
             </div>
         </div>
+    </div>
+    <div v-else class="border-2 border-solid border-white p-0 border-opacity-35 rounded-md mb-4 overflow-hidden min-h-36 flex justify-center items-center">
+        <Loader/>
     </div>
     <ConfirmDialogue ref="confirmDialogue" />
 </template>
@@ -85,9 +89,30 @@ const dueDateObject = $dayjs(props.dueDate, { format: 'MM/DD/YYYY' });
 const month = ref(dueDateObject.format('MMM'));
 const day = ref(dueDateObject.format('DD'));
 const delayed = ref(dueDateObject.isBefore($dayjs(), 'day'))
+const isLoading = ref(false)
 
 // ----- Define methods ------------
-function markAsPaid() {
+async function markAsPaid(value) {
+    // Confirm dialogue
+    const confirmed = await confirmDialogue.value.openDialog({edit: true});
+
+    if(!confirmed) {
+        return;
+    } 
+
+    isLoading.value = true;
+    const result = await indexStore.editIsPaid(props.id, value);
+
+    const toastMessage = {
+        type: "success",
+        message: "Marked as paid successfully"
+    };
+    if(!result) {
+        toastMessage.type = "error";
+        toastMessage.message = "Something went wrong, please try again or contact the support team.";
+    }
+    useToast(toastMessage.type, toastMessage.message);
+    isLoading.value = false;
 
 }
 
@@ -105,10 +130,8 @@ async function removePay() {
         message: "Payment removed successfully"
     };
     if(!removed) {
-        toastMessage = {
-            type: 'error',
-            message: "Something went wrong, please try again or contact the support team."
-        } ;
+        toastMessage.type = "error";
+        toastMessage.message = "Something went wrong, please try again or contact the support team.";
     }
     useToast(toastMessage.type, toastMessage.message);
 }
