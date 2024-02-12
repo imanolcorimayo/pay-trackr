@@ -1,0 +1,135 @@
+
+body {
+    margin: 0;
+    padding: 0;
+    font-family: Avenir, Helvetica, Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    background-color: #27292d;
+    color: white;
+}
+
+a {
+    text-decoration: unset;
+    text-transform: none;
+    line-height: 34px;
+}
+
+#__nuxt {
+    max-width: 600px;
+    margin-left: auto;
+    margin-right: auto;
+    padding: 20px;
+}
+
+h1 {
+    font-weight: bold;
+    font-size: 28px;
+    text-align: center;
+}
+
+form {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+}
+
+label {
+    font-size: 14px;
+    font-weight: bold;
+}
+
+input, select, option,
+textarea,
+button, input[type=submit], .as-button {
+    height: 48px;
+    box-shadow: none;
+    outline: none;
+    padding-left: 12px;
+    padding-right: 12px;
+    border-radius: 6px;
+    font-size: 18px;
+    margin-top: 6px;
+    margin-bottom: 12px;
+}
+
+/* Remove the arrow */
+select {
+  appearance: none;
+  /* safari */
+  -webkit-appearance: none;
+}
+
+/* Remove the arrow */
+select option {
+    background-color: #27292d;
+    color: white;
+    font-size: 18px;
+    height: 48px;
+    box-shadow: none;
+}
+
+input, 
+textarea, select {
+    background-color: transparent;
+    border: 2px solid rgba(255, 255, 255, 0.35);
+    color: inherit;
+}
+
+button, input[type=submit], .as-button {
+    cursor: pointer;
+    background-color: #a0a4d9;
+    border: 1px solid #a0a4d9;
+    color: #1f2023;
+    font-weight: bold;
+    outline: none;
+    border-radius: 6px;
+}
+
+h2 {
+    font-size: 22px;
+    border-bottom: 2px solid rgba(255, 255, 255, 0.35);
+    padding-bottom: 6px;
+}
+
+ul {
+    padding: 10px;
+}
+
+li {
+    border: 2px solid rgba(255, 255, 255, 0.35);
+    padding: 5px 12px;
+    border-radius: 6px;
+    margin-bottom: 12px;
+}
+
+.done {
+    text-decoration: line-through;
+}
+
+button, input[type=submit], .as-button {
+    font-size: 12px;
+    padding: 6px;
+}
+
+h4 {
+    text-align: center;
+    opacity: 0.5;
+    margin: 0;
+}
+
+.vc-container {
+    position: absolute;
+}
+
+/* Chrome, Safari, Edge, Opera */
+input::-webkit-outer-spin-button,
+input::-webkit-inner-spin-button, input[type=submit] {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+/* Firefox */
+input[type=number] {
+  -moz-appearance: textfield;
+}
