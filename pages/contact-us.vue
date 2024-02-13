@@ -1,6 +1,5 @@
 <template>
     <div class="container">
-        <h2>Contact Us</h2>
         <form v-if="!sending" @submit.prevent="sendContactUsMessage()" class="mt-2">
             <label>Full Name *</label>
             <input disabled placeholder="Your full name" v-model="contactUs.fullName" required name="title" autocomplete="off" />
@@ -8,7 +7,7 @@
             <input disabled placeholder="Your email" type="email" v-model="contactUs.email" required name="title" autocomplete="off" />
             <label>Message *</label>
             <textarea required v-model="contactUs.message" name="message" autocomplete="off" class="min-h-20" />
-            <input :disabled="disableButton" type="submit" value="Add Payment">
+            <input :disabled="disableButton" type="submit" value="Submit">
         </form>
         <div v-else class="flex justify-center m-10 p-10">
             <Loader size="10" />
