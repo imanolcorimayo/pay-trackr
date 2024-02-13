@@ -3,7 +3,7 @@
     <div v-if="!loading" class="container flex justify-center align-center flex-col" style="height:90vh">
       <div class="text-center mb-6">
         <div class="block w-full flex justify-center align-center mb-16">
-          <img class="no-flex" src="/img/logo.png" alt="Logo Created With my.logomakr.com">
+          <img class="no-flex" src="/img/logo.png" alt="Logo Created With my.logomakr.com" width="250" height="195">
         </div>
         <h1 class="mb-4">Welcome To Pay Tracker!</h1>
         <span>Join the community for free and manage your finance 😎</span>
@@ -54,8 +54,6 @@ onMounted(async () => {
     console.error('Failed redirect result', reason)
     error.value = reason
   }).then((value) => {
-
-    console.log("value: ", value)
     // If value is not null -> Navigate to the specific page
     value && navigateTo(route.query && route.query.redirect ? route.query.redirect : '/')
     loading.value = false
@@ -64,12 +62,19 @@ onMounted(async () => {
 
 
 useHead({
-    title: 'Welcome To PayTrackr',
-    meta: [
-        {
-            name: 'description',
-            content: 'Web page to keep tracking your main expenses and keep your life organized'
-        }
-    ]
+  title: 'Welcome To PayTrackr',
+  meta: [
+    {
+      name: 'description',
+      content: 'Web page to keep tracking your main expenses and keep your life organized'
+    }
+  ],
+
+  link: [
+    {
+      rel: 'preconnect',
+      href: 'https://wiseutils.com/welcome'
+    }
+  ]
 })
 </script>

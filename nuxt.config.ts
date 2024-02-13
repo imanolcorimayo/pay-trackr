@@ -24,7 +24,7 @@ export default defineNuxtConfig({
     },
     config: {
       apiKey: process.env.FIREBASE_API_KEY,
-      authDomain: "wiseutils.com",
+      authDomain: "pay-tracker-7a5a6.firebaseapp.com",
       projectId: process.env.FIREBASE_PROJECT_ID,
       storageBucket: "pay-tracker-7a5a6.appspot.com",
       messagingSenderId: "16390920244",
