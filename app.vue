@@ -9,6 +9,6 @@
 
 <script setup>
 useHead({
-  titleTemplate: "%s | UtilsCom"
+  titleTemplate: "%s | WiseUtils"
 });
 </script>
