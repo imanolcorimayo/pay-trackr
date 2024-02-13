@@ -53,6 +53,17 @@ button, input[type=submit], .as-button {
     margin-bottom: 12px;
 }
 
+input:disabled {
+    background-color: grey;
+    color: rgb(44, 44, 44);
+}
+
+.no-button {
+    cursor: pointer;
+    background-color: unset;
+    border: unset;
+}
+
 /* Remove the arrow */
 select {
   appearance: none;
