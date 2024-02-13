@@ -35,7 +35,11 @@ export default defineNuxtConfig({
   app: {
     head: {
         htmlAttrs: { dir: 'ltr', lang: 'en' },
-        link: [{ rel: 'icon', type: 'image/png', href: "/img/logo.png" }]
+        link: [{ rel: 'icon', type: 'image/png', href: "/img/logo.png" }],
+        meta: [{
+          name: 'google-site-verification',
+          content: "E0U6Yf1iG222FwlRLisvf7JLYZLZQnT8CLJ3QKo4tjQ"
+        }]
     },
 },
 })
