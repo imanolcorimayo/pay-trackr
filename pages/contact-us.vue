@@ -75,4 +75,13 @@ async function sendContactUsMessage() {
     }
 
 }
+useHead({
+    title: 'Contact Us - PayTrackr',
+    meta: [
+        {
+            name: 'description',
+            content: 'Reach out to provide feedback or any recommendations.'
+        }
+    ]
+})
 </script>

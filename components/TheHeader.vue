@@ -2,8 +2,8 @@
   <header class="w-full">
     <nav class="">
       <div class="w-full max-w-screen flex justify-between items-center mx-auto p-4">
-        <NuxtLink to="/" class="flex items-center space-x-3 rtl:space-x-reverse">
-          <img src="/img/logo.png" class="w-24" alt="PayTrackr Logo" />
+        <NuxtLink to="/" class="flex items-center space-x-3 rtl:space-x-reverse hover:bg-transparent no-hover">
+          <img src="/img/logo.png" class="w-24" width="94" height="74" alt="PayTrackr Logo" />
         </NuxtLink>
         <div class="relative">
           <button class="text-sm p-0 rounded-full no-button" @click="switchMenu">
@@ -70,7 +70,6 @@ async function signOut() {
     // Redirect to welcome page
     await navigateTo('/welcome');
 }
-
 </script>
 
 <style scoped>
@@ -80,5 +79,10 @@ a:hover, .selected {
     color: #1f2023;
     font-weight: bold;
     outline: none;
+}
+
+.no-hover{
+    background-color: unset !important;
+    border: unset !important;
 }
 </style>

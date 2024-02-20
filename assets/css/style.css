@@ -62,6 +62,7 @@ input:disabled {
     cursor: pointer;
     background-color: unset;
     border: unset;
+    color: white;
 }
 
 /* Remove the arrow */
@@ -99,7 +100,6 @@ button, input[type=submit], .as-button {
 
 h2 {
     font-size: 22px;
-    border-bottom: 2px solid rgba(255, 255, 255, 0.35);
     padding-bottom: 6px;
 }
 

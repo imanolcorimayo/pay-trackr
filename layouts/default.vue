@@ -10,6 +10,7 @@
             <NuxtLink class="px-2 py-1 rounded-full text-center min-w-20 text-sm" :class="{selected: route.path == '/'}" to="/">Payments</NuxtLink>
             <NuxtLink class="px-2 py-1 rounded-full text-center min-w-20 text-sm" :class="{selected: route.path == '/new-payment'}" to="/new-payment">New Pay</NuxtLink>
             <NuxtLink class="px-2 py-1 rounded-full text-center min-w-20 text-sm" :class="{selected: route.path == '/edit'}" to="/edit">Edit Pay</NuxtLink>
+            <NuxtLink class="px-2 py-1 rounded-full text-center min-w-20 text-sm" :class="{selected: route.path == '/history'}" to="/history">History</NuxtLink>
         </div>
         <slot />
     </div>

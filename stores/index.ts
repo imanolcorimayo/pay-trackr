@@ -5,6 +5,7 @@ import type { User } from 'firebase/auth';
 interface General {
     payments: Array<any>;
     tracker: Tracker;
+    history: Array<Tracker|undefined>;
 }
 
 interface Tracker {
@@ -23,7 +24,8 @@ const defaultObject = {
         id: '',
         user_id: '',
         createdAt: ''
-    }
+    },
+    history: []
 }
 export const useIndexStore = defineStore('index', {
     state: (): General => {
@@ -32,6 +34,7 @@ export const useIndexStore = defineStore('index', {
     getters: {
         getPayments: (state) => state.payments,
         getTracker: (state) => state.tracker,
+        getHistory: (state) => state.history,
     },
     actions: {
         async fetchData() {
@@ -99,6 +102,7 @@ export const useIndexStore = defineStore('index', {
             this.$state = {
                 payments: payments,
                 tracker: Object.assign({}, tracker),
+                history: []
             };
         },
         async addPayment(payment: any) {
@@ -271,6 +275,41 @@ export const useIndexStore = defineStore('index', {
 
             return true;
         },
+        // History is all trackers from all time
+        async loadHistory() {
+            // If already loaded, return
+            if (this.$state.history.length) {
+                return;
+            }
+
+            // Get user id
+            const user = useCurrentUser()
+
+
+            if (!user || !user.value) {
+                // Handle the case when there is no user
+                return;
+            }
+
+            // Connect with firebase and get payments structure
+            const db = useFirestore();
+            const querySnapshot = await getDocs(query(collection(db, 'tracker'), where('user_id', '==', user.value.uid)));
+
+            // Tracker history object 
+            const trackerHistory:Array<Tracker> = [];
+            querySnapshot.forEach((doc) => {
+                trackerHistory.push({
+                    id: doc.id,
+                    ...doc.data() as Tracker,
+                });
+            });
+
+            if (!trackerHistory.length) {
+                return this.$state.history = [];
+            }
+
+            this.$state.history = trackerHistory;
+        }
     }
 })
 

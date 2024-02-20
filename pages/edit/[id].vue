@@ -112,7 +112,7 @@ watch(date, (newVal) => {
 })
 
 useHead({
-    title: 'Add New Payment - PayTrackr',
+    title: 'Edit Payment - PayTrackr',
     meta: [
         {
             name: 'description',

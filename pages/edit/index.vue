@@ -32,7 +32,7 @@ const { getPayments: payments } = storeToRefs(indexStore);
 isLoading.value = false
 
 useHead({
-    title: 'Edit Payment - PayTrackr',
+    title: 'Payment Details - PayTrackr',
     meta: [
         {
             name: 'description',
