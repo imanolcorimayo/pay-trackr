@@ -2,10 +2,10 @@
     <div v-if="!isLoading" class="flex py-2 items-center card-container">
         <div class="basis-1/6 flex items-center justify-start">
             <div 
-                class="leading-tight mb-1 py-1 flex w-12 me-2 bg-opacity-15 flex-col items-center rounded-lg bg-white"
+                class="leading-tight mb-1 py-1 flex w-12 me-2 bg-opacity-15 flex-col items-center rounded-lg"
                 :class="{
                     'bg-green-500': isPaid && !edit, 'bg-opacity-70': (isPaid || delayed) && !edit ,
-                    'bg-rose-500': !isPaid && delayed && !edit
+                    'bg-rose-500': !isPaid && delayed && !edit, 'bg-white': edit || (!isPaid && !delayed)
                 }"
             >
                 <span class="text-lg font-bold leading-none">{{day}}</span>
