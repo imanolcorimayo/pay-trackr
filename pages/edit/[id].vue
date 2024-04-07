@@ -33,6 +33,9 @@
 </template>
 
 <script setup>
+definePageMeta({
+    middleware: ['auth']
+})
 
 // used for the firestore refs
 const { $dayjs } = useNuxtApp()

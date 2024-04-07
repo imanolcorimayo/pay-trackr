@@ -18,6 +18,7 @@
     <div v-else class="flex justify-center m-10 p-10">
       <Loader size="10" />
     </div>
+    <span class="text-xs sticky block" v-if="!loading">By signing in you accept the <NuxtLink to="/term-of-service" target="_blank" class="font-semibold">terms of service.</NuxtLink></span>
     <span class="text-xs sticky" v-if="!loading">Logos Created With LogoMakr.com</span>
   </div>
 </template>

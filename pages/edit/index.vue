@@ -20,6 +20,9 @@
 </template>
 
 <script setup>
+definePageMeta({
+    middleware: ['auth']
+})
 // ----- Define Vars ------
 const isLoading = ref(true)
 

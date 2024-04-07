@@ -20,7 +20,9 @@
 </template>
 
 <script setup>
-
+definePageMeta({
+    middleware: ['auth']
+})
 
 // This is a composable. It only needs a ref to manage 
 // the subscription.
@@ -30,7 +32,11 @@ const { $dayjs } = useNuxtApp();
 
 
 const indexStore = useIndexStore();
-const { getTracker: tracker } = storeToRefs(indexStore)
+const { getTracker: tracker, isDataFetched } = storeToRefs(indexStore)
+if(!isDataFetched.value) {
+    await indexStore.fetchData();
+}
+
 payments.value = tracker && tracker.value.payments ? orderPayments(tracker.value.payments) : [];
 isLoading.value = false
 
@@ -64,7 +70,7 @@ useHead({
     meta: [
         {
             name: 'description',
-            content: 'Web page to keep tracking your main expenses and keep your life organized'
+            content: 'Web page to keep tracking of your main expenses and keep your life organized'
         }
     ]
 })

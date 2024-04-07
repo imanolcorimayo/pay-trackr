@@ -1,3 +1,7 @@
+:root {
+    --primary-bg-color: #a0a4d9;
+    --secondary-bg-color: #27292d;
+}
 
 body {
     margin: 0;
@@ -16,10 +20,12 @@ a {
 }
 
 #__nuxt {
-    max-width: 600px;
+    overflow: hidden;
+    max-width: 800px;
     margin-left: auto;
     margin-right: auto;
     padding: 20px;
+    padding-bottom: 0px;
 }
 
 h1 {
@@ -138,8 +144,9 @@ input[type=number] {
   display: none;
 }
 
-@media (max-width: 768px) {
+@media (max-width: 640px) {
     #__nuxt {
+        max-width: 600px;
         padding-left: 7px;
         padding-right: 7px;
     } 

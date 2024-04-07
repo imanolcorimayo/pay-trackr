@@ -1,0 +1,6 @@
+User-agent: *
+Disallow: /edit/
+Disallow: /history
+Disallow: /summary
+Disallow: /new-payment
+Disallow: /contact-us

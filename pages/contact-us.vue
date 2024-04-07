@@ -20,7 +20,8 @@ import { collection, addDoc } from 'firebase/firestore';
 
 
 definePageMeta({
-    layout: 'contact-us'
+    layout: 'contact-us',
+    middleware: 'auth'
 })
 
 const user = await getCurrentUser()

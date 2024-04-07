@@ -1,11 +1,11 @@
 <template>
   <header class="w-full">
     <nav class="">
-      <div class="w-full max-w-screen flex justify-between items-center mx-auto p-4">
+      <div class="w-full max-w-screen flex justify-between items-center mx-auto p-4 pt-0">
         <NuxtLink to="/" class="flex items-center space-x-3 rtl:space-x-reverse hover:bg-transparent no-hover">
           <img src="/img/logo.png" class="w-24" width="94" height="74" alt="PayTrackr Logo" />
         </NuxtLink>
-        <div class="relative">
+        <div class="relative" v-if="user">
           <button class="text-sm p-0 rounded-full no-button" @click="switchMenu">
             <img class="w-14 h-14 rounded-full" :src="user?.photoURL" :alt="`${user?.displayName}'s photo`" width="90" height="90">
           </button>
@@ -20,6 +20,10 @@
             </div>
             <ul class="py-2">
               <li @click="switchMenu">
+                <NuxtLink to="/landing"
+                  class="block px-4 py-2 text-sm text-gray-700 dark:text-gray-200 dark:hover:text-white" :class="{selected: route.path =='/landing'}">Home Page</NuxtLink>
+              </li>
+              <li @click="switchMenu">
                 <NuxtLink to="/"
                   class="block px-4 py-2 text-sm text-gray-700 dark:text-gray-200 dark:hover:text-white" :class="{selected: route.path =='/'}">Payments</NuxtLink>
               </li>
@@ -31,10 +35,18 @@
                 <NuxtLink to="/edit"
                   class="block px-4 py-2 text-sm text-gray-700 dark:text-gray-200 dark:hover:text-white" :class="{selected: route.path =='/edit'}">Edit Payments</NuxtLink>
               </li>
-              <!-- <li @click="switchMenu">
+              <li @click="switchMenu">
                 <NuxtLink to="/history"
                   class="block px-4 py-2 text-sm text-gray-700 dark:text-gray-200 dark:hover:text-white" :class="{selected: route.path =='/history'}">History</NuxtLink>
-              </li> -->
+              </li>
+              <li @click="switchMenu">
+                <NuxtLink to="/summary"
+                  class="block px-4 py-2 text-sm text-gray-700 dark:text-gray-200 dark:hover:text-white" :class="{selected: route.path =='/summary'}">Summary</NuxtLink>
+              </li>
+              <li @click="switchMenu">
+                <NuxtLink to="/blog"
+                  class="block px-4 py-2 text-sm text-gray-700 dark:text-gray-200 dark:hover:text-white" :class="{selected: route.path =='/blog'}">Blog</NuxtLink>
+              </li>
               <li @click="switchMenu">
                 <NuxtLink to="/contact-us"
                   class="block px-4 py-2 text-sm text-gray-700 dark:text-gray-200 dark:hover:text-white" :class="{selected: route.path =='/contact-us'}">Contact Us</NuxtLink>
@@ -45,12 +57,20 @@
             </ul>
           </div>
         </div>
+        <div class="ms-4" v-else>
+          <ul class="flex w-50 sm:w-80 justify-between flex-wrap">
+            <li class="border-opacity-35 border-white border-b mx-1 hidden sm:block"><NuxtLink to="/landing">Home</NuxtLink></li>
+            <li class="border-opacity-35 border-white border-b mx-1"><NuxtLink to="/blog">Blog</NuxtLink></li>
+            <li class="border-opacity-35 border-white border-b mx-1"><NuxtLink to="/faq">FAQ</NuxtLink></li>
+            <li class="border-opacity-35 border-white border-b mx-1"><NuxtLink to="/contact-us">Contact</NuxtLink></li>
+            <li class="border-opacity-35 border-white border-b mx-1"><NuxtLink to="/welcome">Sign In</NuxtLink></li>
+          </ul>
+        </div>
     </div>
   </nav>
 </header></template>
 
 <script setup>
-
 const auth = useFirebaseAuth()
 const user = await getCurrentUser();
 const route = useRoute();
@@ -68,17 +88,29 @@ async function signOut() {
     await auth.signOut();
 
     // Redirect to welcome page
-    await navigateTo('/welcome');
+    if(!route.fullPath.includes("/landing")) {
+      return await navigateTo("/landing");
+    }
+    // If already in landing page, reload
+    location.reload();
 }
 </script>
 
 <style scoped>
-a:hover, .selected {
+.selected {
     background-color: #a0a4d9;
     border: 1px solid #a0a4d9;
     color: #1f2023;
     font-weight: bold;
     outline: none;
+}
+
+li {
+  cursor: pointer;
+}
+li:hover {
+  color: #a0a4d9;
+  font-weight: bold;
 }
 
 .no-hover{

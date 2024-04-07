@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { collection, query, where, getDocs, addDoc, serverTimestamp, doc, updateDoc, deleteDoc } from 'firebase/firestore';
+import { collection, query, where, getDocs, addDoc, serverTimestamp, doc, updateDoc, deleteDoc, orderBy } from 'firebase/firestore';
 import type { User } from 'firebase/auth';
 
 interface General {
@@ -25,7 +25,8 @@ const defaultObject = {
         user_id: '',
         createdAt: ''
     },
-    history: []
+    history: [],
+    fetched: false
 }
 export const useIndexStore = defineStore('index', {
     state: (): General => {
@@ -35,6 +36,7 @@ export const useIndexStore = defineStore('index', {
         getPayments: (state) => state.payments,
         getTracker: (state) => state.tracker,
         getHistory: (state) => state.history,
+        isDataFetched: (state) => state.fetched,
     },
     actions: {
         async fetchData() {
@@ -102,7 +104,8 @@ export const useIndexStore = defineStore('index', {
             this.$state = {
                 payments: payments,
                 tracker: Object.assign({}, tracker),
-                history: []
+                history: [],
+                fetched: true
             };
         },
         async addPayment(payment: any) {
@@ -285,7 +288,6 @@ export const useIndexStore = defineStore('index', {
             // Get user id
             const user = useCurrentUser()
 
-
             if (!user || !user.value) {
                 // Handle the case when there is no user
                 return;
@@ -293,7 +295,7 @@ export const useIndexStore = defineStore('index', {
 
             // Connect with firebase and get payments structure
             const db = useFirestore();
-            const querySnapshot = await getDocs(query(collection(db, 'tracker'), where('user_id', '==', user.value.uid)));
+            const querySnapshot = await getDocs(query(collection(db, 'tracker'), where('user_id', '==', user.value.uid), orderBy("createdAt", "desc")));
 
             // Tracker history object 
             const trackerHistory:Array<Tracker> = [];

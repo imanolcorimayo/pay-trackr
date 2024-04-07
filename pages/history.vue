@@ -40,6 +40,9 @@
 </template>
 
 <script setup>
+definePageMeta({
+    middleware: ['auth']
+})
 // ----- Define Useful Properties ---------
 const { $dayjs } = useNuxtApp()
 
@@ -47,7 +50,7 @@ const { $dayjs } = useNuxtApp()
 const show = ref({});
 const formattedHistory = ref([])
 
-// ----- Define Pinia Vars
+// ----- Define Pinia Vars ----------
 const indexStore = useIndexStore()
 // First load history
 await indexStore.loadHistory();
@@ -57,11 +60,10 @@ processHistory();
 
 function processHistory() {
     // Flag to set show object with first element opened
-    let isFirst = true;
     formattedHistory.value = history.value.map(el => {
+
         // Set show object
-        show.value[el.id] = isFirst;
-        isFirst = false;
+        show.value[el.id] = false;
 
         const auxObj = {...el};
         const date = $dayjs.unix(el.createdAt.seconds);
@@ -87,6 +89,8 @@ function processHistory() {
 
         return auxObj;
     })
+
+    show.value[formattedHistory.value[0].id] = true;
 }
 
 function toggleShow(id) {
