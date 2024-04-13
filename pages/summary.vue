@@ -6,7 +6,10 @@
         <select @change="event => createMonthSplit(event)">
             <option :value="month.id" v-for="(month, idx) in monthsToSelect" :key="idx">{{ month.date }}</option>
         </select></h2>
-        <canvas class="m-auto w-full" style="max-width: 30rem; max-height: 30rem;" id="pieChart"></canvas>
+        <canvas v-show="!pieIsLoading" class="m-auto w-full" style="max-width: 30rem; max-height: 30rem;" id="pieChart"></canvas>
+        <div v-if="pieIsLoading" class="w-full min-h-[530px] flex justify-center items-center">
+            <Loader/>
+        </div>
     </div>
 </template>
 
@@ -37,6 +40,7 @@ const monthsToSelect = ref(history.value.map(el => {
     return { date: `${month} ${year}`, id: el.id}
 }))
 const pieCanvasChart = ref(false)
+const pieIsLoading = ref(false)
 
 // ----- Define Hooks ------
 onMounted(() => {
@@ -117,14 +121,19 @@ function createMonthlyResume() {
 }
 
 function createMonthSplit(event = false) {
+    pieIsLoading.value = true;
     // Clean canvas chart first
     if(pieCanvasChart.value) {
         pieCanvasChart.value.destroy();
+        pieCanvasChart.value = false;
+
+        // Canvas is crashing if the update is too fast, so we wait and run function again
+        return setTimeout(() => createMonthSplit(event), 300)
     }
 
     let historyValue;
     if(!event) {
-        historyValue = history.value[history.value.length - 1]
+        historyValue = history.value[0]
     } else {
         // Filter value that matches with payment id
         const filteredValue = history.value.filter(el => el.id == event.target.value)
@@ -187,18 +196,14 @@ function createMonthSplit(event = false) {
             plugins: {
                 legend: {
                     position: 'top',
-                },
-                title: {
-                    display: true,
-                    text: 'Chart.js Pie Chart'
                 }
             }
         },
     };
 
     const ctx = document.getElementById('pieChart');
-
     pieCanvasChart.value = new Chart(ctx, config);
+    pieIsLoading.value = false;
 }
 
 useHead({

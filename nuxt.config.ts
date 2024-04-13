@@ -14,8 +14,14 @@ export default defineNuxtConfig({
     '@vueuse/nuxt',
     'nuxt-vuefire',
     '@pinia/nuxt',
+    '@vite-pwa/nuxt'
   ],
   ssr: false,
+
+  // @ts-ignore
+  pwa: {
+    /* your pwa options */
+  },
 
   vuefire: {
     // ensures the auth module is enabled
