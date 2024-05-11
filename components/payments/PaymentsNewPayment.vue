@@ -24,7 +24,7 @@
                         </div>
                         <div class="w-full flex flex-col relative">
                             <label class="absolute top-[-0.4rem] font-semibold text-[0.857rem] leading-[1rem] bg-[--secondary-bg-color] ml-[0.571rem] px-[0.286rem]">Category *</label>
-                            <input v-model="payment.category" name="category" required autocomplete="off" class="capitalize"
+                            <input v-model="payment.category" name="category" required autocomplete="off" class="capitalize" />
                         </div>
                     </div>
                     <div class="flex justify-between gap-[1.714rem]">
