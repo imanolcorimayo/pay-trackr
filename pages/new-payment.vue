@@ -40,8 +40,6 @@ definePageMeta({
 })
 // used for the firestore refs
 const { $dayjs } = useNuxtApp()
-const db = useFirestore()
-const user = useCurrentUser()
 const disableButton = ref(false);
 const sending = ref(false);
 

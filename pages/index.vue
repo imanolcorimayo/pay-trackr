@@ -1,6 +1,8 @@
 <template>
-    <div >
+    <div>
+        <PaymentsNewPayment ref="newPayment"/>
         <h2>Payments this month</h2>
+        <button @click="() => newPayment.showModal()" class="">Add new</button>
         <div class="p-3 px-0 sm:px-3" v-if="!isLoading">
             <PaymentCard 
                 v-for="(payment, index) in payments" :key="index"
@@ -39,6 +41,10 @@ if(!isDataFetched.value) {
 
 payments.value = tracker && tracker.value.payments ? orderPayments(tracker.value.payments) : [];
 isLoading.value = false
+
+// ----- Define Vars -------
+// Refs
+const newPayment = ref(null)
 
 // ----- Define Methods ---------
 

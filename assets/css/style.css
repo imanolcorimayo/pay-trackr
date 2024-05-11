@@ -3,6 +3,10 @@
     --secondary-bg-color: #27292d;
 }
 
+html {
+    font-size: 14px;
+}
+
 body {
     margin: 0;
     padding: 0;
@@ -11,6 +15,10 @@ body {
     -moz-osx-font-smoothing: grayscale;
     background-color: #27292d;
     color: white;
+}
+
+body.modal-opened {
+    overflow: hidden;
 }
 
 a {
@@ -34,17 +42,6 @@ h1 {
     text-align: center;
 }
 
-form {
-    display: flex;
-    flex-direction: column;
-    width: 100%;
-}
-
-label {
-    font-size: 14px;
-    font-weight: bold;
-}
-
 input, select, option,
 textarea,
 button, input[type=submit], .as-button {
@@ -54,9 +51,7 @@ button, input[type=submit], .as-button {
     padding-left: 12px;
     padding-right: 12px;
     border-radius: 6px;
-    font-size: 18px;
-    margin-top: 6px;
-    margin-bottom: 12px;
+    font-size: 1rem;
 }
 
 input:disabled {
@@ -82,7 +77,6 @@ select {
 select option {
     background-color: #27292d;
     color: white;
-    font-size: 18px;
     height: 48px;
     box-shadow: none;
 }
@@ -114,7 +108,6 @@ h2 {
 }
 
 button, input[type=submit], .as-button {
-    font-size: 12px;
     padding: 6px;
 }
 
