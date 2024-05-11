@@ -2,18 +2,6 @@ import { defineStore } from 'pinia'
 import { collection, query, where, getDocs, addDoc, serverTimestamp, doc, updateDoc, deleteDoc, orderBy } from 'firebase/firestore';
 import type { User } from 'firebase/auth';
 
-interface General {
-    payments: Array<any>;
-    tracker: Tracker;
-    history: Array<Tracker|undefined>;
-}
-
-interface Tracker {
-    payments: Array<any>;
-    id?: string;
-    user_id: string;
-    createdAt: string;
-}
 
 const defaultObject = {
     // Payments will be requested only once
@@ -298,16 +286,21 @@ export const useIndexStore = defineStore('index', {
             const querySnapshot = await getDocs(query(collection(db, 'tracker'), where('user_id', '==', user.value.uid), orderBy("createdAt", "desc")));
 
             // Tracker history object 
-            const trackerHistory:Array<Tracker> = [];
+            const trackerHistory:TrackerList = [];
             querySnapshot.forEach((doc) => {
                 trackerHistory.push({
                     id: doc.id,
-                    ...doc.data() as Tracker,
-                });
+                    ...doc.data(),
+                } as Tracker);
             });
 
             if (!trackerHistory.length) {
                 return this.$state.history = [];
+            }
+
+            // Order the payments positions
+            for (let index in trackerHistory) {
+                trackerHistory[index].payments = orderPayments(trackerHistory[index].payments)
             }
 
             this.$state.history = trackerHistory;
@@ -332,7 +325,7 @@ function createTrackerObject(user:Ref<User>, payments: Array<any>):Tracker {
 
 }
 
-function createPaymentTracker(payment: any) {
+function createPaymentTracker(payment: any):Payment {
     const { $dayjs } = useNuxtApp();
 
     // Update payment month

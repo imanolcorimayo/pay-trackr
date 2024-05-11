@@ -41,23 +41,6 @@ payments.value = tracker && tracker.value.payments ? orderPayments(tracker.value
 isLoading.value = false
 
 // ----- Define Methods ---------
-function orderPayments(items) {
-    // Sort the array
-    items.sort((a, b) => {
-        // Sort by isCompleted (false first)
-        if (a.isPaid !== b.isPaid) {
-            return a.isPaid ? 1 : -1;
-        }
-
-        // If isCompleted is the same, sort by dueDate
-        const dueDateA = $dayjs(a.dueDate, { format: 'MM/DD/YYYY' });
-        const dueDateB = $dayjs(b.dueDate, { format: 'MM/DD/YYYY' });
-
-        return dueDateA - dueDateB;
-    });
-
-    return items
-}
 
 // ----- Define Watchers ---------
 watch(tracker, (newValue) => {

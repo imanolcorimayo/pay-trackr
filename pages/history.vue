@@ -13,7 +13,17 @@
                 <div class="overflow-hidden">
                     <Transition>
                         <div v-if="show[tracker.id]">
-                            <div class="flex py-2 items-center" v-for="(pay, idxPay) in tracker.payments" :key="`pay-${index}-${idxPay}`">
+                            <PaymentCard 
+                                v-for="(pay, idxPay) in tracker.payments" :key="`01-pay-${index}-${idxPay}`"
+                                :amount="pay.amount" 
+                                :description="pay.description" 
+                                :title="pay.title" 
+                                :dueDate="pay.dueDate"
+                                :id="pay.payment_id"
+                                :isPaid="pay.isPaid"
+                                :trackerId="tracker.id"
+                            />
+                            <!-- <div class="flex py-2 items-center" v-for="(pay, idxPay) in tracker.payments" :key="`pay-${index}-${idxPay}`">
                                 <div class="basis-1/6 flex items-center justify-start">
                                     <div 
                                         class="leading-tight mb-1 py-1 flex w-12 me-2 bg-opacity-15 flex-col items-center rounded-lg"
@@ -30,7 +40,7 @@
                                         <div class="text-sm">{{ pay.description }}</div>
                                     </div>
                                 </div>
-                            </div>
+                            </div> -->
                         </div>
                     </Transition>
                 </div>
@@ -44,20 +54,21 @@ definePageMeta({
     middleware: ['auth']
 })
 // ----- Define Useful Properties ---------
-const { $dayjs } = useNuxtApp()
+const { $dayjs } = useNuxtApp();
 
 // ----- Define Vars -------------
 const show = ref({});
-const formattedHistory = ref([])
+const formattedHistory = ref([]);
 
 // ----- Define Pinia Vars ----------
-const indexStore = useIndexStore()
+const indexStore = useIndexStore();
 // First load history
 await indexStore.loadHistory();
 // Retrieve values
 const { getHistory: history } = storeToRefs(indexStore);
 processHistory();
 
+// ----- Define Methods --------
 function processHistory() {
     // Flag to set show object with first element opened
     formattedHistory.value = history.value.map(el => {
@@ -92,7 +103,6 @@ function processHistory() {
 
     show.value[formattedHistory.value[0].id] = true;
 }
-
 function toggleShow(id) {
     show.value[id] = !show.value[id];
 }
