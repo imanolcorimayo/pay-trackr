@@ -266,6 +266,61 @@ export const useIndexStore = defineStore('index', {
 
             return true;
         },
+        async editIsPaidInHistory(paymentId: string, trackerId: string, value: Boolean) {
+            const db = useFirestore()
+
+            // If there is no elements on history, return false
+            if(!this.$state.history.length) {
+                return false;
+            }
+
+            // 1. Find the tracker based on the tracker id
+            // Look for the index of the tracker
+            const trackerIndex = this.$state.history.map(el => {
+                // "el" en "el.id" could be undefined
+                if(el && el.id) {
+                    return el.id
+                }
+            }).indexOf(trackerId);
+
+            // Get a clean history that will be modified
+            const history = Object.assign({}, this.$state.history);
+
+            // Ensure the tracker exists
+            if(trackerIndex === -1) {
+                return false;
+            }
+
+            // 2. Find the payment in the tracker found based on the payment id
+            const auxTracker: Tracker|undefined = history[trackerIndex];
+            if(auxTracker === undefined || auxTracker.id === undefined) {
+                return false;
+            }
+
+            const trackerPayIndex = auxTracker.payments.map(el => el.payment_id).indexOf(paymentId);
+
+            if(trackerPayIndex === -1) {
+                return false;
+            }
+
+
+            // Update Pinia && auxiliary variables
+            auxTracker.payments[trackerPayIndex].isPaid = value;
+            this.$state.history[trackerIndex]!.payments[trackerPayIndex].isPaid = value;
+
+            // Update firebase
+            const trackerRef = doc(db, "tracker", auxTracker.id as string);
+            delete auxTracker.id; // We don't update the id
+            // @ts-ignore
+            await updateDoc(trackerRef, auxTracker);
+
+            // Order the payments positions in history
+            for (let index in this.$state.history) {
+                this.$state.history[index].payments = orderPayments(this.$state.history[index].payments)
+            }
+
+            return true;
+        },
         // History is all trackers from all time
         async loadHistory() {
             // If already loaded, return

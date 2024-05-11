@@ -39,6 +39,8 @@
 </template>
 
 <script setup>
+import { routeLocationKey } from 'vue-router';
+
 
 const props = defineProps({
     description: {
@@ -72,19 +74,30 @@ const props = defineProps({
         required: false,
         type: Boolean,
         default: false
+    },
+    trackerId: {
+        required: false,
+        type: String
     }
 })
 
-const indexStore = useIndexStore()
+// ----- Define Useful Properties --------
 const { $dayjs } = useNuxtApp()
-const confirmDialogue = ref(null)
+const route = useRoute()
 
+// ------ Define Pinia Variables ----
+const indexStore = useIndexStore()
+
+// ------ Define Vars -------
 const dueDateObject = $dayjs(props.dueDate, { format: 'MM/DD/YYYY' });
 const month = ref(dueDateObject.format('MMM'));
 const day = ref(dueDateObject.format('DD'));
 const delayed = ref(dueDateObject.isBefore($dayjs(), 'day'))
 const weekDay = ref(dueDateObject.format('ddd'))
 const isLoading = ref(false)
+
+// Refs
+const confirmDialogue = ref(null)
 
 // ----- Define methods ------------
 async function markAsPaid(value) {
@@ -96,7 +109,13 @@ async function markAsPaid(value) {
     }
 
     isLoading.value = true;
-    const result = await indexStore.editIsPaid(props.id, value);
+    // Manage if it comes form "/history" or home "/"" page
+    let result;
+    if(props.trackerId && route.fullPath.includes("/history")) {
+        result = await indexStore.editIsPaidInHistory(props.id, props.trackerId,value);
+    } else {
+        result = await indexStore.editIsPaid(props.id, value);
+    }
 
     const toastMessage = {
         type: "success",

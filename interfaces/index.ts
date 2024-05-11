@@ -15,7 +15,7 @@ interface TrackerList extends Array<Tracker>{}
 interface General {
     payments: PaymentList;
     tracker: Tracker;
-    history: Array<Tracker|undefined>;
+    history: TrackerList;
     fetched: Boolean;
 }
 
