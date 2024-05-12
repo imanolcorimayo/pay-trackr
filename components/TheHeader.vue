@@ -29,7 +29,7 @@
               </li>
               <li @click="switchMenu">
                 <NuxtLink to="/edit"
-                  class="block px-4 py-2 text-sm text-gray-700 dark:text-gray-200 dark:hover:text-white" :class="{selected: route.path =='/edit'}">Edit Payments</NuxtLink>
+                  class="block px-4 py-2 text-sm text-gray-700 dark:text-gray-200 dark:hover:text-white" :class="{selected: route.path =='/edit'}">Recurrent Payments</NuxtLink>
               </li>
               <li @click="switchMenu">
                 <NuxtLink to="/history"

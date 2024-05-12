@@ -1,5 +1,9 @@
 <template>
-    <div v-if="!isLoading" class="flex py-2 items-center card-container">
+    <div v-if="!isLoading" 
+        class="
+            flex py-2 items-center card-container 
+            transition ease-in-out hover:-translate-y-1 hover:scale-[1.01] duration-150
+        ">
         <div class="basis-1/6 flex items-center justify-start">
             <div 
                 class="leading-tight mb-1 py-1 flex w-12 me-2 bg-opacity-15 flex-col items-center rounded-lg"
@@ -20,14 +24,14 @@
             </div>
             <div class="hover-show">
                 <div v-if="!edit" class="m-1">
-                    <button v-if="!isPaid" class="w-20 leading-none my-0 h-auto" @click="markAsPaid(true)">Mark Paid</button>
-                    <button v-else class="w-20 leading-none my-0 h-auto hover:bg-red-300" @click="markAsPaid(false)">Unpaid</button>
+                    <button v-if="!isPaid" class="w-20 leading-none my-0 h-auto" @click="markAsPaid(true)" style="font-size: 0.714rem;">Mark Paid</button>
+                    <button v-else class="w-20 leading-none my-0 h-auto hover:bg-red-300" @click="markAsPaid(false)" style="font-size: 0.714rem;">Unpaid</button>
                 </div>
-                <div v-else  class="m-1">
-                    <NuxtLink :to="`/edit/${id}`" class="w-16 leading-none my-0 inline-block as-button text-center" style="height: auto;">
+                <div v-else  class="flex flex-col gap-[0.286rem]">
+                    <button @click="$emit('editPayment', id)" class="w-16 leading-none" style="height: auto; font-size: 0.714rem;">
                         Edit
-                    </NuxtLink>
-                    <button class="w-16 leading-none my-0 h-auto bg-red-300 border-red-300" @click="removePay()">Remove</button>
+                    </button>
+                    <button class="w-16 leading-none my-0 h-auto bg-red-300 border-red-300" @click="removePay()" style="font-size: 0.714rem;">Remove</button>
                 </div>
             </div>
         </div>
@@ -39,8 +43,6 @@
 </template>
 
 <script setup>
-import { routeLocationKey } from 'vue-router';
-
 
 const props = defineProps({
     description: {
@@ -80,6 +82,8 @@ const props = defineProps({
         type: String
     }
 })
+
+const emit = defineEmits(["editPayment"])
 
 // ----- Define Useful Properties --------
 const { $dayjs } = useNuxtApp()

@@ -10,9 +10,8 @@
                     <button 
                         @click="() => {showAddButton = false;newPayment.showModal()}" 
                         class="
-                            flex justify-center items-center rounded-full
-                    transition ease-in-out delay-50 hover:-translate-y-1 hover:scale-110 duration-150 w-[3.143rem] h-[3.143rem]
-                            
+                            flex justify-center items-center rounded-full w-[3.143rem] h-[3.143rem]
+                            transition ease-in-out delay-50 hover:-translate-y-1 hover:scale-110 duration-150 
                         ">
                         <MdiPlus class="text-[1.428rem] leading-[1.714rem]"/>
                     </button>

@@ -1,6 +1,7 @@
 <template>
     <div>
         <h2>Select to edit</h2>
+        <PaymentsNewPayment ref="editPayment" :paymentId="paymentId" />
         <div class="p-3 sm:px-0" v-if="!isLoading">
                 <PaymentCard 
                     v-for="(payment, index) in payments" :key="index"
@@ -10,6 +11,7 @@
                     :dueDate="payment.dueDate"
                     :id="payment.id"
                     edit
+                    @editPayment="showEdit"
                 />
         </div>
         <div v-else class="flex justify-center m-10 p-10">
@@ -25,10 +27,23 @@ definePageMeta({
 })
 // ----- Define Vars ------
 const isLoading = ref(true)
+const paymentId = ref(false)
+
+// Refs
+const editPayment = ref(null)
 
 // ----- Define Pinia Vars -----------
 const indexStore = useIndexStore();
 const { getPayments: payments } = storeToRefs(indexStore);
+
+// ----- Define Methods --------
+function showEdit(id) {
+    // Save id that will passed to the edit modal component
+    paymentId.value = id; 
+
+    // Open the modal
+    editPayment.value.showModal();
+}
 
 // ----- Stop loader -----------
 // TODO: For now, this is useless

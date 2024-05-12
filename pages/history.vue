@@ -10,7 +10,7 @@
                         <div class="w-full border-b-2 border-solid border-white border-opacity-35"></div>
                     </button>
                 </div>
-                <div class="overflow-hidden">
+                <div class="overflow-hidden px-4">
                     <Transition>
                         <div v-if="show[tracker.id]">
                             <PaymentCard 
@@ -23,24 +23,6 @@
                                 :isPaid="pay.isPaid"
                                 :trackerId="tracker.id"
                             />
-                            <!-- <div class="flex py-2 items-center" v-for="(pay, idxPay) in tracker.payments" :key="`pay-${index}-${idxPay}`">
-                                <div class="basis-1/6 flex items-center justify-start">
-                                    <div 
-                                        class="leading-tight mb-1 py-1 flex w-12 me-2 bg-opacity-15 flex-col items-center rounded-lg"
-                                        :class="{'bg-green-500': pay.isPaid, 'bg-opacity-70': pay.isPaid, 'bg-white': !pay.isPaid }"
-                                    >
-                                        <span class="text-lg font-bold leading-none">{{pay.day}}</span>
-                                        <span>{{pay.weekDay}}</span>
-                                    </div>
-                                </div>
-                                <div class="flex basis-full items-center border-b pb-2 self-end border-opacity-35 border-white">
-                                    <div class="basis-1/4 font-bold" style="min-width: 95px;">{{ formatPrice(pay.amount) }}</div>
-                                    <div class="basis-full flex flex-col">
-                                        <div class="font-bold text-sm">{{ pay.title }}</div>
-                                        <div class="text-sm">{{ pay.description }}</div>
-                                    </div>
-                                </div>
-                            </div> -->
                         </div>
                     </Transition>
                 </div>
