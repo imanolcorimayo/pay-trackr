@@ -105,18 +105,28 @@ export const useIndexStore = defineStore('index', {
             }
 
             try {
-                const newPayment = await addDoc(collection(db, "payment"), {
-                    ...payment,
-                    createdAt: serverTimestamp(),
-                    user_id: user.value.uid
-                });
-                payment.id = newPayment.id;
+
+                // ---- Step 1. Create recurrent payment if it's the case. 
+                // In case it's a one time payment, simulate an id
+                if(payment.timePeriod !== "one-time") {
+                    // Handle recurrent payments
+                    const newPayment = await addDoc(collection(db, "payment"), {
+                        ...payment,
+                        createdAt: serverTimestamp(),
+                        user_id: user.value.uid
+                    });
+                    payment.id = newPayment.id;
+                } else {
+                    // Handle one time payments. Create an unique uuid
+                    payment.id = uuidv4();
+                }
 
                 this.$state.payments = [
                     ...this.$state.payments,
                     payment
                 ];
 
+                // ---- Step 2. Update tracker object 
                 let tracker = Object.assign({}, this.$state.tracker) ;
 
                 if(tracker.id === "") {
@@ -255,14 +265,15 @@ export const useIndexStore = defineStore('index', {
             if(!this.$state.tracker.id) {
                 return false;
             }
-            // Update Pinia
-            tracker.payments[trackerPayIndex].isPaid = value;
-            this.$state.tracker.payments[trackerPayIndex].isPaid = value;
 
             // Update firebase
+            tracker.payments[trackerPayIndex].isPaid = value;
             const trackerRef = doc(db, "tracker", this.$state.tracker.id);
             delete tracker.id;
             await updateDoc(trackerRef, tracker);
+
+            // Update Pinia
+            this.$state.tracker.payments[trackerPayIndex].isPaid = value;
 
             return true;
         },
@@ -284,7 +295,7 @@ export const useIndexStore = defineStore('index', {
             }).indexOf(trackerId);
 
             // Get a clean history that will be modified
-            const history = Object.assign({}, this.$state.history);
+            const history: TrackerList = Object.assign({}, this.$state.history);
 
             // Ensure the tracker exists
             if(trackerIndex === -1) {
@@ -303,16 +314,16 @@ export const useIndexStore = defineStore('index', {
                 return false;
             }
 
-
-            // Update Pinia && auxiliary variables
-            auxTracker.payments[trackerPayIndex].isPaid = value;
-            this.$state.history[trackerIndex]!.payments[trackerPayIndex].isPaid = value;
-
             // Update firebase
+            auxTracker.payments[trackerPayIndex].isPaid = value;
             const trackerRef = doc(db, "tracker", auxTracker.id as string);
             delete auxTracker.id; // We don't update the id
+
             // @ts-ignore
             await updateDoc(trackerRef, auxTracker);
+
+            // Update Pinia && auxiliary variables
+            this.$state.history[trackerIndex]!.payments[trackerPayIndex].isPaid = value;
 
             // Order the payments positions in history
             for (let index in this.$state.history) {
@@ -395,7 +406,15 @@ function createPaymentTracker(payment: any):Payment {
         isPaid: false,
         title: payment.title,
         description: payment.description,
-        amount: payment.amount
+        amount: payment.amount,
+        category: payment.category ? payment.category : 'other',
     }
 
+}
+
+// Creates a random UUID
+function uuidv4() {
+    return "10000000-1000-4000-8000-100000000000".replace(/[018]/g, c =>
+        (+c ^ crypto.getRandomValues(new Uint8Array(1))[0] & 15 >> +c / 4).toString(16)
+    );
 }

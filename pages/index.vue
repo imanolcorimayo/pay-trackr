@@ -1,8 +1,25 @@
 <template>
     <div>
-        <PaymentsNewPayment ref="newPayment"/>
+        <PaymentsNewPayment ref="newPayment" @onClose="() => showAddButton = true"/>
         <h2>Payments this month</h2>
-        <button @click="() => newPayment.showModal()" class="">Add new</button>
+        <div class="fixed bottom-0 right-0 w-full" v-if="showAddButton">
+            <div class="max-w-[57.143rem] m-auto flex justify-end p-[1.429rem]">
+                <div class="
+                    flex flex-col gap-[0.143rem] items-center
+                    ">
+                    <button 
+                        @click="() => {showAddButton = false;newPayment.showModal()}" 
+                        class="
+                            flex justify-center items-center rounded-full
+                    transition ease-in-out delay-50 hover:-translate-y-1 hover:scale-110 duration-150 w-[3.143rem] h-[3.143rem]
+                            
+                        ">
+                        <MdiPlus class="text-[1.428rem] leading-[1.714rem]"/>
+                    </button>
+                    <span class="text-[0.714rem] font-semibold capitalize">new pay</span>
+                </div>
+            </div>
+        </div>
         <div class="p-3 px-0 sm:px-3" v-if="!isLoading">
             <PaymentCard 
                 v-for="(payment, index) in payments" :key="index"
@@ -22,6 +39,8 @@
 </template>
 
 <script setup>
+import MdiPlus from '~icons/mdi/plus';
+
 definePageMeta({
     middleware: ['auth']
 })
@@ -30,6 +49,7 @@ definePageMeta({
 // the subscription.
 const isLoading = ref(true)
 const payments = ref([])
+const showAddButton = ref(true);
 const { $dayjs } = useNuxtApp();
 
 
@@ -50,7 +70,11 @@ const newPayment = ref(null)
 
 // ----- Define Watchers ---------
 watch(tracker, (newValue) => {
-    payments.value = newValue.payments ? orderPayments(newValue.payments) : [];
+    console.log("SOME")
+    isLoading.value = true; // This let us reload the full list and avoid rendering problems
+    const auxPayments = newValue.payments ? orderPayments(newValue.payments) : [];
+    payments.value = Object.assign([], auxPayments)
+    isLoading.value = false;
 }, {deep: true})
 
 // ----- Define Methods ---------

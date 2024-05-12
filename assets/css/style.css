@@ -29,10 +29,10 @@ a {
 
 #__nuxt {
     overflow: hidden;
-    max-width: 800px;
+    max-width: 57.143rem;
     margin-left: auto;
     margin-right: auto;
-    padding: 20px;
+    padding: 1.429rem;
     padding-bottom: 0px;
 }
 
@@ -96,6 +96,7 @@ button, input[type=submit], .as-button {
     font-weight: bold;
     outline: none;
     border-radius: 6px;
+    padding: 0.286rem;
 }
 
 h2 {
@@ -105,10 +106,6 @@ h2 {
 
 .done {
     text-decoration: line-through;
-}
-
-button, input[type=submit], .as-button {
-    padding: 6px;
 }
 
 h4 {

@@ -1,7 +1,7 @@
 // https://nuxt.com/docs/api/configuration/nuxt-config
 export default defineNuxtConfig({
   devtools: { enabled: true },
-  css: ['~/assets/css/main.css', '~/assets/css/style.css', "vue3-toastify/dist/index.css"],
+  css: ["~/assets/css/main.css", "~/assets/css/style.css", "vue3-toastify/dist/index.css"],
   postcss: {
     plugins: {
       tailwindcss: {},
@@ -9,12 +9,13 @@ export default defineNuxtConfig({
     },
   },
   modules: [
-    '@samk-dev/nuxt-vcalendar',
-    'dayjs-nuxt',
-    '@vueuse/nuxt',
-    'nuxt-vuefire',
-    '@pinia/nuxt',
-    '@vite-pwa/nuxt'
+    "@samk-dev/nuxt-vcalendar",
+    "dayjs-nuxt",
+    "@vueuse/nuxt",
+    "nuxt-vuefire",
+    "@pinia/nuxt",
+    "@vite-pwa/nuxt",
+    "unplugin-icons/nuxt"
   ],
   ssr: false,
 

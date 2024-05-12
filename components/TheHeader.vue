@@ -28,10 +28,6 @@
                   class="block px-4 py-2 text-sm text-gray-700 dark:text-gray-200 dark:hover:text-white" :class="{selected: route.path =='/'}">Payments</NuxtLink>
               </li>
               <li @click="switchMenu">
-                <NuxtLink to="/new-payment"
-                  class="block px-4 py-2 text-sm text-gray-700 dark:text-gray-200 dark:hover:text-white" :class="{selected: route.path =='/new-payment'}">New Payment</NuxtLink>
-              </li>
-              <li @click="switchMenu">
                 <NuxtLink to="/edit"
                   class="block px-4 py-2 text-sm text-gray-700 dark:text-gray-200 dark:hover:text-white" :class="{selected: route.path =='/edit'}">Edit Payments</NuxtLink>
               </li>

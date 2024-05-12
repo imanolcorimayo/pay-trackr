@@ -10,7 +10,7 @@ export const validatePayment = (payment: any) => {
     if (!payment.dueDate || typeof payment.dueDate != "string" || !regex.test(payment.dueDate)) {
         return 'Invalid payment date.'
     }
-    if(!['weekly', 'bi-weekly', 'semi-monthly', 'monthly', ].includes(payment.timePeriod)) {
+    if(!['weekly', 'bi-weekly', 'semi-monthly', 'monthly', 'one-time'].includes(payment.timePeriod)) {
         return 'Invalid payment time period. We fixed it to the default.';
     }
 }

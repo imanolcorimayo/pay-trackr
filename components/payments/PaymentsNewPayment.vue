@@ -1,6 +1,6 @@
 <template>
-    <form @submit.prevent="addPayment()" class="mt-2">
-        <ModalStructure ref="mainModal">
+    <form @submit.prevent="addPayment()" class="mt-2 w-auto h-0">
+        <ModalStructure @onClose="() => emit('onClose')" ref="mainModal">
             <template #header>
                 <p class="text-[1.143rem] font-semibold">New Payment</p>
                 <span class="text-[0.857rem] text-stone-400">You can create a regular payment or a one time payment</span>
@@ -47,7 +47,7 @@
                                 <!-- 2 times in a month -->
                                 <option disabled value="semi-monthly">Semi Monthly</option>
                                 <option value="monthly" selected>Monthly</option>
-                                <option value="semi-monthly">One Time Pay</option>
+                                <option value="one-time">One Time Pay</option>
                             </select>
                         </div>
                     </div>
@@ -61,10 +61,13 @@
 </template>
 
 <script setup>
+const emit = defineEmits(["onClose"]);
 
 // ------ Define Useful Properties ----------
 const { $dayjs } = useNuxtApp()
 
+// ------ Define Pinia Vars --------
+const indexStore = useIndexStore();
 
 // ----- Define Vars ------
 const payment = ref({
@@ -108,6 +111,8 @@ async function addPayment() {
         useToast('error', validate)
         disableButton.value = false;
         sending.value = false;
+        closeModal();
+        return;
     }
 
     // save data in firebase
@@ -126,12 +131,14 @@ async function addPayment() {
         description: '',
         amount: null,
         dueDate: '',
+        category: 'other',
         timePeriod: 'monthly'
     }
 
     disableButton.value = false;
     sending.value = false;
     useToast('success', 'Payment saved successfully. Click to go home.', { onClick: "goHome", autoClose: 2000 })
+    closeModal();
 }
 // Calendar methods
 function showPicker() {

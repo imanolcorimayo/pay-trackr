@@ -11,6 +11,7 @@
     "postinstall": "nuxt prepare"
   },
   "devDependencies": {
+    "@iconify/json": "^2.2.208",
     "@samk-dev/nuxt-vcalendar": "^1.0.2",
     "@vite-pwa/nuxt": "^0.6.0",
     "@vueuse/nuxt": "^10.7.2",
@@ -19,6 +20,7 @@
     "nuxt": "^3.10.0",
     "postcss": "^8.4.33",
     "tailwindcss": "^3.4.1",
+    "unplugin-icons": "^0.19.0",
     "vue": "^3.4.15",
     "vue-router": "^4.2.5"
   },
