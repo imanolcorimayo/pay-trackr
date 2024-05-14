@@ -62,7 +62,6 @@
 const props = defineProps({
     paymentId: {
         required: false,
-        type: String,
         default: false,
     }
 })

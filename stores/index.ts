@@ -168,19 +168,28 @@ export const useIndexStore = defineStore('index', {
                 return false
             }
         },
-        async removePayment(id: string) {
+        async updateTrackerInHistory(tracker: Tracker) {
+            const trackerIds = this.$state.history.map(e => e.id);
+            // Search index in history using trackerId
+            const trackerIndex = trackerIds.indexOf(tracker.id);
+
+            // If tracker index is found, update in history array
+            if (trackerIndex !== -1) {
+                this.$state.history[trackerIndex] = tracker; 
+            }
+        },
+        async removePayment(paymentId: string) {
             const db = useFirestore();
             // If last payment the logic should change
             const isLastPayment = this.$state.payments.length == 1;
-            const isLastTrackerPayment = this.$state.tracker.payments.length == 1;
 
             try {
                 // Remove first from main payment object
-                await deleteDoc(doc(db, 'payment', id))
+                await deleteDoc(doc(db, 'payment', paymentId))
                 // Update Pinia
                 if (!isLastPayment) {
                     const paymentIds = this.$state.payments.map(e => e.id);
-                    const index = paymentIds.indexOf(id);
+                    const index = paymentIds.indexOf(paymentId);
                     if (index > -1) {
                         this.$state.payments.splice(index, 1);
                     }
@@ -188,39 +197,81 @@ export const useIndexStore = defineStore('index', {
                     this.$state.payments = [];
                 }
 
-                // Update payment tracker
-                const tracker = Object.assign({}, this.$state.tracker)
-
-                // Only update when there is more than one payment
-                if(!isLastTrackerPayment && this.$state.tracker.id) {
-                    const paymentsInTracker = tracker.payments.map(e => e.payment_id);
-                    const index = paymentsInTracker.indexOf(id);
-                    if (index > -1 && !tracker.payments[index].isPaid) {
-                        tracker.payments.splice(index, 1);
-                    }
-                    
-                    // Update tracker in firebase
-                    const trackerRef = doc(db, "tracker", this.$state.tracker.id);
-                    
-                    // Update tracker in Pinia
-                    this.$state.tracker = Object.assign({}, tracker) ;
-
-                    delete tracker.id;
-                    await updateDoc(trackerRef, tracker);
-
-                    return true;
-                } else if(!tracker.payments[0].isPaid && this.$state.tracker.id) {
-                    // Delete document directly
-                    await deleteDoc(doc(db, "tracker", this.$state.tracker.id))
-
-                    // Update tracker in Pinia
-                    this.$state.tracker = Object.assign({}, defaultObject.tracker);
-                    return true;
-                }
             } catch (error) {
                 console.error(error)
                 return false
             }
+
+            // Update tracker
+            return await this.removePayInTracker(paymentId);
+
+        },
+        async removePayInTracker(paymentId: string, trackerParam?: Tracker) {
+            const db = useFirestore();
+            const trackerToRemove = trackerParam ? trackerParam : this.$state.tracker;
+ 
+            try {
+                // Update payment tracker in firestore and pinia
+                // If last element, delete document
+                const isLastTrackerPayment = trackerToRemove.payments.length == 1;
+                if(
+                    isLastTrackerPayment && 
+                    !trackerToRemove.payments[0].isPaid && // Last payment should not be paid
+                    trackerToRemove.id
+                ) {
+                    // Delete document directly
+                    await deleteDoc(doc(db, "tracker", trackerToRemove.id))
+
+                    // Update history array
+                    this.updateTrackerInHistory(Object.assign({}, defaultObject.tracker));
+                    
+                    // Update tracker in Pinia only if not passed a specific tracker in parameters
+                    if(!trackerParam) {
+                        return this.$state.tracker = Object.assign({}, defaultObject.tracker);
+                    }
+                    return;
+                }
+
+                // Only update when there is more than one payment
+                const tracker = await removePaymentFromTracker(trackerToRemove, paymentId);
+
+                // Update tracker in Firestore. This is only possible if exists tracker id
+                if(tracker.id) {
+                    // Update tracker in firebase
+                    const trackerRef = doc(db, "tracker", tracker.id);
+                    
+                    // Update doc in Firestore
+                    const auxTracker = Object.assign({}, tracker);
+                    delete auxTracker.id;
+                    // @ts-ignore
+                    await updateDoc(trackerRef, auxTracker);
+                }
+
+                // Update history array
+                this.updateTrackerInHistory(tracker);
+
+                // Update tracker in Pinia only if not passed a specific tracker in parameters
+                if(!trackerParam) {
+                    return this.$state.tracker = Object.assign({}, tracker);
+                }
+                return;
+            } catch (error) {
+                console.error(error)
+                return false
+            }
+        },
+        async removePayInHistory(paymentId: string, trackerId: string) {
+
+            // Retrieve all tracker ids
+            const trackerIds = this.$state.history.map(e => e.id);
+            // Search index in history using trackerId
+            const trackerIndex = trackerIds.indexOf(trackerId);
+
+            // If tracker index is found, run the removePayInTracker function
+            if (trackerIndex !== -1) {
+                return await this.removePayInTracker(paymentId, this.$state.history[trackerIndex]); 
+            }
+            return false
         },
         async editPayment(payment: any, id: string) {
             const db = useFirestore()
@@ -410,6 +461,21 @@ function createPaymentTracker(payment: any):Payment {
         category: payment.category ? payment.category : 'other',
     }
 
+}
+
+async function removePaymentFromTracker(tracker: Tracker, paymentId: string):Promise<Tracker> {
+    // Get paymentIds array
+    const paymentIdsInTracker = tracker.payments.map(e => e.payment_id);
+    // Search index in payments using paymentId
+    const index = paymentIdsInTracker.indexOf(paymentId);
+
+    // Remove from array only if not paid
+    if (index !== -1 && !tracker.payments[index].isPaid) {
+        tracker.payments.splice(index, 1); 
+    }
+
+    // Return cleaned tracker
+    return tracker;
 }
 
 // Creates a random UUID
