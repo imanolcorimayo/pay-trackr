@@ -69,7 +69,6 @@ const newPayment = ref(null)
 
 // ----- Define Watchers ---------
 watch(tracker, (newValue) => {
-    console.log("SOME")
     isLoading.value = true; // This let us reload the full list and avoid rendering problems
     const auxPayments = newValue.payments ? orderPayments(newValue.payments) : [];
     payments.value = Object.assign([], auxPayments)

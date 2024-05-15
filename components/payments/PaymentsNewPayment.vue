@@ -113,7 +113,7 @@ function closeModal() {
 function updatePaymentObject(payId) {
     const filteredPayment = payments.value.filter(el => el.id == payId)
     if (!filteredPayment.length) {
-        console.log("No such document!");
+        ("No such document!");
         useToast("error", "This payment does not exists.")
         showError({
             statusCode: 404,

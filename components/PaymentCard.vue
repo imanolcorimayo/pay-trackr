@@ -26,12 +26,14 @@
                 <div v-if="!edit" class="m-1">
                     <button v-if="!isPaid" class="w-20 leading-none my-0 h-auto" @click="markAsPaid(true)" style="font-size: 0.714rem;">Mark Paid</button>
                     <button v-else class="w-20 leading-none my-0 h-auto hover:bg-red-300" @click="markAsPaid(false)" style="font-size: 0.714rem;">Unpaid</button>
+                    <button v-if="trackerId" class="w-20 leading-none my-0 h-auto bg-red-300" @click="removePay('history')" style="font-size: 0.714rem;">Remove History</button>
+                    <button v-else="trackerId" class="w-20 leading-none my-0 h-auto bg-red-300" @click="removePay('tracker')" style="font-size: 0.714rem;">Remove</button>
                 </div>
                 <div v-else  class="flex flex-col gap-[0.286rem]">
                     <button @click="$emit('editPayment', id)" class="w-16 leading-none" style="height: auto; font-size: 0.714rem;">
                         Edit
                     </button>
-                    <button class="w-16 leading-none my-0 h-auto bg-red-300 border-red-300" @click="removePay()" style="font-size: 0.714rem;">Remove</button>
+                    <button class="w-16 leading-none my-0 h-auto bg-red-300 border-red-300" @click="removePay('recurrent')" style="font-size: 0.714rem;">Remove</button>
                 </div>
             </div>
         </div>
@@ -134,7 +136,7 @@ async function markAsPaid(value) {
 
 }
 
-async function removePay() {
+async function removePay(type) {
     // Confirm dialogue
     const confirmed = await confirmDialogue.value.openDialog();
 
@@ -142,7 +144,26 @@ async function removePay() {
         return;
     }
 
-    const removed = indexStore.removePayment(props.id);
+    // We only change the function to execute, so we do a switch
+    let removed;
+    switch(type) {
+        case "recurrent":
+            removed = await indexStore.removePayment(props.id);
+            break;
+        case "tracker":
+            removed = await indexStore.removePayInTracker(props.id);
+            break;
+        case "history":
+            // Validate we have trackerId
+            if(!props.trackerId) {
+                return useToast("error", "Invalid function execution. Contact us to continue.")
+            }
+            removed = await indexStore.removePayInHistory(props.id, props.trackerId);
+            break;
+    }
+
+
+
     const toastMessage = {
         type: "success",
         message: "Payment removed successfully"

@@ -152,7 +152,7 @@ export const useIndexStore = defineStore('index', {
 
                     // Update in firebase
                     if (!this.$state.tracker.id) {
-                        console.log("Error: Tracker id does not exist");
+                        console.error("Error: Tracker id does not exist");
                         return false;
                     }
                     const trackerRef = doc(db, "tracker", this.$state.tracker.id);
@@ -227,9 +227,9 @@ export const useIndexStore = defineStore('index', {
                     
                     // Update tracker in Pinia only if not passed a specific tracker in parameters
                     if(!trackerParam) {
-                        return this.$state.tracker = Object.assign({}, defaultObject.tracker);
+                        this.$state.tracker = Object.assign({}, defaultObject.tracker);
                     }
-                    return;
+                    return true;
                 }
 
                 // Only update when there is more than one payment
@@ -250,11 +250,12 @@ export const useIndexStore = defineStore('index', {
                 // Update history array
                 this.updateTrackerInHistory(tracker);
 
-                // Update tracker in Pinia only if not passed a specific tracker in parameters
+                // Update current tracker in Pinia only if not passed a specific tracker in parameters
                 if(!trackerParam) {
-                    return this.$state.tracker = Object.assign({}, tracker);
+                    this.$state.tracker = Object.assign({}, tracker);
                 }
-                return;
+                return true; 
+
             } catch (error) {
                 console.error(error)
                 return false
@@ -292,7 +293,7 @@ export const useIndexStore = defineStore('index', {
 
                     // Update in firebase
                     if (!this.$state.tracker.id) {
-                        console.log("Error: Tracker id does not exist");
+                        console.error("Error: Tracker id does not exist");
                         return false;
                     }
                     const customTrackerForFirebase = Object.assign({}, this.$state.tracker);
