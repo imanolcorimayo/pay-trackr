@@ -1,5 +1,6 @@
 <template>
     <div>
+        <PaymentsManagePayment ref="editPayment" :paymentId="paymentId" :trackerId="trackerId" isHistoryOnly />
         <h2>Payments' History</h2>
         <div>
             <div v-for="(tracker, index) in formattedHistory" :key="index">
@@ -22,6 +23,7 @@
                                 :id="pay.payment_id"
                                 :isPaid="pay.isPaid"
                                 :trackerId="tracker.id"
+                                @editPayment="showEdit"
                             />
                         </div>
                     </Transition>
@@ -41,6 +43,10 @@ const { $dayjs } = useNuxtApp();
 // ----- Define Vars -------------
 const show = ref({});
 const formattedHistory = ref([]);
+const paymentId = ref(false)
+const trackerId = ref(false)
+// Refs
+const editPayment = ref(null);
 
 // ----- Define Pinia Vars ----------
 const indexStore = useIndexStore();
@@ -87,6 +93,19 @@ function processHistory() {
 }
 function toggleShow(id) {
     show.value[id] = !show.value[id];
+}
+function showEdit(payId, trackrId = false) {
+    if(!trackrId) {
+        useToast("error", "Something went wrong. Contact us for more details.")
+        return;
+    }
+
+    // Save id that will passed to the edit modal component
+    paymentId.value = payId; 
+    trackerId.value = trackrId; 
+
+    // Open the modal
+    editPayment.value.showModal();
 }
 
 useHead({

@@ -1,24 +1,8 @@
 <template>
     <div>
-        <PaymentsNewPayment ref="newPayment" @onClose="() => showAddButton = true"/>
+        <PaymentsNewPayment/>
+        <PaymentsManagePayment ref="editPayment" :paymentId="paymentId" isTrackerOnly />
         <h2>Payments this month</h2>
-        <div class="fixed bottom-0 right-0 w-full" v-if="showAddButton">
-            <div class="max-w-[57.143rem] m-auto flex justify-end p-[1.429rem]">
-                <div class="
-                    flex flex-col gap-[0.143rem] items-center
-                    ">
-                    <button 
-                        @click="() => {showAddButton = false;newPayment.showModal()}" 
-                        class="
-                            flex justify-center items-center rounded-full w-[3.143rem] h-[3.143rem]
-                            transition ease-in-out delay-50 hover:-translate-y-1 hover:scale-110 duration-150 
-                        ">
-                        <MdiPlus class="text-[1.428rem] leading-[1.714rem]"/>
-                    </button>
-                    <span class="text-[0.714rem] font-semibold capitalize">new pay</span>
-                </div>
-            </div>
-        </div>
         <div class="p-3 px-0 sm:px-3" v-if="!isLoading">
             <PaymentCard 
                 v-for="(payment, index) in payments" :key="index"
@@ -28,6 +12,7 @@
                 :dueDate="payment.dueDate"
                 :id="payment.payment_id"
                 :isPaid="payment.isPaid"
+                @editPayment="showEdit"
             />
         </div>
         <div v-else class="flex justify-center m-10 p-10">
@@ -38,8 +23,6 @@
 </template>
 
 <script setup>
-import MdiPlus from '~icons/mdi/plus';
-
 definePageMeta({
     middleware: ['auth']
 })
@@ -48,7 +31,6 @@ definePageMeta({
 // the subscription.
 const isLoading = ref(true)
 const payments = ref([])
-const showAddButton = ref(true);
 const { $dayjs } = useNuxtApp();
 
 
@@ -62,10 +44,18 @@ payments.value = tracker && tracker.value.payments ? orderPayments(tracker.value
 isLoading.value = false
 
 // ----- Define Vars -------
+const paymentId = ref(false)
 // Refs
-const newPayment = ref(null)
+const editPayment = ref(null);
 
 // ----- Define Methods ---------
+function showEdit(payId) {
+    // Save id that will passed to the edit modal component
+    paymentId.value = payId; 
+
+    // Open the modal
+    editPayment.value.showModal();
+}
 
 // ----- Define Watchers ---------
 watch(tracker, (newValue) => {

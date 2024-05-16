@@ -1,18 +1,19 @@
 <template>
     <div>
         <h2>Select to edit</h2>
-        <PaymentsNewPayment ref="editPayment" :paymentId="paymentId" />
+        <PaymentsNewPayment/>
+        <PaymentsManagePayment ref="editPayment" :paymentId="paymentId" />
         <div class="p-3 sm:px-0" v-if="!isLoading">
-                <PaymentCard 
-                    v-for="(payment, index) in payments" :key="index"
-                    :amount="payment.amount" 
-                    :description="payment.description" 
-                    :title="payment.title" 
-                    :dueDate="payment.dueDate"
-                    :id="payment.id"
-                    edit
-                    @editPayment="showEdit"
-                />
+            <PaymentCard 
+                v-for="(payment, index) in payments" :key="index"
+                :amount="payment.amount" 
+                :description="payment.description" 
+                :title="payment.title" 
+                :dueDate="payment.dueDate"
+                :id="payment.id"
+                edit
+                @editPayment="showEdit"
+            />
         </div>
         <div v-else class="flex justify-center m-10 p-10">
             <Loader size="10"/>

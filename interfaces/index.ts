@@ -7,6 +7,7 @@ interface Payment {
     payment_id: string;
     title: string;
     category: string;
+    timePeriod: string;
     id?: string|number;
 }
 interface PaymentList extends Array<Payment>{}

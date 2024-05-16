@@ -28,6 +28,8 @@
                     <button v-else class="w-20 leading-none my-0 h-auto hover:bg-red-300" @click="markAsPaid(false)" style="font-size: 0.714rem;">Unpaid</button>
                     <button v-if="trackerId" class="w-20 leading-none my-0 h-auto bg-red-300" @click="removePay('history')" style="font-size: 0.714rem;">Remove History</button>
                     <button v-else="trackerId" class="w-20 leading-none my-0 h-auto bg-red-300" @click="removePay('tracker')" style="font-size: 0.714rem;">Remove</button>
+                    <button v-if="trackerId" class="w-20 leading-none my-0 h-auto" @click="$emit('editPayment', id, trackerId)" style="font-size: 0.714rem;">Edit History</button>
+                    <button v-else="trackerId" class="w-20 leading-none my-0 h-auto" @click="$emit('editPayment', id)" style="font-size: 0.714rem;">Edit</button>
                 </div>
                 <div v-else  class="flex flex-col gap-[0.286rem]">
                     <button @click="$emit('editPayment', id)" class="w-16 leading-none" style="height: auto; font-size: 0.714rem;">
