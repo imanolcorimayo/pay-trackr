@@ -1,7 +1,8 @@
 <template>
     <ModalStructure @onClose="() => emit('onClose')" ref="mainModal">
         <template #header>
-            <p class="text-[1.143rem] font-semibold">New Payment</p>
+            <p class="text-[1.143rem] font-semibold" v-if="!isEdit">New Payment</p>
+            <p class="text-[1.143rem] font-semibold" v-else>Edit Payment</p>
             <span class="text-[0.857rem] text-stone-400">You can create a regular payment or a one time payment</span>
         </template>
         <template #default>
@@ -9,36 +10,36 @@
                 <div class="flex flex-col gap-[1.714rem] w-full">
                     <div class="w-full flex flex-col relative">
                         <label class="absolute top-[-0.4rem] font-semibold text-[0.857rem] leading-[1rem] bg-[--secondary-bg-color] ml-[0.571rem] px-[0.286rem]">Payment title *</label>
-                        <input v-model="payment.title" required name="title" autocomplete="off" />
+                        <input class="form-input" v-model="payment.title" required name="title" autocomplete="off" />
                     </div>
                     <div class="w-full flex flex-col relative">
                         <label class="absolute top-[-0.4rem] font-semibold text-[0.857rem] leading-[1rem] bg-[--secondary-bg-color] ml-[0.571rem] px-[0.286rem]">Description</label>
-                        <textarea v-model="payment.description" name="description" autocomplete="off" class="min-h-[7rem] pt-4" />
+                        <textarea v-model="payment.description" name="description" autocomplete="off" class="min-h-[7rem] pt-4 form-input" />
                     </div>
 
                     <div class="grid grid-cols-2 gap-y-[1.714rem] gap-x-[0.571rem] lg:gap-x-[1.714rem]">
                         <div class="w-full flex flex-col relative">
                             <label class="absolute top-[-0.4rem] font-semibold text-[0.857rem] leading-[1rem] bg-[--secondary-bg-color] ml-[0.571rem] px-[0.286rem]">Amount *</label>
-                            <input v-model="payment.amount" type="number" step="0.01" min="0" name="amount" placeholder="0.00" required
+                            <input class="form-input" v-model="payment.amount" type="number" step="0.01" min="0" name="amount" placeholder="0.00" required
                                 autocomplete="off">
                         </div>
                         <div class="w-full flex flex-col relative">
                             <label class="absolute top-[-0.4rem] font-semibold text-[0.857rem] leading-[1rem] bg-[--secondary-bg-color] ml-[0.571rem] px-[0.286rem]">Category *</label>
-                            <input v-model="payment.category" name="category" required autocomplete="off" class="capitalize" />
+                            <input v-model="payment.category" name="category" required autocomplete="off" class="capitalize form-input" />
                         </div>
                         <ClientOnly>
                             <div class="w-full flex flex-col relative">
                                 <label class="absolute top-[-0.4rem] font-semibold text-[0.857rem] leading-[1rem] bg-[--secondary-bg-color] ml-[0.571rem] px-[0.286rem]">Next Due Date *</label>
-                                <input id="valid-until" name="dueDate" placeholder="mm/dd/yyyy" autocomplete="off"
+                                <input class="form-input" id="valid-until" name="dueDate" placeholder="mm/dd/yyyy" autocomplete="off"
                                     v-model="payment.dueDate" required @click="showPicker" />
                                 <div v-if="pickerVisible" ref="picker" class="absolute w-full bottom-0">
-                                    <VDatePicker expanded v-model="date" />
+                                    <VDatePicker class="picker" expanded v-model="date" />
                                 </div>
                             </div>
                         </ClientOnly>
                         <div class="w-full flex flex-col relative">
                             <label class="absolute top-[-0.4rem] font-semibold text-[0.857rem] leading-[1rem] bg-[--secondary-bg-color] ml-[0.571rem] px-[0.286rem]">Payment Time Period *</label>
-                            <select v-model="payment.timePeriod" name="period" id="time-period" class="p-2.5">
+                            <select v-model="payment.timePeriod" name="period" id="time-period" class="p-2.5 form-input">
                                 <option disabled value="weekly">Weekly</option>
                                 <!-- Every two weeks -->
                                 <option disabled value="bi-weekly">Bi-Weekly</option>
@@ -53,7 +54,7 @@
             </form>
         </template>
         <template #footer>
-            <input :disabled="disableButton" form="payment-form" type="submit" :value="(!paymentId ? 'Add Payment' : 'Edit Payment')">
+            <input class="btn btn-primary" :disabled="disableButton" form="payment-form" type="submit" :value="(!paymentId ? 'Add Payment' : 'Edit Payment')">
         </template>
     </ModalStructure>
 </template>
@@ -259,6 +260,6 @@ defineExpose({showModal, closeModal})
 
 </script>
 
-<style>
+<style scoped>
 
 </style>

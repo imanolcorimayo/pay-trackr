@@ -1,13 +1,19 @@
 <template>
     <div class="container">
-        <form v-if="!sending" @submit.prevent="sendContactUsMessage()" class="mt-2">
-            <label>Full Name *</label>
-            <input disabled placeholder="Your full name" v-model="contactUs.fullName" required name="title" autocomplete="off" />
-            <label>Email *</label>
-            <input disabled placeholder="Your email" type="email" v-model="contactUs.email" required name="title" autocomplete="off" />
-            <label>Message *</label>
-            <textarea required v-model="contactUs.message" name="message" autocomplete="off" class="min-h-20" />
-            <input :disabled="disableButton" type="submit" value="Submit">
+        <form v-if="!sending" @submit.prevent="sendContactUsMessage()" class="mt-2 flex flex-col gap-[1rem]">
+            <div class="flex flex-col gap-[0.571rem]">
+                <label>Full Name *</label>
+                <input class="form-input" disabled placeholder="Your full name" v-model="contactUs.fullName" required name="title" autocomplete="off" />
+            </div>
+            <div class="flex flex-col gap-[0.571rem]">
+                <label>Email *</label>
+                <input class="form-input" disabled placeholder="Your email" type="email" v-model="contactUs.email" required name="title" autocomplete="off" />
+            </div>
+            <div class="flex flex-col gap-[0.571rem]">
+                <label>Message *</label>
+                <textarea required v-model="contactUs.message" name="message" autocomplete="off" class="min-h-20 pt-4 form-input" />
+            </div>
+            <input class="btn btn-primary" :disabled="disableButton" type="submit" value="Submit">
         </form>
         <div v-else class="flex justify-center m-10 p-10">
             <Loader size="10" />

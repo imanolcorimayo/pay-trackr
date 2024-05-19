@@ -9,6 +9,8 @@
                     <button 
                         @click="() => {showAddButton = false; newPayment.showModal()}" 
                         class="
+                            bg-[--primary-bg-color]
+                            text-[--secondary-bg-color]
                             flex justify-center items-center rounded-full w-[3.143rem] h-[3.143rem]
                             transition ease-in-out delay-50 hover:-translate-y-1 hover:scale-110 duration-150 
                         ">

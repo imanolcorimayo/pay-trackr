@@ -10,9 +10,7 @@
                         <span class="w-32 flex-initial text-start">{{ tracker.month }} {{ tracker.year }}</span>
                         <div class="w-full border-b-2 border-solid border-white border-opacity-35"></div>
                     </button>
-                    <button @click="newPayInHistory(tracker.id)" class="
-                        flex flex-col justify-center items-center text-[0.714rem] font-semibold capitalize text-nowrap h-auto
-                    ">
+                    <button @click="newPayInHistory(tracker.id)" class="flex flex-col justify-center items-center text-[0.714rem] font-semibold capitalize text-nowrap h-auto btn">
                         Add new pay
                     </button>
                 </div>

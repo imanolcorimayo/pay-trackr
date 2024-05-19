@@ -2,14 +2,14 @@
   <div>
     <div v-if="!loading" class="container flex justify-center align-center flex-col" style="height:90vh">
       <div class="text-center mb-6">
-        <div class="block w-full flex justify-center align-center mb-16">
+        <div class="w-full flex justify-center align-center mb-16">
           <img class="no-flex" src="/img/logo.png" alt="Logo Created With my.logomakr.com" width="250" height="195">
         </div>
         <h1 class="mb-4">Welcome To Pay Tracker!</h1>
         <span>Join the community for free and manage your finance 😎</span>
       </div>
       <div class="text-center">
-        <button class="w-full max-w-80" @click="googleSignIn">
+        <button class="w-full max-w-80 btn btn-primary" @click="googleSignIn">
           <img src="/img/google_logo.png" width="25" height="25" class="inline mx-2" alt="Google Logo">
           Google Sign In
         </button>

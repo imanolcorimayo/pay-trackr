@@ -2,7 +2,7 @@
     <div>
         <h2>Select to edit</h2>
         <PaymentsNewPayment/>
-        <PaymentsManagePayment ref="editPayment" :paymentId="paymentId" />
+        <PaymentsManagePayment ref="editPayment" :paymentId="paymentId" isEdit />
         <div class="p-3 sm:px-0" v-if="!isLoading">
             <PaymentCard 
                 v-for="(payment, index) in payments" :key="index"

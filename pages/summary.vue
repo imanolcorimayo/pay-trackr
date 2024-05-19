@@ -3,7 +3,7 @@
         <h2>Monthly Totals</h2>
         <canvas id="monthlyTotals"></canvas>
         <h2>Payments distribution for 
-        <select @change="event => createMonthSplit(event)">
+        <select class="form-input" @change="event => createMonthSplit(event)">
             <option :value="month.id" v-for="(month, idx) in monthsToSelect" :key="idx">{{ month.date }}</option>
         </select></h2>
         <canvas v-show="!pieIsLoading" class="m-auto w-full" style="max-width: 30rem; max-height: 30rem;" id="pieChart"></canvas>

@@ -5,7 +5,7 @@
             <span class="subtitle block mb-8">Take control of your money with our beautifully designed platform. Track
                 your spending, set budgets, and reach your financial goals.</span>
             <NuxtLink to="/welcome?redirect=/"
-                class="m-2 btn inline-block w-28 hover:bg-blue-700 rounded-md font-semibold"
+                class="m-2 inline-block w-28 hover:bg-blue-700 rounded-md font-semibold"
                 style="background-color: var(--primary-bg-color); color: var(--secondary-bg-color)">Get Started
             </NuxtLink>
             <NuxtLink to="/faq"
@@ -65,7 +65,7 @@
                             </h2>
                         </div>
                         <NuxtLink 
-                            class="m-auto m-2 btn inline-block w-28 hover:bg-blue-700 rounded-md font-semibold"
+                            class="m-auto my-2 inline-block w-28 hover:bg-blue-700 rounded-md font-semibold"
                             style="background-color: var(--primary-bg-color); color: var(--secondary-bg-color)"
                             to="/welcome?redirect=/"
                         >
@@ -78,7 +78,7 @@
                         <p class="mx-auto max-w-[700px] text-gray-500 md:text-xl/relaxed dark:text-gray-400">
                             Our fully managed infrastructure is built with security in mind. With a global edge network service, we ensure your information is fortified against potential threats.
                         </p>
-                        <NuxtLink class="m-auto landing-button m-2 w-28 bg-transparent text-white font-medium border hover:border-transparent rounded-md"
+                        <NuxtLink class="m-auto landing-button my-2 w-28 bg-transparent text-white font-medium border hover:border-transparent rounded-md"
                             to="/faq" >
                             Learn more
                         </NuxtLink>

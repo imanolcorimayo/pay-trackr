@@ -11,7 +11,7 @@
                 <div>
                     <slot></slot>
                 </div>
-                <div class="flex flex-col justify-end gap-[0.517rem] footer mb-6 lg:mb-[unset] w-full md:max-w-[15rem] m-auto">
+                <div class="flex flex-col justify-end gap-[0.571rem] footer mb-6 lg:mb-[unset] w-full md:max-w-[15rem] m-auto">
                     <slot name="footer">
                     </slot>
                 </div>
