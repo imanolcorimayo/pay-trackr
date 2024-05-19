@@ -2,7 +2,7 @@
     <div v-if="!isLoading" 
         class="
             flex py-2 items-center card-container 
-            transition ease-in-out hover:-translate-y-1 hover:scale-[1.01] duration-150
+            transition ease-in-out duration-150 hover:-translate-y-1 hover:scale-[1.01]
         ">
         <div class="basis-1/6 flex items-center justify-start">
             <div 
@@ -16,26 +16,84 @@
                 <span>{{weekDay}}</span>
             </div>
         </div>
-        <div class="flex basis-full items-center border-b pb-2 self-end border-opacity-35 border-white">
-            <div class="basis-1/4 font-bold" style="min-width: 95px;">{{ formatPrice(amount) }}</div>
-            <div class="basis-full flex flex-col">
+        <div class="grid grid-cols-6 gap-y-3 items-center border-b pb-2 self-end border-opacity-35 border-white w-full">
+            <div class="col-start-1 col-end-2 font-bold" style="min-width: 95px;">{{ formatPrice(amount) }}</div>
+            <div class="col-start-3 col-end-6 md:col-start-3 md:col-end-5 flex flex-col">
                 <div class="font-bold text-sm">{{ title }}</div>
                 <div class="text-sm">{{ description }}</div>
             </div>
-            <div class="hover-show">
-                <div v-if="!edit" class="m-1">
-                    <button v-if="!isPaid" class="btn w-20 leading-none my-0 h-auto" @click="markAsPaid(true)" style="font-size: 0.714rem;">Mark Paid</button>
-                    <button v-else class="btn w-20 leading-none my-0 h-auto hover:bg-red-300" @click="markAsPaid(false)" style="font-size: 0.714rem;">Unpaid</button>
-                    <button v-if="trackerId" class="btn w-20 leading-none my-0 h-auto bg-red-300" @click="removePay('history')" style="font-size: 0.714rem;">Remove History</button>
-                    <button v-else="trackerId" class="btn w-20 leading-none my-0 h-auto bg-red-300" @click="removePay('tracker')" style="font-size: 0.714rem;">Remove</button>
-                    <button v-if="trackerId" class="btn w-20 leading-none my-0 h-auto" @click="$emit('editPayment', id, trackerId)" style="font-size: 0.714rem;">Edit History</button>
-                    <button v-else="trackerId" class="btn w-20 leading-none my-0 h-auto" @click="$emit('editPayment', id)" style="font-size: 0.714rem;">Edit</button>
-                </div>
-                <div v-else  class="flex flex-col gap-[0.286rem]">
-                    <button @click="$emit('editPayment', id)" class="btn w-16 leading-none" style="height: auto; font-size: 0.714rem;">
-                        Edit
+            <div class="col-start-1 md:col-start-6 col-end-6 flex justify-center">
+                <div v-if="!edit" class="flex gap-[0.571rem]">
+                    <button 
+                        v-if="!isPaid" 
+                        class="transition ease-in-out duration-150 flex justify-center items-center border-[1.5px] border-opacity-30 border-white 
+                            rounded-[0.4rem] h-[2.423rem] w-[2.423rem]
+                            hover:bg-green-600" 
+                        @click="markAsPaid(true)" 
+                    >
+                        <IcRoundCheck class="text-[1rem]"/>
                     </button>
-                    <button class="btn w-16 leading-none my-0 h-auto bg-red-300 border-red-300" @click="removePay('recurrent')" style="font-size: 0.714rem;">Remove</button>
+                    <button v-else class="
+                        transition ease-in-out duration-150 flex justify-center items-center border-[1.5px] border-opacity-30 border-white 
+                        rounded-[0.4rem] h-[2.423rem] w-[2.423rem]
+                        hover:bg-red-400
+                        " @click="markAsPaid(false)">
+                        <MdiRemove class="text-[1rem]"/>
+                    </button>
+                    <button 
+                        v-if="trackerId"
+                        class="transition ease-in-out duration-150 flex justify-center items-center border-[1.5px] border-opacity-30 border-white 
+                            rounded-[0.4rem] h-[2.423rem] w-[2.423rem]
+                            hover:bg-red-400" 
+                        @click="removePay('history')" 
+                    
+                    >
+                        <PhTrashLight class="text-[1rem]"/>
+                    </button>
+                    <button 
+                        v-else="trackerId" 
+                        class="transition ease-in-out duration-150 flex justify-center items-center border-[1.5px] border-opacity-30 border-white 
+                            rounded-[0.4rem] h-[2.423rem] w-[2.423rem]
+                            hover:bg-red-400" 
+                        @click="removePay('tracker')" 
+                    >
+                        <PhTrashLight class="text-[1rem]"/>
+                    </button>
+                    <button 
+                        v-if="trackerId" 
+                        class="transition ease-in-out duration-150 flex justify-center items-center border-[1.5px] border-opacity-30 border-white 
+                            rounded-[0.4rem] h-[2.423rem] w-[2.423rem]
+                            hover:bg-gray-500" 
+                        @click="$emit('editPayment', id, trackerId)">
+                        <MaterialSymbolsLightEditSharp class="text-[1rem]"/>
+                    </button>
+                    <button 
+                        v-else="trackerId" 
+                        class="transition ease-in-out duration-150 flex justify-center items-center border-[1.5px] border-opacity-30 border-white 
+                            rounded-[0.4rem] h-[2.423rem] w-[2.423rem]
+                            hover:bg-gray-500" 
+                        @click="$emit('editPayment', id)"
+                    >
+                        <MaterialSymbolsLightEditSharp class="text-[1rem]"/>
+                    </button>
+                </div>
+                <div v-else  class="flex gap-[0.571rem]">
+                    <button 
+                        @click="$emit('editPayment', id)" 
+                        class="transition ease-in-out duration-150 flex justify-center items-center border-[1.5px] border-opacity-30 border-white 
+                            rounded-[0.4rem] h-[2.423rem] w-[2.423rem]
+                            hover:bg-gray-500" 
+                        style="height: auto; font-size: 0.714rem;"
+                    >
+                        <MaterialSymbolsLightEditSharp class="text-[1rem]"/>
+                    </button>
+                    <button 
+                        class="transition ease-in-out duration-150 flex justify-center items-center border-[1.5px] border-opacity-30 border-white 
+                            rounded-[0.4rem] h-[2.423rem] w-[2.423rem]
+                            hover:bg-red-400" 
+                        @click="removePay('recurrent')">
+                        <PhTrashLight class="text-[1rem]"/>
+                    </button>
                 </div>
             </div>
         </div>
@@ -47,6 +105,10 @@
 </template>
 
 <script setup>
+import MaterialSymbolsLightEditSharp from '~icons/material-symbols-light/edit-sharp';
+import IcRoundCheck from '~icons/ic/round-check';
+import MdiRemove from '~icons/mdi/remove';
+import PhTrashLight from '~icons/ph/trash-light';
 
 const props = defineProps({
     description: {
@@ -177,15 +239,3 @@ async function removePay(type) {
     useToast(toastMessage.type, toastMessage.message);
 }
 </script>
-
-<style>
-.hover-show {
-    display: none;
-    opacity: 0;
-}
-.card-container:hover .hover-show {
-    display: block;
-    opacity: 1;
-    transition: all .3 ease;
-}
-</style>
