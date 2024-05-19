@@ -1,24 +1,28 @@
 <template>
     <div v-if="!isLoading" 
-        class="
-            flex py-2 items-center card-container 
+        class="flex py-2 items-start md:items-center card-container 
             transition ease-in-out duration-150 hover:-translate-y-1 hover:scale-[1.01]
+            border-b border-opacity-35 border-white md:border-none gap-2
         ">
-        <div class="basis-1/6 flex items-center justify-start">
+        <div class="
+            basis-1/6 flex items-center justify-center h-[3rem] w-[3rem]
+        ">
             <div 
-                class="leading-tight mb-1 py-1 flex w-12 me-2 bg-opacity-15 flex-col items-center rounded-lg"
+                class="flex flex-col justify-center items-center gap-[0.286rem] h-full leading-tight w-12 bg-opacity-15 rounded-lg"
                 :class="{
                     'bg-green-500': isPaid && !edit, 'bg-opacity-70': (isPaid || delayed) && !edit ,
                     'bg-rose-500': !isPaid && delayed && !edit, 'bg-white': edit || (!isPaid && !delayed)
                 }"
             >
                 <span class="text-lg font-bold leading-none">{{day}}</span>
-                <span>{{weekDay}}</span>
+                <span class="leading-none">{{weekDay}}</span>
             </div>
         </div>
-        <div class="grid grid-cols-6 gap-y-3 items-center border-b pb-2 self-end border-opacity-35 border-white w-full">
-            <div class="col-start-1 col-end-2 font-bold" style="min-width: 95px;">{{ formatPrice(amount) }}</div>
-            <div class="col-start-3 col-end-6 md:col-start-3 md:col-end-5 flex flex-col">
+        <div class="
+            grid grid-cols-6 gap-y-3 items-center pb-2 self-end 
+            md:border-b md:border-opacity-35 md:border-white w-full">
+            <div class="col-start-1 col-end-2 flex items-center font-bold min-h-[3rem]" style="min-width: 95px;">{{ formatPrice(amount) }}</div>
+            <div class="col-start-3 col-end-6 md:col-start-3 md:col-end-5 flex flex-col justify-center min-h-[3rem]">
                 <div class="font-bold text-sm">{{ title }}</div>
                 <div class="text-sm">{{ description }}</div>
             </div>
