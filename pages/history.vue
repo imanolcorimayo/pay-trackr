@@ -4,11 +4,16 @@
         <h2>Payments' History</h2>
         <div>
             <div v-for="(tracker, index) in formattedHistory" :key="index">
-                <div class="hover-expand">
+                <div class="hover-expand flex gap-[0.815rem] items-center">
                     <button @click="toggleShow(tracker.id)"
                         class="px-0 text-xl no-button my-0 mt-2 flex items-center justify-between w-full">
                         <span class="w-32 flex-initial text-start">{{ tracker.month }} {{ tracker.year }}</span>
                         <div class="w-full border-b-2 border-solid border-white border-opacity-35"></div>
+                    </button>
+                    <button @click="newPayInHistory(tracker.id)" class="
+                        flex flex-col justify-center items-center text-[0.714rem] font-semibold capitalize text-nowrap h-auto
+                    ">
+                        Add new pay
                     </button>
                 </div>
                 <div class="overflow-hidden px-4">
@@ -34,6 +39,7 @@
 </template>
 
 <script setup>
+
 definePageMeta({
     middleware: ['auth']
 })
@@ -51,9 +57,12 @@ const editPayment = ref(null);
 // ----- Define Pinia Vars ----------
 const indexStore = useIndexStore();
 // First load history
+console.log("SOMETHING")
 await indexStore.loadHistory();
 // Retrieve values
 const { getHistory: history } = storeToRefs(indexStore);
+
+console.log(history.value)
 processHistory();
 
 // ----- Define Methods --------
@@ -106,6 +115,9 @@ function showEdit(payId, trackrId = false) {
 
     // Open the modal
     editPayment.value.showModal();
+}
+function newPayInHistory(trackerId) {
+    console.log("SOME", trackerId)
 }
 
 useHead({

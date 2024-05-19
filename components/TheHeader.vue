@@ -62,9 +62,10 @@
             <li class="border-opacity-35 border-white border-b mx-1"><NuxtLink to="/welcome">Sign In</NuxtLink></li>
           </ul>
         </div>
-    </div>
-  </nav>
-</header></template>
+      </div>
+    </nav>
+  </header>
+</template>
 
 <script setup>
 const auth = useFirebaseAuth()

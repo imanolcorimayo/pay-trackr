@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { collection, query, where, getDocs, addDoc, serverTimestamp, doc, updateDoc, deleteDoc, orderBy } from 'firebase/firestore';
+import { collection, query, where, getDocs, getDoc, addDoc, serverTimestamp, doc, updateDoc, deleteDoc, orderBy } from 'firebase/firestore';
 import type { User } from 'firebase/auth';
 
 
@@ -14,7 +14,8 @@ const defaultObject = {
         createdAt: ''
     },
     history: [],
-    fetched: false
+    fetched: false,
+    historyFetched: false,
 }
 export const useIndexStore = defineStore('index', {
     state: (): General => {
@@ -25,9 +26,13 @@ export const useIndexStore = defineStore('index', {
         getTracker: (state) => state.tracker,
         getHistory: (state) => state.history,
         isDataFetched: (state) => state.fetched,
+        isHistoryFetched: (state) => state.historyFetched,
     },
     actions: {
         async fetchData() {
+            if(this.isDataFetched) {
+                return;
+            }
             // Index store will manage all logic needed in the app to run
             // First check if there is a user
             const user = useCurrentUser();
@@ -93,9 +98,11 @@ export const useIndexStore = defineStore('index', {
                 payments: payments,
                 tracker: Object.assign({}, tracker),
                 history: [],
-                fetched: true
+                fetched: true,
+                historyFetched: false
             };
         },
+        // Create a record
         async addPayment(payment: any) {
             const user = useCurrentUser();
             const db = useFirestore();
@@ -105,7 +112,6 @@ export const useIndexStore = defineStore('index', {
             }
 
             try {
-
                 // ---- Step 1. Create recurrent payment if it's the case. 
                 // In case it's a one time payment, simulate an id
                 if(payment.timePeriod !== "one-time") {
@@ -116,68 +122,122 @@ export const useIndexStore = defineStore('index', {
                         user_id: user.value.uid
                     });
                     payment.id = newPayment.id;
+
+                    // Add to recurrent payments only if it's recurrent payment
+                    this.$state.payments = [
+                        ...this.$state.payments,
+                        payment
+                    ];
                 } else {
                     // Handle one time payments. Create an unique uuid
                     payment.id = uuidv4();
                 }
 
-                this.$state.payments = [
-                    ...this.$state.payments,
-                    payment
-                ];
-
                 // ---- Step 2. Update tracker object 
-                let tracker = Object.assign({}, this.$state.tracker) ;
-
-                if(tracker.id === "") {
-                    // Add this to the tracker object and update it if exist or create it
-                    tracker = createTrackerObject(user as Ref<User>, this.$state.payments);
-
-                    // Post tracker object on Firestore
-                    const newTracker = await addDoc(collection(db, "tracker"), tracker);
-                    // Add the id in case it's the first time the document is created
-                    tracker.id = newTracker.id
-                    // Update Pinia state
-                    this.$state.tracker = tracker;
-
-                    return true;
-                } 
-                // Update current tracker object
-                else {
-                    const paymentTracker = createPaymentTracker(payment);
-                    tracker.payments.push(paymentTracker)
-
-                    // Update Pinia state
-                    this.$state.tracker = Object.assign({}, tracker) ;
-
-                    // Update in firebase
-                    if (!this.$state.tracker.id) {
-                        console.error("Error: Tracker id does not exist");
-                        return false;
-                    }
-                    const trackerRef = doc(db, "tracker", this.$state.tracker.id);
-                    // Update doc using paymentRef
-                    delete tracker.id; // We remove the id as it's not needed on the firebase object
-                    await updateDoc(trackerRef, tracker);
-                }
-
-                return true;
+                return await this.addPaymentInTracker(payment);
 
             } catch (error) {
                 console.error(error)
                 return false
             }
         },
-        async updateTrackerInHistory(tracker: Tracker) {
-            const trackerIds = this.$state.history.map(e => e.id);
-            // Search index in history using trackerId
-            const trackerIndex = trackerIds.indexOf(tracker.id);
+        async addPaymentInTracker(payment: Payment, trackerParam?: Tracker) {
 
-            // If tracker index is found, update in history array
-            if (trackerIndex !== -1) {
-                this.$state.history[trackerIndex] = tracker; 
+            const user = useCurrentUser();
+            const db = useFirestore();
+
+            if (!user || !user.value) {
+                return 'Login first to be able to add payments';
+            }
+
+            // Select proper tracker to work with
+            let tracker = trackerParam ? trackerParam : Object.assign({}, this.$state.tracker);
+
+            try {
+    
+                console.log("Tracker", tracker)
+                console.log("trackerParam", trackerParam)
+                if(tracker.id === "" && !trackerParam) {
+                    // Add this to the tracker object and update it if exist or create it
+                    tracker = createTrackerObject(user as Ref<User>, [payment]);
+    
+                    // Post tracker object on Firestore
+                    const newTracker = await addDoc(collection(db, "tracker"), tracker);
+
+                    // Get tracker generated from Firestore in order to have the correct object
+                    // This solves a a createdAt format issue
+                    const querySnapshot = await getDoc(doc(db, "tracker", newTracker.id));
+
+                    // Create tracker object from snapshot
+                    const trackerCreated: Tracker = {
+                        id: querySnapshot.id,
+                        ...querySnapshot.data(),
+                    } as Tracker;
+
+                    tracker.id = newTracker.id
+                    // Update Tracker in Pinia state
+                    this.$state.tracker = trackerCreated; 
+                    // Update History in Pinia state
+                    this.$state.history.push(trackerCreated);
+                }
+                // Update current tracker object
+                else if(tracker.id !== "") {
+                    const paymentTracker = createPaymentTracker(payment);
+                    tracker.payments.push(paymentTracker)
+    
+                    // Update Pinia state only if it's not for history only
+                    if(!trackerParam) {
+                        this.$state.tracker = Object.assign({}, tracker) ;
+                    }
+    
+                    // Update in firebase. Double check the id exists to avoid typescript errors
+                    if (!tracker.id || typeof tracker.id !== "string") {
+                        console.error("Error: Tracker id does not exist or has an incorrect format");
+                        return false;
+                    }
+                    const trackerRef = doc(db, "tracker", tracker.id);
+                    const auxTracker = Object.assign({}, tracker);
+                    // Update doc using paymentRef
+                    delete auxTracker.id; // We remove the id as it's not needed on the firebase object
+                    // @ts-ignore
+                    await updateDoc(trackerRef, auxTracker);
+
+                    // Update History in Pinia
+                    const trackerIds = this.$state.history.map(e => e.id);
+                    // Search index in history using trackerId
+                    const trackerIndex = trackerIds.indexOf(tracker.id);
+
+                    // If tracker index is found, update in history array
+                    if (trackerIndex !== -1) {
+                        this.$state.history[trackerIndex] = tracker;
+                    }
+                }
+                return true;
+            } catch (error) {
+                console.error(error)
+                return false
             }
         },
+        async addPaymentInHistory(payment: any, trackerId: string) {
+            // Retrieve all tracker ids
+            const trackerIds = this.$state.history.map(e => e.id);
+            // Search index in history using trackerId
+            const trackerIndex = trackerIds.indexOf(trackerId);
+
+            // If tracker index is found, run the addPaymentInTracker function
+            if (trackerIndex !== -1) {
+                // Verify it's a one time payment
+                if(payment.timePeriod === "one-time") {
+                    // Handle one time payments. Create an unique uuid (This let us edit the payment later)
+                    payment.id = uuidv4();
+                    return await this.addPaymentInTracker(payment, this.$state.history[trackerIndex]); 
+                } else {
+                    // If it's not one time, then it's an error
+                    return "Error: When creating payment in history it must be one-time payment.";
+                }
+            }
+        },
+        // Remove a record
         async removePayment(paymentId: string) {
             const db = useFirestore();
             // If last payment the logic should change
@@ -223,7 +283,7 @@ export const useIndexStore = defineStore('index', {
                     await deleteDoc(doc(db, "tracker", trackerToRemove.id))
 
                     // Update history array
-                    this.updateTrackerInHistory(Object.assign({}, defaultObject.tracker));
+                    this.updateTrackerInHistory(trackerToRemove, true);
                     
                     // Update tracker in Pinia only if not passed a specific tracker in parameters
                     if(!trackerParam) {
@@ -273,6 +333,20 @@ export const useIndexStore = defineStore('index', {
                 return await this.removePayInTracker(paymentId, this.$state.history[trackerIndex]); 
             }
             return false
+        },
+        // Edit a record
+        updateTrackerInHistory(tracker: Tracker, removeElement = false) {
+            const trackerIds = this.$state.history.map(e => e.id);
+            // Search index in history using trackerId
+            const trackerIndex = trackerIds.indexOf(tracker.id);
+
+            // If tracker index is found, update in history array
+            if (trackerIndex !== -1 && !removeElement) {
+                this.$state.history[trackerIndex] = tracker; 
+            } else if(trackerIndex !== -1) {
+                // Remove the element directly when it was the last tracker payment
+                this.$state.history = this.$state.history.filter(el => el.id !== tracker.id); 
+            }
         },
         async editPayment(payment: any, paymentId: string) {
             const db = useFirestore()
@@ -423,7 +497,7 @@ export const useIndexStore = defineStore('index', {
         // History is all trackers from all time
         async loadHistory() {
             // If already loaded, return
-            if (this.$state.history.length) {
+            if (this.$state.history.length && this.isHistoryFetched) {
                 return;
             }
 
@@ -458,12 +532,13 @@ export const useIndexStore = defineStore('index', {
             }
 
             this.$state.history = trackerHistory;
+            this.$state.historyFetched = true;
         }
     }
 })
 
 
-function createTrackerObject(user:Ref<User>, payments: Array<any>):Tracker {
+function createTrackerObject(user:Ref<User>, payments: PaymentList):Tracker {
 
     const tracker: Tracker = {
         user_id: user.value.uid,

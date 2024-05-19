@@ -19,6 +19,7 @@ interface General {
     tracker: Tracker;
     history: TrackerList;
     fetched: Boolean;
+    historyFetched: Boolean;
 }
 
 interface Tracker {
