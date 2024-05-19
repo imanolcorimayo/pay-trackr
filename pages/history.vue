@@ -1,6 +1,6 @@
 <template>
     <div>
-        <PaymentsManagePayment ref="editPayment" :paymentId="paymentId" :trackerId="trackerId" isHistoryOnly />
+        <PaymentsManagePayment ref="editPayment" :paymentId="paymentId" :trackerId="trackerId" isHistoryOnly :isEdit="isEdit" />
         <h2>Payments' History</h2>
         <div>
             <div v-for="(tracker, index) in formattedHistory" :key="index">
@@ -51,18 +51,17 @@ const show = ref({});
 const formattedHistory = ref([]);
 const paymentId = ref(false)
 const trackerId = ref(false)
+const isEdit = ref(true);
 // Refs
 const editPayment = ref(null);
 
 // ----- Define Pinia Vars ----------
 const indexStore = useIndexStore();
 // First load history
-console.log("SOMETHING")
 await indexStore.loadHistory();
 // Retrieve values
 const { getHistory: history } = storeToRefs(indexStore);
 
-console.log(history.value)
 processHistory();
 
 // ----- Define Methods --------
@@ -109,16 +108,28 @@ function showEdit(payId, trackrId = false) {
         return;
     }
 
-    // Save id that will passed to the edit modal component
-    paymentId.value = payId; 
-    trackerId.value = trackrId; 
+    // Save id and extra info that will passed to the edit modal component
+    isEdit.value = true;
+    paymentId.value = payId;
+    trackerId.value = trackrId;
 
     // Open the modal
-    editPayment.value.showModal();
+    editPayment.value.showModal(payId, trackrId);
 }
-function newPayInHistory(trackerId) {
-    console.log("SOME", trackerId)
+function newPayInHistory(trackrId) {
+    
+    // Save id and extra info that will passed to the edit modal component
+    isEdit.value = false;
+    trackerId.value = trackrId;
+
+    // Open the modal
+    editPayment.value.showModal(false, false, false);
 }
+
+// ----- Define Watchers ----------
+watch(history, () => {
+    processHistory();
+}, {deep: true})
 
 useHead({
     title: 'Payments\' History - PayTrackr',

@@ -44,7 +44,7 @@
                                 <option disabled value="bi-weekly">Bi-Weekly</option>
                                 <!-- 2 times in a month -->
                                 <option disabled value="semi-monthly">Semi Monthly</option>
-                                <option value="monthly" selected>Monthly</option>
+                                <option :disabled="!isEdit && isHistoryOnly" value="monthly" selected>Monthly</option>
                                 <option value="one-time">One Time Pay</option>
                             </select>
                         </div>
@@ -78,6 +78,11 @@ const props = defineProps({
         default: false,
         type: Boolean
     },
+    isEdit: {
+        required: false,
+        default: false,
+        type: Boolean
+    },
 })
 const emit = defineEmits(["onClose"]);
 
@@ -94,7 +99,7 @@ const payment = ref({
     description: '',
     amount: null,
     dueDate: '',
-    timePeriod: 'monthly',
+    timePeriod: (!props.isEdit && props.isHistoryOnly) ? 'one-time' : 'monthly',
     category: 'other',
 })
 const pickerVisible = ref(false);
@@ -118,13 +123,29 @@ onClickOutside(picker, event => {
 })
 
 // ----- Define Methods ---------
-function showModal(type) {
+function showModal(payId = false, trackerId = false, isEdit = false) {
+    // Set default value if no payId has been set
+    if(!isEdit && props.isHistoryOnly && !payId) {
+        payment.value = {
+            title: "",
+            description: "",
+            amount: null,
+            dueDate: "",
+            timePeriod: "one-time",
+            category: "other",
+        };
+    }
+
+    // Update the payment object every time it is opened (only if payId exists)
+    payId && updatePaymentObject(payId ? payId : props.paymentId, trackerId ? trackerId : props.trackerId);
+
+    // Show modal
     mainModal.value.showModal();
 }
 function closeModal() {
     mainModal.value.closeModal();
 }
-function updatePaymentObject(payId) {
+function updatePaymentObject(payId, trackerId) {
 
     let filteredPayment;
     // Look for the payment in the specific place
@@ -132,7 +153,7 @@ function updatePaymentObject(payId) {
         // Get tracker
         const trackerIds = history.value.map(e => e.id);
         // Search index in history using trackerId
-        const trackerIndex = trackerIds.indexOf(props.trackerId);
+        const trackerIndex = trackerIds.indexOf(trackerId);
 
         // Check this to be on the safe side
         if(trackerIndex !== -1 && history.value[trackerIndex] && history.value[trackerIndex].payments?.length) {
@@ -145,8 +166,10 @@ function updatePaymentObject(payId) {
     } else {
         filteredPayment = payments.value.filter(el => el.id == payId)
     }
-    if (!filteredPayment.length) {
-        ("No such document!");
+
+    // Check if there is a payment
+    if (!filteredPayment || !filteredPayment.length) {
+        console.error("No such document!");
         useToast("error", "This payment does not exists.")
         closeModal();
         return;
@@ -156,8 +179,6 @@ function updatePaymentObject(payId) {
         if(!filteredPayment[0].category) {
             filteredPayment[0].category = "other"
         }
-
-        console.log(filteredPayment[0]);
 
         payment.value = Object.assign({}, filteredPayment[0]);
     }
@@ -180,7 +201,7 @@ async function addOrEditPayment() {
 
     // Save data in Firestore. If Payment id exists it's an editing process
     let result;
-    if(props.paymentId) {
+    if(props.isEdit) {
         // Analyze which function to execute
         if(props.isHistoryOnly) {
             // Edit only in history
@@ -193,10 +214,14 @@ async function addOrEditPayment() {
             result = await indexStore.editPayment(payment.value, props.paymentId);
         }
     } else {
-        result = await indexStore.addPayment(payment.value);
+        if(props.isHistoryOnly && props.trackerId) {
+            result = await indexStore.addPaymentInHistory(payment.value, props.trackerId);
+        } else {
+            result = await indexStore.addPayment(payment.value);
+        }
     }
-    if (!result) {
-        useToast('error', 'Something went wrong, please try again')
+    if (!result || typeof result == "string") {
+        useToast('error', typeof result == "string" ? result : "Something went wrong, please try again")
         // Un-Block add button
         sending.value = false;
         disableButton.value = false;
@@ -210,7 +235,7 @@ async function addOrEditPayment() {
         amount: null,
         dueDate: '',
         category: 'other',
-        timePeriod: 'monthly'
+        timePeriod: (!props.isEdit && props.isHistoryOnly) ? 'one-time' : 'monthly'
     }
 
     disableButton.value = false;
@@ -228,11 +253,6 @@ watch(date, (newVal) => {
     pickerVisible.value = false;
     payment.value.dueDate = $dayjs(newVal).format('MM/DD/YYYY')
 })
-watch(() => props.paymentId, (newVal => {
-    if(newVal) {
-        updatePaymentObject(newVal);
-    }
-}));
 
 // ----- Define Expose ---------
 defineExpose({showModal, closeModal})

@@ -81,6 +81,9 @@ export const useIndexStore = defineStore('index', {
                     id: doc.id,
                     ...doc.data(),
                 } as Tracker;
+
+                // Fix payments format when they don't contains the timePeriod
+                tracker.payments = tracker.payments.map(el => ({...el, timePeriod: (el.timePeriod ? el.timePeriod : "monthly")}))
             });
 
             // If no tacker but payments, then create trackers per this month per each payment
@@ -154,9 +157,6 @@ export const useIndexStore = defineStore('index', {
             let tracker = trackerParam ? trackerParam : Object.assign({}, this.$state.tracker);
 
             try {
-    
-                console.log("Tracker", tracker)
-                console.log("trackerParam", trackerParam)
                 if(tracker.id === "" && !trackerParam) {
                     // Add this to the tracker object and update it if exist or create it
                     tracker = createTrackerObject(user as Ref<User>, [payment]);
@@ -386,6 +386,8 @@ export const useIndexStore = defineStore('index', {
                         console.error("Error: Tracker id does not exist");
                         return false;
                     }
+
+                    // Create custom object to edit the id and send to Firestore
                     const customTrackerForFirebase = Object.assign({}, trackerToEdit);
                     delete customTrackerForFirebase.id;
                     const trackerRef = doc(db, "tracker", trackerToEdit.id);
@@ -397,7 +399,17 @@ export const useIndexStore = defineStore('index', {
 
                     // Only if there is no tracker param, update in Pinia -> current tracker
                     if(!trackerParam) {
-                        this.$state.tracker.payments[trackerPayIndex] = trackerPayment;
+                        this.$state.tracker = trackerToEdit;
+                    }
+
+                    // Update History in Pinia
+                    const trackerIds = this.$state.history.map(e => e.id);
+                    // Search index in history using trackerId
+                    const trackerIndex = trackerIds.indexOf(trackerToEdit.id);
+
+                    // If tracker index is found, update in history array
+                    if (trackerIndex !== -1) {
+                        this.$state.history[trackerIndex] = trackerToEdit;
                     }
                 }
 
@@ -516,10 +528,16 @@ export const useIndexStore = defineStore('index', {
             // Tracker history object 
             const trackerHistory:TrackerList = [];
             querySnapshot.forEach((doc) => {
-                trackerHistory.push({
+
+                const currentTracker = {
                     id: doc.id,
                     ...doc.data(),
-                } as Tracker);
+                } as Tracker;
+
+                // Fix payments format when they don't contains the timePeriod
+                currentTracker.payments = currentTracker.payments.map(el => ({...el, timePeriod: (el.timePeriod ? el.timePeriod : "monthly")}))
+
+                trackerHistory.push(currentTracker);
             });
 
             if (!trackerHistory.length) {
@@ -564,16 +582,15 @@ function createPaymentTracker(payment: any):Payment {
     
     // Send some data twice to save a log history
     return {
-        payment_id: payment.id,
+        payment_id: payment.id ? payment.id : payment.payment_id, // It could come from payments array or tracker.payments array
         dueDate: updatedDateString,
         isPaid: false,
         title: payment.title,
         description: payment.description,
         amount: payment.amount,
         category: payment.category ? payment.category : 'other',
-        timePeriod: payment.timePeriod,
+        timePeriod: payment.timePeriod ? payment.timePeriod : 'monthly',
     }
-
 }
 
 async function removePaymentFromTracker(tracker: Tracker, paymentId: string):Promise<Tracker> {

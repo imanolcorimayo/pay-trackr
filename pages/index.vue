@@ -1,7 +1,7 @@
 <template>
     <div>
         <PaymentsNewPayment/>
-        <PaymentsManagePayment ref="editPayment" :paymentId="paymentId" isTrackerOnly />
+        <PaymentsManagePayment ref="editPayment" :paymentId="paymentId" isTrackerOnly isEdit />
         <h2>Payments this month</h2>
         <div class="p-3 px-0 sm:px-3" v-if="!isLoading">
             <PaymentCard 
@@ -54,7 +54,7 @@ function showEdit(payId) {
     paymentId.value = payId; 
 
     // Open the modal
-    editPayment.value.showModal();
+    editPayment.value.showModal(payId);
 }
 
 // ----- Define Watchers ---------

@@ -38,12 +38,12 @@ const indexStore = useIndexStore();
 const { getPayments: payments } = storeToRefs(indexStore);
 
 // ----- Define Methods --------
-function showEdit(id) {
-    // Save id that will passed to the edit modal component
-    paymentId.value = id; 
+function showEdit(payId) {
+    // Save payId that will passed to the edit modal component
+    paymentId.value = payId; 
 
     // Open the modal
-    editPayment.value.showModal();
+    editPayment.value.showModal(payId);
 }
 
 // ----- Stop loader -----------
