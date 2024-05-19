@@ -185,11 +185,6 @@ export const useIndexStore = defineStore('index', {
                     const paymentTracker = createPaymentTracker(payment);
                     tracker.payments.push(paymentTracker)
     
-                    // Update Pinia state only if it's not for history only
-                    if(!trackerParam) {
-                        this.$state.tracker = Object.assign({}, tracker) ;
-                    }
-    
                     // Update in firebase. Double check the id exists to avoid typescript errors
                     if (!tracker.id || typeof tracker.id !== "string") {
                         console.error("Error: Tracker id does not exist or has an incorrect format");
@@ -201,6 +196,11 @@ export const useIndexStore = defineStore('index', {
                     delete auxTracker.id; // We remove the id as it's not needed on the firebase object
                     // @ts-ignore
                     await updateDoc(trackerRef, auxTracker);
+
+                    // Update Tracker Pinia state if it's not for history only
+                    if(!trackerParam) {
+                        this.$state.tracker = Object.assign({}, tracker) ;
+                    }
 
                     // Update History in Pinia
                     const trackerIds = this.$state.history.map(e => e.id);
@@ -375,7 +375,7 @@ export const useIndexStore = defineStore('index', {
 
             try {
                 
-                if(!trackerToEdit.payments[trackerPayIndex].isPaid) {
+                if(trackerToEdit.payments[trackerPayIndex] && !trackerToEdit.payments[trackerPayIndex].isPaid) {
                     const trackerPayment = createPaymentTracker(newPayment);
                     
                     // Update in the original object

@@ -54,7 +54,8 @@
             </form>
         </template>
         <template #footer>
-            <input class="btn btn-primary" :disabled="disableButton" form="payment-form" type="submit" :value="(!paymentId ? 'Add Payment' : 'Edit Payment')">
+            <div v-if="sending" class="btn btn-primary flex justify-center items-center"><Loader class="max-w-[2rem]"/></div>
+            <input v-else class="btn btn-primary" :disabled="disableButton" form="payment-form" type="submit" :value="(!paymentId ? 'Add Payment' : 'Edit Payment')">
         </template>
     </ModalStructure>
 </template>
