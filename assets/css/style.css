@@ -1,10 +1,18 @@
 :root {
     --primary-bg-color: #a0a4d9;
     --secondary-bg-color: #27292d;
+    --popper-theme-background-color: #333333;
+    --popper-theme-background-color-hover: #333333;
+    --popper-theme-text-color: #ffffff;
+    --popper-theme-border-width: 0px;
+    --popper-theme-border-style: solid;
+    --popper-theme-border-radius: 0.333rem;
+    --popper-theme-padding: 0.517rem;
+    --popper-theme-box-shadow: 0 0.333rem 1.667rem -0.333rem rgba(0, 0, 0, 0.25);
 }
 
 html {
-    font-size: 14px;
+    font-size: 18px;
 }
 
 body {
@@ -132,10 +140,14 @@ input[type=number] {
   display: none;
 }
 
-@media (max-width: 640px) {
+@media (max-width: 767px) {
     #__nuxt {
-        max-width: 600px;
-        padding-left: 7px;
-        padding-right: 7px;
+        max-width: 42.857rem;
+        padding-left: 0.5rem;
+        padding-right: 0.5rem;
     } 
+
+    html {
+        font-size: 16px;
+    }
 }

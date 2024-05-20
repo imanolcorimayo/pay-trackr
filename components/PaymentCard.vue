@@ -4,9 +4,7 @@
             transition ease-in-out duration-150 hover:-translate-y-1 hover:scale-[1.01]
             border-b border-opacity-35 border-white md:border-none gap-2
         ">
-        <div class="
-            basis-1/6 flex items-center justify-center h-[3rem] w-[3rem]
-        ">
+        <div class="basis-1/6 flex items-center justify-center h-[3rem] w-[3rem]">
             <div 
                 class="flex flex-col justify-center items-center gap-[0.286rem] h-full leading-tight w-12 bg-opacity-15 rounded-lg"
                 :class="{
@@ -27,77 +25,88 @@
                 <div class="text-sm">{{ description }}</div>
             </div>
             <div class="col-start-1 md:col-start-6 col-end-6 flex justify-center">
-                <div v-if="!edit" class="flex gap-[0.571rem]">
-                    <button 
-                        v-if="!isPaid" 
-                        class="transition ease-in-out duration-150 flex justify-center items-center border-[1.5px] border-opacity-30 border-white 
+                <div v-if="!edit" class="flex gap-[0.571rem]"> 
+                    <Popper hover content="Mark payment as paid" v-if="!isPaid">
+                        <button 
+                            class="transition ease-in-out duration-150 flex justify-center items-center border-[1.5px] border-opacity-30 border-white 
+                                rounded-[0.4rem] h-[2.423rem] w-[2.423rem]
+                                hover:bg-green-600" 
+                            @click="markAsPaid(true)" 
+                        >
+                            <IcRoundCheck class="text-[1rem]"/>
+                        </button>
+                    </Popper>
+                    <Popper hover content="Mark payment as paid" v-else>
+                        <button class="
+                            transition ease-in-out duration-150 flex justify-center items-center border-[1.5px] border-opacity-30 border-white 
                             rounded-[0.4rem] h-[2.423rem] w-[2.423rem]
-                            hover:bg-green-600" 
-                        @click="markAsPaid(true)" 
-                    >
-                        <IcRoundCheck class="text-[1rem]"/>
-                    </button>
-                    <button v-else class="
-                        transition ease-in-out duration-150 flex justify-center items-center border-[1.5px] border-opacity-30 border-white 
-                        rounded-[0.4rem] h-[2.423rem] w-[2.423rem]
-                        hover:bg-red-400
-                        " @click="markAsPaid(false)">
-                        <MdiRemove class="text-[1rem]"/>
-                    </button>
-                    <button 
-                        v-if="trackerId"
-                        class="transition ease-in-out duration-150 flex justify-center items-center border-[1.5px] border-opacity-30 border-white 
-                            rounded-[0.4rem] h-[2.423rem] w-[2.423rem]
-                            hover:bg-red-400" 
-                        @click="removePay('history')" 
-                    
-                    >
-                        <PhTrashLight class="text-[1rem]"/>
-                    </button>
-                    <button 
-                        v-else="trackerId" 
-                        class="transition ease-in-out duration-150 flex justify-center items-center border-[1.5px] border-opacity-30 border-white 
-                            rounded-[0.4rem] h-[2.423rem] w-[2.423rem]
-                            hover:bg-red-400" 
-                        @click="removePay('tracker')" 
-                    >
-                        <PhTrashLight class="text-[1rem]"/>
-                    </button>
-                    <button 
-                        v-if="trackerId" 
-                        class="transition ease-in-out duration-150 flex justify-center items-center border-[1.5px] border-opacity-30 border-white 
-                            rounded-[0.4rem] h-[2.423rem] w-[2.423rem]
-                            hover:bg-gray-500" 
-                        @click="$emit('editPayment', id, trackerId)">
-                        <MaterialSymbolsLightEditSharp class="text-[1rem]"/>
-                    </button>
-                    <button 
-                        v-else="trackerId" 
-                        class="transition ease-in-out duration-150 flex justify-center items-center border-[1.5px] border-opacity-30 border-white 
-                            rounded-[0.4rem] h-[2.423rem] w-[2.423rem]
-                            hover:bg-gray-500" 
-                        @click="$emit('editPayment', id)"
-                    >
-                        <MaterialSymbolsLightEditSharp class="text-[1rem]"/>
-                    </button>
+                            hover:bg-red-400
+                            " @click="markAsPaid(false)">
+                            <MdiRemove class="text-[1rem]"/>
+                        </button>
+                    </Popper>
+                    <Popper hover content="Delete payment (only from history)" v-if="trackerId">
+                        <button 
+                            class="transition ease-in-out duration-150 flex justify-center items-center border-[1.5px] border-opacity-30 border-white 
+                                rounded-[0.4rem] h-[2.423rem] w-[2.423rem]
+                                hover:bg-red-400" 
+                            @click="removePay('history')" 
+
+                        >
+                            <PhTrashLight class="text-[1rem]"/>
+                        </button>
+                    </Popper>                    
+                    <Popper hover content="Delete payment (only from tracker)" v-else=>
+                        <button  
+                            class="transition ease-in-out duration-150 flex justify-center items-center border-[1.5px] border-opacity-30 border-white 
+                                rounded-[0.4rem] h-[2.423rem] w-[2.423rem]
+                                hover:bg-red-400" 
+                            @click="removePay('tracker')" 
+                        >
+                            <PhTrashLight class="text-[1rem]"/>
+                        </button>
+                    </Popper> 
+                    <Popper hover content="Edit payment only in history" v-if="trackerId" >
+                        <button 
+                            class="transition ease-in-out duration-150 flex justify-center items-center border-[1.5px] border-opacity-30 border-white 
+                                rounded-[0.4rem] h-[2.423rem] w-[2.423rem]
+                                hover:bg-gray-500" 
+                            @click="$emit('editPayment', id, trackerId)">
+                            <MaterialSymbolsLightEditSharp class="text-[1rem]"/>
+                        </button>
+                    </Popper>
+                    <Popper hover content="Edit payment only in tracker" v-else>
+                        <button 
+                             
+                            class="transition ease-in-out duration-150 flex justify-center items-center border-[1.5px] border-opacity-30 border-white 
+                                rounded-[0.4rem] h-[2.423rem] w-[2.423rem]
+                                hover:bg-gray-500" 
+                            @click="$emit('editPayment', id)"
+                        >
+                            <MaterialSymbolsLightEditSharp class="text-[1rem]"/>
+                        </button>
+                    </Popper>
                 </div>
                 <div v-else  class="flex gap-[0.571rem]">
-                    <button 
-                        @click="$emit('editPayment', id)" 
-                        class="transition ease-in-out duration-150 flex justify-center items-center border-[1.5px] border-opacity-30 border-white 
-                            rounded-[0.4rem] h-[2.423rem] w-[2.423rem]
-                            hover:bg-gray-500" 
-                        style="height: auto; font-size: 0.714rem;"
-                    >
-                        <MaterialSymbolsLightEditSharp class="text-[1rem]"/>
-                    </button>
-                    <button 
-                        class="transition ease-in-out duration-150 flex justify-center items-center border-[1.5px] border-opacity-30 border-white 
-                            rounded-[0.4rem] h-[2.423rem] w-[2.423rem]
-                            hover:bg-red-400" 
-                        @click="removePay('recurrent')">
-                        <PhTrashLight class="text-[1rem]"/>
-                    </button>
+                    <Popper hover content="Edit tracker">
+                        <button 
+                            @click="$emit('editPayment', id)" 
+                            class="transition ease-in-out duration-150 flex justify-center items-center border-[1.5px] border-opacity-30 border-white 
+                                rounded-[0.4rem] h-[2.423rem] w-[2.423rem]
+                                hover:bg-gray-500" 
+                        >
+                            <MaterialSymbolsLightEditSharp class="text-[1rem]"/>
+                        </button>
+                    </Popper>
+                    <Popper hover content="Delete payment">
+                        <button 
+                            class="transition ease-in-out duration-150 flex justify-center items-center border-[1.5px] border-opacity-30 border-white 
+                                rounded-[0.4rem] h-[2.423rem] w-[2.423rem]
+                                hover:bg-red-400" 
+                            @click="removePay('recurrent')">
+                            <PhTrashLight class="text-[1rem]"/>
+                        </button>
+                    </Popper>
                 </div>
             </div>
         </div>
@@ -243,3 +252,10 @@ async function removePay(type) {
     useToast(toastMessage.type, toastMessage.message);
 }
 </script>
+
+<style scoped>
+
+:deep(.popper) {
+    font-size: 0.778rem;
+}
+</style>

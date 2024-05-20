@@ -34,6 +34,7 @@
     "firebase-functions": "^4.6.0",
     "nuxt-vuefire": "^1.0.1",
     "pinia": "^2.1.7",
+    "vue3-popper": "^1.5.0",
     "vue3-toastify": "^0.2.1",
     "vuefire": "^3.1.22"
   }

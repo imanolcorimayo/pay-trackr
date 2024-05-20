@@ -3,13 +3,13 @@
         <Transition>
             <div v-if="isVisible" class="bg-[#00000080] fixed z-50 bottom-0 left-0 w-full h-full flex justify-center items-center max-h-screen overflow-hidden">
                 <div ref="innerContainer" class="flex flex-col justify-between gap-[2.25rem] p-2 pt-6 lg:p-8 w-full absolute bottom-0 max-h-[90vh] min-h-[30vh] bg-[--secondary-bg-color] rounded-t-[0.9rem] lg:static lg:w-[60vw] lg:rounded-b-[0.9rem]">
-                    <div class="flex justify-between items-start">
+                    <div class="flex justify-between items-start mb-[-0.5rem]">
                         <div>
                             <slot name="header"></slot>
                         </div>
                         <IconoirCancel @click="closeModal" class="cursor-pointer text-[1.143rem]"/>
                     </div>
-                    <div>
+                    <div class="overflow-auto pt-2">
                         <slot></slot>
                     </div>
                     <div class="flex flex-col justify-end gap-[0.571rem] footer mb-6 lg:mb-[unset] w-full md:max-w-[15rem] m-auto">

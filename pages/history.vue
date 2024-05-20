@@ -2,8 +2,8 @@
     <div>
         <PaymentsManagePayment ref="editPayment" :paymentId="paymentId" :trackerId="trackerId" isHistoryOnly :isEdit="isEdit" />
         <h2>Payments' History</h2>
-        <div>
-            <div v-for="(tracker, index) in formattedHistory" :key="index">
+        <div class="mb-4">
+            <div v-for="(tracker, index) in formattedHistory" :key="index" class="flex flex-col gap-[0.571rem]">
                 <div class="hover-expand flex gap-[0.815rem] items-center">
                     <button @click="toggleShow(tracker.id)"
                         class="px-0 text-xl no-button my-0 mt-2 flex items-center justify-between w-full">
