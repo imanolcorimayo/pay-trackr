@@ -28,15 +28,16 @@
                 <div v-if="!edit" class="flex gap-[0.571rem]"> 
                     <Popper hover content="Mark payment as paid" v-if="!isPaid">
                         <button 
-                            class="transition ease-in-out duration-150 flex justify-center items-center border-[1.5px] border-opacity-30 border-white 
-                                rounded-[0.4rem] h-[2.423rem] w-[2.423rem]
+                            class="
+                                transition ease-in-out duration-150 
+                                flex justify-center items-center border-[1.5px] border-opacity-30 border-white rounded-[0.4rem] h-[2.423rem] w-[2.423rem]
                                 hover:bg-green-600" 
                             @click="markAsPaid(true)" 
                         >
                             <IcRoundCheck class="text-[1rem]"/>
                         </button>
                     </Popper>
-                    <Popper hover content="Mark payment as paid" v-else>
+                    <Popper hover content="Mark payment as unpaid" v-else>
                         <button class="
                             transition ease-in-out duration-150 flex justify-center items-center border-[1.5px] border-opacity-30 border-white 
                             rounded-[0.4rem] h-[2.423rem] w-[2.423rem]
@@ -88,7 +89,7 @@
                     </Popper>
                 </div>
                 <div v-else  class="flex gap-[0.571rem]">
-                    <Popper hover content="Edit tracker">
+                    <Popper hover content="Edit payment">
                         <button 
                             @click="$emit('editPayment', id)" 
                             class="transition ease-in-out duration-150 flex justify-center items-center border-[1.5px] border-opacity-30 border-white 

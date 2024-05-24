@@ -35,7 +35,12 @@ const editPayment = ref(null)
 
 // ----- Define Pinia Vars -----------
 const indexStore = useIndexStore();
-const { getPayments: payments } = storeToRefs(indexStore);
+const { getPayments: payments, isDataFetched } = storeToRefs(indexStore);
+
+if(!isDataFetched.value) {
+    await indexStore.fetchData();
+}
+
 
 // ----- Define Methods --------
 function showEdit(payId) {
