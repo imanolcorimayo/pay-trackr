@@ -17,14 +17,14 @@
             </div>
         </div>
         <div class="
-            grid grid-cols-6 gap-y-3 items-center pb-2 self-end 
+            grid grid-cols-10 gap-y-3 items-center pb-2 self-end 
             md:border-b md:border-opacity-35 md:border-white w-full">
-            <div class="col-start-1 col-end-2 flex items-center font-bold min-h-[3rem]" style="min-width: 95px;">{{ formatPrice(amount) }}</div>
-            <div class="col-start-3 col-end-6 md:col-start-3 md:col-end-5 flex flex-col justify-center min-h-[3rem]">
+            <div class="col-start-1 col-end-3 flex items-center font-bold min-h-[3rem]" style="min-width: 95px;">{{ formatPrice(amount) }}</div>
+            <div class="col-start-4 col-end-11 md:col-end-9 flex flex-col justify-center min-h-[3rem]">
                 <div class="font-bold text-sm">{{ title }}</div>
                 <div class="text-sm">{{ description }}</div>
             </div>
-            <div class="col-start-1 md:col-start-6 col-end-6 flex justify-center">
+            <div class="col-start-1 md:col-start-9 col-end-11 flex justify-center">
                 <div v-if="!edit" class="flex gap-[0.571rem]"> 
                     <Popper hover content="Mark payment as paid" v-if="!isPaid">
                         <button 

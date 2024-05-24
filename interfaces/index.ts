@@ -28,3 +28,18 @@ interface Tracker {
     user_id: string;
     createdAt: string;
 }
+
+enum SortType {
+    Asc = "asc",
+    Desc = "desc",
+}
+
+enum SortFields {
+    Date = "date",
+    Amount = "amount",
+}
+
+interface SortOptions {
+    type: SortType, 
+    field: SortFields
+} 

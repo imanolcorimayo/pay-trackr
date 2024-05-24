@@ -1,6 +1,6 @@
 
 // Order function. Used in main "/"" page and on index store page
-export const orderPayments = (items: PaymentList) => {
+export const orderPayments = (items: PaymentList, options?: SortOptions) => {
     const { $dayjs } = useNuxtApp();
 
     // Sort the array
@@ -11,10 +11,25 @@ export const orderPayments = (items: PaymentList) => {
         }
 
         // If isCompleted is the same, sort by dueDate
-        const dueDateA = $dayjs(a.dueDate, { format: 'MM/DD/YYYY' });
-        const dueDateB = $dayjs(b.dueDate, { format: 'MM/DD/YYYY' });
+        let firstValue = 0;
+        let secondValue = 0;
 
-        return dueDateA.unix() - dueDateB.unix();
+        if(options && options.field == "amount") {
+            firstValue = a.amount;
+            secondValue = b.amount;
+        } else {
+            firstValue = $dayjs(a.dueDate, { format: 'MM/DD/YYYY' }).unix();
+            secondValue = $dayjs(b.dueDate, { format: 'MM/DD/YYYY' }).unix();
+        }
+
+        // Change order if descendant is requested
+        if(options && options.type == "desc") {
+            const aux = firstValue;
+            firstValue = secondValue;
+            secondValue = aux;
+        }
+
+        return firstValue - secondValue;
     });
 
     return items

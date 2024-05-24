@@ -4,7 +4,7 @@
         <PaymentsManagePayment ref="editPayment" :paymentId="paymentId" isTrackerOnly isEdit />
         <div class="flex flex-col items-start md:flex-row md:justify-between">
             <h2>Payments this month</h2>
-            <div class="flex gap-[0.571rem] self-end">
+            <div class="flex gap-[0.571rem]">
                 <div
                     :class="[
                     'flex items-center border-[1.5px] border-opacity-30 border-white rounded-[0.4rem] h-[2.423rem] transition-all duration-300',
@@ -15,7 +15,9 @@
                     <IcTwotoneSearch class="ml-2" />
                     <input
                     type="text"
+                    v-model="paymentSearch"
                     v-show="isExpanded"
+                    @input="searchPayment"
                     @blur="collapseInput"
                     class="flex-grow px-2 py-1 bg-transparent border-none outline-none text-white"
                     ref="searchInput"
@@ -29,12 +31,12 @@
                         <div 
                             v-if="isOpen"
                             ref="orderPopup"
-                            class="origin-top-right absolute z-10 right-0 mt-2 w-[10rem] rounded-md shadow-lg bg-[--secondary-bg-color] ring-2 ring-black ring-opacity-5 focus:outline-none overflow-hidden" role="menu" aria-orientation="vertical" aria-labelledby="options-menu">
+                            class="origin-top-left md:origin-top-right absolute z-10 md:right-0 mt-2 w-[10rem] rounded-md shadow-lg bg-[--secondary-bg-color] ring-2 ring-black ring-opacity-5 focus:outline-none overflow-hidden" role="menu" aria-orientation="vertical" aria-labelledby="options-menu">
                             <div class="flex flex-col items-start gap-[0.125rem]" role="none">
-                                <button class="w-full px-4 py-2 text-[0.875rem] leading-[1rem] text-start text-white hover:bg-gray-500" role="menuitem" @click="selectOption('Option 1')">Date - Desc</button>
-                                <button class="w-full px-4 py-2 text-[0.875rem] leading-[1rem] text-start text-white hover:bg-gray-500" role="menuitem" @click="selectOption('Option 2')">Date - Asc</button>
-                                <button class="w-full px-4 py-2 text-[0.875rem] leading-[1rem] text-start text-white hover:bg-gray-500" role="menuitem" @click="selectOption('Option 3')">Amount - Desc</button>
-                                <button class="w-full px-4 py-2 text-[0.875rem] leading-[1rem] text-start text-white hover:bg-gray-500" role="menuitem" @click="selectOption('Option 3')">Amount - Asc</button>
+                                <button class="w-full px-4 py-2 text-[0.875rem] leading-[1rem] text-start text-white hover:bg-gray-500" role="menuitem" @click="sortPayments({type: 'desc', field: 'date'})">Date - Desc</button>
+                                <button class="w-full px-4 py-2 text-[0.875rem] leading-[1rem] text-start text-white hover:bg-gray-500" role="menuitem" @click="sortPayments({type: 'asc', field: 'date'})">Date - Asc</button>
+                                <button class="w-full px-4 py-2 text-[0.875rem] leading-[1rem] text-start text-white hover:bg-gray-500" role="menuitem" @click="sortPayments({type: 'desc', field: 'amount'})">Amount - Desc</button>
+                                <button class="w-full px-4 py-2 text-[0.875rem] leading-[1rem] text-start text-white hover:bg-gray-500" role="menuitem" @click="sortPayments({type: 'asc', field: 'amount'})">Amount - Asc</button>
                             </div>
                         </div>
                     </Transition>
@@ -76,11 +78,11 @@ const indexStore = useIndexStore();
 const { getTracker: tracker, isDataFetched } = storeToRefs(indexStore)
 
 // ----- Define Vars ---------
-const isLoading = ref(true)
-const payments = ref([])
-const orderFilter = ref("asc")
-const isExpanded = ref(false)
-const isOpen = ref(false)
+const isLoading = ref(true);
+const payments = ref([]);
+const isExpanded = ref(false);
+const isOpen = ref(false);
+const paymentSearch = ref("");
 
 
 // Refs
@@ -126,13 +128,30 @@ function collapseInput() {
   isExpanded.value = false;
 }
 
+function searchPayment() {
+    payments.value = tracker.value.payments.filter(el => {
+        const isInTitle = el.title.toLowerCase().includes(paymentSearch.value.toLowerCase());
+        const isInDescription = el.description.toLowerCase().includes(paymentSearch.value.toLowerCase());
+        const isInAmount = el.amount.toString().toLowerCase().includes(paymentSearch.value.toLowerCase());
+
+        return isInTitle || isInDescription || isInAmount;
+    })
+}
+
+function sortPayments(options) {
+    payments.value = orderPayments(Object.assign([], tracker.value.payments), options);
+    isOpen.value = false; // Close the popup
+}
+
+
 // ----- Define Watchers ---------
 watch(tracker, (newValue) => {
+    console.log("SOME")
     isLoading.value = true; // This let us reload the full list and avoid rendering problems
     const auxPayments = newValue.payments ? orderPayments(newValue.payments) : [];
     payments.value = Object.assign([], auxPayments)
     isLoading.value = false;
-}, {deep: true})
+}, { deep: true })
 
 // ----- Define Methods ---------
 useHead({
