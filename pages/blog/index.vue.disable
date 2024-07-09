@@ -1,5 +1,4 @@
 <template>
-
     <section class="w-full py-12 lg:pt-14">
         <div class="container px-4 grid gap-12 lg:px-6">
             <div class="space-y-3">

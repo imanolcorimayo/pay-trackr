@@ -19,8 +19,8 @@
         <div class="
             grid grid-cols-10 gap-y-3 items-center pb-2 self-end 
             md:border-b md:border-opacity-35 md:border-white w-full">
-            <div class="col-start-1 col-end-3 flex items-center font-bold min-h-[3rem]" style="min-width: 95px;">{{ formatPrice(amount) }}</div>
-            <div class="col-start-4 col-end-11 md:col-end-9 flex flex-col justify-center min-h-[3rem]">
+            <div class="col-start-1 col-end-3 sm:col-end-2 flex items-center font-bold min-h-[3rem]" style="min-width: 95px;">{{ formatPrice(amount) }}</div>
+            <div class="col-start-4 col-end-11 md:col-start-3 md:col-end-9 flex flex-col justify-center min-h-[3rem]">
                 <div class="font-bold text-sm">{{ title }}</div>
                 <div class="text-sm">{{ description }}</div>
             </div>

@@ -27,7 +27,7 @@ const indexStore = useIndexStore()
 // First load history
 await indexStore.loadHistory();
 // Retrieve values
-const { getHistory: history } = storeToRefs(indexStore);
+const { getHistory: history, getPayments: recurrentPayments } = storeToRefs(indexStore);
 
 // ---- Define Vars -------
 const monthsToSelect = ref(history.value.map(el => {
@@ -54,7 +54,7 @@ onMounted(() => {
 // ----- Define Methods ------
 function createMonthlyResume() {
     const totalPaid = [];
-    const totalOwed = [];
+    const totalOneTime = [];
     const total = [];
 
     // Order history first
@@ -68,22 +68,25 @@ function createMonthlyResume() {
         const year = date.format('YYYY')
 
         // Calculate total paid and total owed
-        const paidAmount = monthly.payments.reduce((total, num) => {
+        const paidRecurrentAmount = monthly.payments.reduce((total, num) => {
+
+            // Check if payment is a recurrent payment and if it's paid
+            const isRecurrentPayment = recurrentPayments.value.filter(el => el.id == num.payment_id).length
+            if (num.isPaid && isRecurrentPayment > 0) {
+                return total + num.amount;
+            }
+            return total;
+        }, 0)
+        const paidWithOneTime = monthly.payments.reduce((total, num) => {
             if (num.isPaid) {
                 return total + num.amount;
             }
             return total;
         }, 0)
-        const owedAmount = monthly.payments.reduce((total, num) => {
-            if (!num.isPaid) {
-                return total + num.amount;
-            }
-            return total;
-        }, 0)
 
-        totalPaid.push(paidAmount)
-        totalOwed.push(owedAmount)
-        total.push(owedAmount + paidAmount)
+        totalPaid.push(paidRecurrentAmount)
+        totalOneTime.push(paidWithOneTime - paidRecurrentAmount)
+        total.push(paidWithOneTime)
 
 
         return `${month} - ${year}`
@@ -91,19 +94,19 @@ function createMonthlyResume() {
     const data = {
         labels: labels,
         datasets: [{
-            label: 'Total Paid',
+            label: 'Total Recurrent Paid',
             data: totalPaid,
             fill: false,
             borderColor: 'rgb(75, 192, 192)',
             tension: 0.1
         }, {
-            label: 'Total Owed',
-            data: totalOwed,
+            label: 'Total One Time',
+            data: totalOneTime,
             borderColor: 'rgb(255, 99, 132)',
             fill: false,
             tension: 0.1
         }, {
-            label: 'Total',
+            label: 'Total (Recurrent + One Time)',
             data: total,
             borderColor: 'rgb(54, 162, 235)',
             fill: false,
