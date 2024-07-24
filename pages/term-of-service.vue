@@ -82,13 +82,3 @@ useHead({
     ]
 })
 </script>
-
-<style scoped>
-h1 {
-  text-align: start;
-}
-
-h2 {
-  margin-top: 2rem;
-}
-</style>

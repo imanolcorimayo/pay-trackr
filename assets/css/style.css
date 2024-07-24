@@ -1,6 +1,12 @@
 :root {
-    --primary-bg-color: #a0a4d9;
-    --secondary-bg-color: #27292d;
+    --base-color: #27292D;
+    --primary-color: #6ABAA4;
+    --secondary-color: #7A73FF;
+    --danger-color: #FF6BA5;
+    --success-color: #28A745;
+    --warning-color: #FFC95C;
+    --accent-color: #0085FF;
+    --base-color: #27292D;
     --popper-theme-background-color: #333333;
     --popper-theme-background-color-hover: #333333;
     --popper-theme-text-color: #ffffff;
@@ -12,13 +18,13 @@
 }
 
 html {
-    font-size: 18px;
+    font-size: 14px;
 }
 
 body {
     margin: 0;
     padding: 0;
-    font-family: Avenir, Helvetica, Arial, sans-serif;
+    font-family: Inter, Helvetica, Arial, sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     background-color: #27292d;
@@ -39,24 +45,15 @@ body.modal-opened {
   opacity: 0;
 }
 
-a {
-    text-decoration: unset;
-    text-transform: none;
-    line-height: 34px;
-}
-
 #__nuxt {
     overflow: hidden;
-    max-width: 57.143rem;
     margin-left: auto;
-    margin-right: auto;
-    padding: 1.429rem;
-    padding-bottom: 0px;
+    padding-top: 1.429rem;
 }
 
 h1 {
     font-weight: bold;
-    font-size: 28px;
+    font-size: 24px;
     text-align: center;
 }
 
@@ -106,8 +103,8 @@ textarea, select {
 
 .btn {
     cursor: pointer;
-    background-color: #a0a4d9;
-    border: 1px solid #a0a4d9;
+    background-color: var(--primary-color);
+    border: 1px solid var(--primary-color);
     color: #1f2023;
     font-weight: bold;
     outline: none;
@@ -116,8 +113,7 @@ textarea, select {
 }
 
 h2 {
-    font-size: 22px;
-    padding-bottom: 6px;
+    font-size: 20px;
 }
 
 .done {
@@ -148,16 +144,4 @@ input[type=number] {
 
 .scrollbar-hide::-webkit-scrollbar {
   display: none;
-}
-
-@media (max-width: 767px) {
-    #__nuxt {
-        max-width: 42.857rem;
-        padding-left: 0.5rem;
-        padding-right: 0.5rem;
-    } 
-
-    html {
-        font-size: 16px;
-    }
 }

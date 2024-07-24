@@ -1,5 +1,5 @@
 <template>
-    <div class="container">
+    <div class="max-w-[80rem] px-[1.429rem] mx-auto">
         <form v-if="!sending" @submit.prevent="sendContactUsMessage()" class="mt-2 flex flex-col gap-[1rem]">
             <div class="flex flex-col gap-[0.571rem]">
                 <label>Full Name *</label>

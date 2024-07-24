@@ -2,12 +2,14 @@
 export default defineNuxtConfig({
   devtools: { enabled: true },
   css: ["~/assets/css/main.css", "~/assets/css/style.css", "vue3-toastify/dist/index.css"],
+
   postcss: {
     plugins: {
       tailwindcss: {},
       autoprefixer: {},
     },
   },
+
   modules: [
     "@samk-dev/nuxt-vcalendar",
     "dayjs-nuxt",
@@ -17,6 +19,7 @@ export default defineNuxtConfig({
     "@vite-pwa/nuxt",
     "unplugin-icons/nuxt"
   ],
+
   ssr: false,
 
   // @ts-ignore
@@ -42,11 +45,13 @@ export default defineNuxtConfig({
   app: {
     head: {
         htmlAttrs: { dir: 'ltr', lang: 'en' },
-        link: [{ rel: 'icon', type: 'image/png', href: "/img/logo.png" }],
+        link: [{ rel: 'icon', type: 'image/png', href: "/img/new-logo.png" }],
         meta: [{
           name: 'google-site-verification',
           content: "E0U6Yf1iG222FwlRLisvf7JLYZLZQnT8CLJ3QKo4tjQ"
         }]
     },
 },
+
+  compatibilityDate: "2024-07-13",
 })

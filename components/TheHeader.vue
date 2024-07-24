@@ -1,9 +1,9 @@
 <template>
-  <header class="w-full">
-    <nav class="">
-      <div class="w-full max-w-screen flex justify-between items-center mx-auto p-4 pt-0">
+  <header class="w-full max-w-[80rem] m-auto px-[1.429rem]">
+    <nav>
+      <div class="w-full max-w-screen flex justify-between items-center mx-auto py-[1.429rem] pt-0">
         <NuxtLink to="/" class="flex items-center space-x-3 rtl:space-x-reverse hover:bg-transparent no-hover">
-          <img src="/img/logo.png" class="w-24" width="94" height="74" alt="PayTrackr Logo" />
+          <img src="/img/new-logo.png" class="w-24" width="94" height="74" alt="PayTrackr Logo" />
         </NuxtLink>
         <div class="relative" v-if="user">
           <button class="text-sm p-0 rounded-full no-button" @click="switchMenu">
@@ -20,20 +20,16 @@
             </div>
             <ul class="py-2">
               <li @click="switchMenu">
-                <NuxtLink to="/landing"
-                  class="block px-4 py-2 text-sm text-gray-700 dark:text-gray-200 dark:hover:text-white" :class="{selected: route.path =='/landing'}">Home Page</NuxtLink>
-              </li>
-              <li @click="switchMenu">
                 <NuxtLink to="/"
-                  class="block px-4 py-2 text-sm text-gray-700 dark:text-gray-200 dark:hover:text-white" :class="{selected: route.path =='/'}">Payments</NuxtLink>
+                  class="block px-4 py-2 text-sm text-gray-700 dark:text-gray-200 dark:hover:text-white" :class="{selected: route.path =='/'}">Home Page</NuxtLink>
               </li>
               <li @click="switchMenu">
-                <NuxtLink to="/edit"
-                  class="block px-4 py-2 text-sm text-gray-700 dark:text-gray-200 dark:hover:text-white" :class="{selected: route.path =='/edit'}">Recurrent Payments</NuxtLink>
+                <NuxtLink to="/recurrent"
+                  class="block px-4 py-2 text-sm text-gray-700 dark:text-gray-200 dark:hover:text-white" :class="{selected: route.path =='/recurrent'}">Recurrent Payments</NuxtLink>
               </li>
               <li @click="switchMenu">
-                <NuxtLink to="/history"
-                  class="block px-4 py-2 text-sm text-gray-700 dark:text-gray-200 dark:hover:text-white" :class="{selected: route.path =='/history'}">History</NuxtLink>
+                <NuxtLink to="/one-time"
+                  class="block px-4 py-2 text-sm text-gray-700 dark:text-gray-200 dark:hover:text-white" :class="{selected: route.path =='/one-time'}">One-Time Payments</NuxtLink>
               </li>
               <li @click="switchMenu">
                 <NuxtLink to="/summary"
@@ -70,9 +66,16 @@
 </template>
 
 <script setup>
+import IcTwotoneWifiOff from '~icons/ic/twotone-wifi-off';
+
+// ----- Define Useful Properties ---------
 const auth = useFirebaseAuth()
 const user = await getCurrentUser();
 const route = useRoute();
+
+// ----- Define Pinia Vars ----------
+const indexStore = useIndexStore();
+
 // ---- Define Vars --------
 const showMenu = ref(false)
 const dropdownMenu = ref(null)

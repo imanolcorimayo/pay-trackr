@@ -1,165 +1,138 @@
 <template>
-    <div>
-        <PaymentsNewPayment/>
-        <PaymentsManagePayment ref="editPayment" :paymentId="paymentId" isTrackerOnly isEdit />
-        <div class="flex flex-col items-start md:flex-row md:justify-between">
-            <h2>Payments this month</h2>
-            <div class="flex gap-[0.571rem]">
-                <div
-                    :class="[
-                    'flex items-center border-[1.5px] border-opacity-30 border-white rounded-[0.4rem] h-[2.423rem] transition-all duration-300',
-                    isExpanded ? 'w-[20rem] border-2' : 'w-[2.423rem] hover:cursor-pointer hover:border-2'
-                    ]"
-                    @click="expandInput"
-                >
-                    <IcTwotoneSearch class="ml-2" />
-                    <input
-                    type="text"
-                    v-model="paymentSearch"
-                    v-show="isExpanded"
-                    @input="searchPayment"
-                    @blur="collapseInput"
-                    class="flex-grow px-2 py-1 bg-transparent border-none outline-none text-white"
-                    ref="searchInput"
-                    />
-                </div>
-                <div class="relative inline-block text-left">
-                    <button ref="orderPopupButton" @click="isOpen = !isOpen" class="flex justify-center items-center border-[1.5px] border-opacity-30 border-white rounded-[0.4rem] h-[2.423rem] w-[2.423rem] focus:border-2" id="options-menu" aria-haspopup="true" :aria-expanded="isOpen.toString()">
-                        <BasilSortSolid/>
-                    </button>
-                    <Transition>
-                        <div 
-                            v-if="isOpen"
-                            ref="orderPopup"
-                            class="origin-top-left md:origin-top-right absolute z-10 md:right-0 mt-2 w-[10rem] rounded-md shadow-lg bg-[--secondary-bg-color] ring-2 ring-black ring-opacity-5 focus:outline-none overflow-hidden" role="menu" aria-orientation="vertical" aria-labelledby="options-menu">
-                            <div class="flex flex-col items-start gap-[0.125rem]" role="none">
-                                <button class="w-full px-4 py-2 text-[0.875rem] leading-[1rem] text-start text-white hover:bg-gray-500" role="menuitem" @click="sortPayments({type: 'desc', field: 'date'})">Date - Desc</button>
-                                <button class="w-full px-4 py-2 text-[0.875rem] leading-[1rem] text-start text-white hover:bg-gray-500" role="menuitem" @click="sortPayments({type: 'asc', field: 'date'})">Date - Asc</button>
-                                <button class="w-full px-4 py-2 text-[0.875rem] leading-[1rem] text-start text-white hover:bg-gray-500" role="menuitem" @click="sortPayments({type: 'desc', field: 'amount'})">Amount - Desc</button>
-                                <button class="w-full px-4 py-2 text-[0.875rem] leading-[1rem] text-start text-white hover:bg-gray-500" role="menuitem" @click="sortPayments({type: 'asc', field: 'amount'})">Amount - Asc</button>
-                            </div>
-                        </div>
-                    </Transition>
-                </div>
+    <div class="flex flex-col">
+      <!-- Hero Section -->
+      <section class="flex flex-col justify-between gap-[3rem] md:gap-[4.286rem] max-w-[80rem] m-auto min-h-[90vh] md:min-h-[unset] rounded-[0.571rem] p-[1.429rem]">
+        <div class="flex flex-col md:flex-row md:items-center gap-[3rem]">
+          <div class="flex flex-col gap-[2.429rem] bg-secondary rounded-[0.571rem] p-[1.429rem]">
+            <div class="flex flex-col">
+              <h1 class="text-start">Simply track your payments, don't miss anything</h1>
+              <span class=" block ">You can track your monthly and one-time payments for free</span>
             </div>
+            <div class="flex justify-start items-center gap-4 max-w-[80%]">
+              <NuxtLink to="/welcome?redirect=/" class="flex items-center justify-center gap-[0.287rem] bg-primary text-black rounded-md p-2">
+                <PhSignInBold/>
+                <span class="text-nowrap">Get Started</span>
+              </NuxtLink>
+              <span class="text-sm">Join to the great community who loves to organize</span>
+            </div>
+          </div>
+          <div>
+            <img src="/img/home_hero.svg" alt="Hero image representative of tracking payments">
+          </div>
         </div>
-        <div class="p-3 px-0 sm:px-3" v-if="!isLoading">
-            <PaymentCard 
-                v-for="(payment, index) in payments" :key="index"
-                :amount="payment.amount" 
-                :description="payment.description" 
-                :title="payment.title" 
-                :dueDate="payment.dueDate"
-                :id="payment.payment_id"
-                :isPaid="payment.isPaid"
-                @editPayment="showEdit"
-            />
+        <a href="/landing#features" class="flex flex-col items-center justify-center animate-jump">
+          <span class="text-[--primary-color] font-semibold">Learn More</span>
+          <PhArrowDownBold class="text-[2.5rem] text-[--primary-color]"/>
+        </a>
+      </section>
+      <!-- Features Section -->
+      <section id="features" class="bg-[#B9B9B94D] py-[4rem] w-full">
+        <div class="flex flex-col gap-[4rem] max-w-[80rem] m-auto px-[1.429rem]">
+          <div class="flex flex-col items-center text-center">
+            <h2 class="text-[1.714rem] font-semibold border-white border-opacity-35 ">Key Features</h2>
+            <span class="">PayTrackr offers simply tools to help you stay on top of your finances.</span>
+          </div>
+          <div class="flex flex-col sm:flex-row gap-[3.571rem]">
+            <div class="flex flex-col align-start gap-[0.857rem]">
+              <div class="bg-secondary p-[0.571rem] rounded-[0.571rem] w-fit">
+                <LucideCalendar class="text-[1.429rem]"/>
+              </div>
+              <div class="flex flex-col">
+                <h3 class="text-xl font-bold">Track Monthly & One-time Payments</h3>
+                <span>Easily manage your recurring and one-time bills, never miss a payment again</span>
+              </div>
+            </div>
+            <div class="flex flex-col align-start gap-[0.857rem]">
+              <div class="bg-secondary p-[0.571rem] rounded-[0.571rem] w-fit">
+                <SolarPieChartLinear class="text-[1.429rem]"/>
+              </div>
+              <h3 class="text-xl font-bold">Spending Summaries & Charts</h3>
+              <span>Get a clear overview of your spending with detailed summaries and visualizations</span>
+            </div>
+            <div class="flex flex-col align-start gap-[0.857rem]">
+              <div class="bg-secondary p-[0.571rem] rounded-[0.571rem] w-fit">
+                <MingcuteNotificationFill class="text-[1.429rem]"/>
+              </div>
+              <h3 class="text-xl font-bold">Bill Reminders, Alerts & Data Exports</h3>
+              <span>On the premium version you will never miss a bill payment again with customizable reminders, alerts & data exports</span>
+            </div>
+          </div>
         </div>
-        <div v-else class="flex justify-center m-10 p-10">
-            <Loader size="10"/>
+      </section>
+      <!-- Pricing Section -->
+      <section class="flex flex-col gap-[4rem] px-[1.429rem] py-[4rem] max-w-[80rem] m-auto">
+        <div class="flex flex-col items-center text-center">
+          <h2 class="text-[1.714rem] font-semibold border-white border-opacity-35">Pricing</h2>
+          <span class="">Choose the plan that best fits your needs.</span>
         </div>
-        <h4 v-if="payments.length === 0 && !isLoading">Empty list.</h4>
+        <div class="flex flex-col md:flex-row items-center gap-[3.571rem]">
+          <div class="flex flex-col items-center justify-center gap-[2.143rem] border px-4 py-[1.429rem] rounded-[1rem] w-fit">
+            <span class="font-semibold text-lg tracking-wider">Free</span>
+            <div class="flex items-end gap-[0.286rem]">
+              <span class="text-[1.714rem] leading-[1.714rem] font-bold tracking-wider">$0</span>
+              <span class="font-semibold tracking-wide">/ month</span>
+            </div>
+            <span class="text-center max-w-[18.57rem]">Manage up to 5 bills, view spending summaries, and get basic reminders.</span>
+              <NuxtLink to="/welcome?redirect=/" class="flex items-center justify-center gap-[0.287rem] bg-primary text-black rounded-md p-2">
+                <PhSignInBold/>
+                <span class="text-nowrap">Sign-up for Free</span>
+              </NuxtLink>
+          </div>
+          <div class="flex flex-col items-center justify-center gap-[2.143rem] border px-4 py-[1.429rem] rounded-[1rem] w-fit">
+            <span class="font-semibold text-lg tracking-wider">Premium</span>
+            <div class="flex items-end gap-[0.286rem]">
+              <span class="text-[1.714rem] leading-[1.714rem] font-bold tracking-wider">$2.5</span>
+              <span class="font-semibold tracking-wide">/ month</span>
+            </div>
+            <span class="text-center max-w-[18.57rem]">Manage unlimited bills, get advanced spending insights, export payments, and receive priority support.</span>
+              <NuxtLink to="/welcome?redirect=/" class="flex items-center justify-center gap-[0.287rem] bg-primary text-black rounded-md p-2">
+                <LetsIconsDimondAlt/>
+                <span class="text-nowrap">Get Premium</span>
+              </NuxtLink>
+          </div>
+        </div>
+      </section>
+      <!-- Re-engagement Section -->
+      <section id="features" class="bg-[#B9B9B94D] px-[1.429rem] py-[4rem] w-full">
+        <div class="flex flex-col items-center gap-[4rem] max-w-[80rem] m-auto">
+          <div class="flex flex-col items-center text-center">
+            <h2 class="text-[1.714rem] font-semibold border-white border-opacity-35 ">Take Control of Your Finances</h2>
+            <span class="">Sign up for BillTracker and start managing your bills and spending with ease.</span>
+          </div>
+          <div class="flex gap-[2rem]">
+            <NuxtLink to="/welcome?redirect=/" class="flex items-center justify-center gap-[0.287rem] bg-primary text-black rounded-md p-2">
+              <PhSignInBold/>
+              <span class="text-nowrap">Sign-up for Free</span>
+            </NuxtLink>
+            <NuxtLink to="/welcome?redirect=/" class="flex items-center justify-center gap-[0.287rem] bg-secondary text-white rounded-md p-2">
+              <IcRoundPlus/>
+              <span class="text-nowrap">Try Adding A Payment</span>
+            </NuxtLink>
+          </div>
+        </div>
+      </section>
     </div>
-</template>
-
-<script setup>
-import BasilSortSolid from '~icons/basil/sort-solid';
-import IcTwotoneSearch from '~icons/ic/twotone-search';
-
-definePageMeta({
-    middleware: ['auth']
-})
-
-// ----- Define Useful Properties ---------
-const { $dayjs } = useNuxtApp();
-
-// ----- Define Pinia Vars ----------
-const indexStore = useIndexStore();
-const { getTracker: tracker, isDataFetched } = storeToRefs(indexStore)
-
-// ----- Define Vars ---------
-const isLoading = ref(true);
-const payments = ref([]);
-const isExpanded = ref(false);
-const isOpen = ref(false);
-const paymentSearch = ref("");
-
-
-// Refs
-const orderPopup = ref(null);
-const orderPopupButton = ref(null);
-const searchInput = ref(null);
-
-// If click outside orderPopup, we close the modal
-onClickOutside(orderPopup, () => isOpen.value = false, {
-    ignore: [orderPopupButton]
-})
-
-// Fetch necessary data to continue
-if(!isDataFetched.value) {
-    await indexStore.fetchData();
-}
-
-payments.value = tracker && tracker.value.payments ? orderPayments(tracker.value.payments) : [];
-isLoading.value = false
-
-// ----- Define Vars -------
-const paymentId = ref(false)
-// Refs
-const editPayment = ref(null);
-
-// ----- Define Methods ---------
-function showEdit(payId) {
-    // Save id that will passed to the edit modal component
-    paymentId.value = payId; 
-
-    // Open the modal
-    editPayment.value.showModal(payId);
-}
-function expandInput() {
-  isExpanded.value = true;
-  // Delay focus to ensure the input is visible before focusing
-  setTimeout(() => {
-    searchInput.value.focus();
-  }, 100);
-}
-
-function collapseInput() {
-  isExpanded.value = false;
-}
-
-function searchPayment() {
-    payments.value = tracker.value.payments.filter(el => {
-        const isInTitle = el.title.toLowerCase().includes(paymentSearch.value.toLowerCase());
-        const isInDescription = el.description.toLowerCase().includes(paymentSearch.value.toLowerCase());
-        const isInAmount = el.amount.toString().toLowerCase().includes(paymentSearch.value.toLowerCase());
-
-        return isInTitle || isInDescription || isInAmount;
-    })
-}
-
-function sortPayments(options) {
-    payments.value = orderPayments(Object.assign([], tracker.value.payments), options);
-    isOpen.value = false; // Close the popup
-}
-
-
-// ----- Define Watchers ---------
-watch(tracker, (newValue) => {
-    isLoading.value = true; // This let us reload the full list and avoid rendering problems
-    const auxPayments = newValue.payments ? orderPayments(newValue.payments) : [];
-    payments.value = Object.assign([], auxPayments)
-    isLoading.value = false;
-}, { deep: true })
-
-// ----- Define Methods ---------
-useHead({
-    title: 'Optimize your finances - PayTrackr',
+  </template>
+  <script setup>
+  import PhSignInBold from '~icons/ph/sign-in-bold';
+  import PhArrowDownBold from '~icons/ph/arrow-down-bold';
+  import LucideCalendar from '~icons/lucide/calendar';
+  import SolarPieChartLinear from '~icons/solar/pie-chart-linear';
+  import MingcuteNotificationFill from '~icons/mingcute/notification-fill';
+  import LetsIconsDimondAlt from '~icons/lets-icons/dimond-alt';
+  import IcRoundPlus from '~icons/ic/round-plus';
+  
+  definePageMeta({
+    layout: "landing"
+  })
+  
+  useHead({
+    title: 'Effortless Personal Finance: Simplifying Monthly Payments Tracking',
     meta: [
-        {
-            name: 'description',
-            content: 'Web page to keep tracking of your main expenses and keep your life organized'
-        }
+      {
+        name: 'description',
+        content: 'Streamline your financial journey with our user-friendly platform dedicated to effortlessly tracking your personal monthly payments. Stay organized and in control of your finances with ease. Start managing your monthly payments more efficiently today!'
+      }
     ]
-})
-</script>
+  })
+  </script>

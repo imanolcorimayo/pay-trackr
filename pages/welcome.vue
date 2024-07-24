@@ -1,23 +1,25 @@
 <template>
   <div>
-    <div class="container flex justify-center align-center flex-col" style="height:90vh">
-      <div class="text-center mb-6">
-        <div class="w-full flex justify-center align-center mb-16">
-          <img class="no-flex" src="/img/logo.png" alt="Logo Created With my.logomakr.com" width="250" height="195">
-        </div>
-        <h1 class="mb-4">Welcome To Pay Tracker!</h1>
+    <div class="container flex flex-col justify-center align-center gap-[2.857rem] h-[90vh]">
+      <div class="w-full flex justify-center align-center">
+        <img class="no-flex" src="/img/new-logo.png" alt="Logo Created With my.logomakr.com" width="200">
+      </div>
+      <div class="flex flex-col justify-center gap-[0.571rem] text-center">
+        <h1>Welcome To Pay Tracker!</h1>
         <span>Join the community for free and manage your finance 😎</span>
       </div>
-      <div class="text-center">
+      <div class="flex flex-col items-center">
         <button class="w-full max-w-80 btn btn-primary" @click="googleSignIn">
-          <img src="/img/google_logo.png" width="25" height="25" class="inline mx-2" alt="Google Logo">
-          Google Sign In
+          <div class="flex items-center justify-center gap-[0.571rem]">
+            <FlatColorIconsGoogle class="text-[1.5rem]"/>
+            <span class="">Sign-In With Google</span>
+          </div>
         </button>
+        <span class="text-xs sticky block">By signing in you accept the <NuxtLink to="/term-of-service" target="_blank" class="font-semibold underline">terms of service</NuxtLink></span>
       </div>
     </div>
-    <span class="text-xs sticky block">By signing in you accept the <NuxtLink to="/term-of-service" target="_blank" class="font-semibold">terms of service.</NuxtLink></span>
-    <span class="text-xs sticky">Logos Created With LogoMakr.com</span>
   </div>
+  <TheFooter/>
 </template>
 
 <script setup>
@@ -26,6 +28,8 @@ import {
   GoogleAuthProvider
 } from 'firebase/auth'
 const googleAuthProvider = new GoogleAuthProvider()
+import FlatColorIconsGoogle from '~icons/flat-color-icons/google';
+
 
 definePageMeta({
   layout: false
@@ -38,7 +42,7 @@ const error = ref(false)
 function googleSignIn() {
   signInWithPopup(auth, googleAuthProvider).
   then((result) => {
-    console.log('Success signInRedirect', result)
+    // If success, then just redirect to the home page
     navigateTo(route.query && route.query.redirect ? route.query.redirect : '/')
   }).
   catch((reason) => {

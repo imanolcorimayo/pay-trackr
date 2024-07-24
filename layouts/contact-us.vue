@@ -1,9 +1,9 @@
 <template>
-    <div class="container">
+    <div class="mx-auto">
         <TheHeader />
         <div class="text-center mb-6">
             <h1>Contact Us!</h1>
-            <span>We welcome any recommendations 🚀 <br>Our team is here to assist you!</span>
+            <span>We welcome any recommendations 🚀</span>
         </div>
         <slot />
     </div>
