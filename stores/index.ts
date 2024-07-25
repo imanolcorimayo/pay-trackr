@@ -105,6 +105,53 @@ export const useIndexStore = defineStore('index', {
                 historyFetched: false
             };
         },
+        // History is all trackers from all time
+        async loadHistory() {
+            // If already loaded, return
+            if (this.$state.history.length && this.isHistoryFetched) {
+                return;
+            }
+
+            // Get user id
+            const user = useCurrentUser()
+
+            if (!user || !user.value) {
+                // Handle the case when there is no user
+                return;
+            }
+
+            // Connect with firebase and get payments structure
+            const db = useFirestore();
+            const querySnapshot = await getDocs(query(collection(db, 'tracker'), where('user_id', '==', user.value.uid), orderBy("createdAt", "desc")));
+
+            // Tracker history object 
+            const trackerHistory:TrackerList = [];
+            querySnapshot.forEach((doc) => {
+
+                // Add id to the object
+                const currentTracker = {
+                    id: doc.id,
+                    ...doc.data(),
+                } as Tracker;
+
+                // Fix payments format when they don't contains the timePeriod
+                currentTracker.payments = currentTracker.payments.map(el => ({...el, timePeriod: (el.timePeriod ? el.timePeriod : "monthly")}))
+
+                trackerHistory.push(currentTracker);
+            });
+
+            if (!trackerHistory.length) {
+                return this.$state.history = [];
+            }
+
+            // Order the payments positions
+            for (let index in trackerHistory) {
+                trackerHistory[index].payments = orderPayments(trackerHistory[index].payments)
+            }
+
+            this.$state.history = trackerHistory;
+            this.$state.historyFetched = true;
+        },
         // Create a record
         async addPayment(payment: any) {
             const user = useCurrentUser();
@@ -431,26 +478,6 @@ export const useIndexStore = defineStore('index', {
             }
             return false
         },
-        async editIsPaid(id: string, value: Boolean) {
-            const db = useFirestore()
-            const trackerPayIndex = this.$state.tracker.payments.map(el => el.payment_id).indexOf(id);
-            const tracker = Object.assign({}, this.$state.tracker);
-
-            if(!this.$state.tracker.id) {
-                return false;
-            }
-
-            // Update firebase
-            tracker.payments[trackerPayIndex].isPaid = value;
-            const trackerRef = doc(db, "tracker", this.$state.tracker.id);
-            delete tracker.id;
-            await updateDoc(trackerRef, tracker);
-
-            // Update Pinia
-            this.$state.tracker.payments[trackerPayIndex].isPaid = value;
-
-            return true;
-        },
         async editIsPaidInHistory(paymentId: string, trackerId: string, value: Boolean) {
             const db = useFirestore()
 
@@ -477,7 +504,7 @@ export const useIndexStore = defineStore('index', {
             }
 
             // 2. Find the payment in the tracker found based on the payment id
-            const auxTracker: Tracker|undefined = history[trackerIndex];
+            const auxTracker: Tracker|undefined = Object.assign({}, history[trackerIndex]);
             if(auxTracker === undefined || auxTracker.id === undefined) {
                 return false;
             }
@@ -497,61 +524,16 @@ export const useIndexStore = defineStore('index', {
             await updateDoc(trackerRef, auxTracker);
 
             // Update Pinia && auxiliary variables
-            this.$state.history[trackerIndex]!.payments[trackerPayIndex].isPaid = value;
+            this.$state.history[trackerIndex].payments[trackerPayIndex].isPaid = value;
 
             // Order the payments positions in history
             for (let index in this.$state.history) {
+                console.log("this.$state.history[index]:", this.$state.history[index])
                 this.$state.history[index].payments = orderPayments(this.$state.history[index].payments)
             }
 
             return true;
         },
-        // History is all trackers from all time
-        async loadHistory() {
-            // If already loaded, return
-            if (this.$state.history.length && this.isHistoryFetched) {
-                return;
-            }
-
-            // Get user id
-            const user = useCurrentUser()
-
-            if (!user || !user.value) {
-                // Handle the case when there is no user
-                return;
-            }
-
-            // Connect with firebase and get payments structure
-            const db = useFirestore();
-            const querySnapshot = await getDocs(query(collection(db, 'tracker'), where('user_id', '==', user.value.uid), orderBy("createdAt", "desc")));
-
-            // Tracker history object 
-            const trackerHistory:TrackerList = [];
-            querySnapshot.forEach((doc) => {
-
-                const currentTracker = {
-                    id: doc.id,
-                    ...doc.data(),
-                } as Tracker;
-
-                // Fix payments format when they don't contains the timePeriod
-                currentTracker.payments = currentTracker.payments.map(el => ({...el, timePeriod: (el.timePeriod ? el.timePeriod : "monthly")}))
-
-                trackerHistory.push(currentTracker);
-            });
-
-            if (!trackerHistory.length) {
-                return this.$state.history = [];
-            }
-
-            // Order the payments positions
-            for (let index in trackerHistory) {
-                trackerHistory[index].payments = orderPayments(trackerHistory[index].payments)
-            }
-
-            this.$state.history = trackerHistory;
-            this.$state.historyFetched = true;
-        }
     }
 })
 

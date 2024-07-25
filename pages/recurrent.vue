@@ -15,26 +15,33 @@
             </thead>
             <tbody class="text-center">
               <tr 
-                v-for="(payment, index) in searchedPayments" 
-                :key="index" 
-                class="border-b h-[4.571rem]"
-                @click="showEdit(index)"
+                v-for="(payment, paymentId) in searchedPayments" 
+                :key="paymentId" 
+                class="border-b h-[4.571rem] drop-shadow-md hover:cursor-pointer min-h-[5rem]"
+                @click="showEdit(paymentId)"
               >
-                <td class="text-start">{{ payment.title }}</td>
-                <td>{{ $dayjs(payment.dueDate, { format: 'MM/DD/YYYY' }).format('MMM DD') }}</td>
-                <th v-for="(month, index) in months" :key="`${index}-${month}`">
+                <td class="text-start font-semibold">{{ payment.title }}</td>
+                <td class="font-semibold">{{ $dayjs(payment.dueDate, { format: 'MM/DD/YYYY' }).format('MMM DD') }}</td>
+                <th v-for="(month, monthIndex) in months" :key="`${monthIndex}-${month}`">
 
-                  <span v-if="!payment.months[month]">N/A</span>
+                  <span v-if="!payment.months[month]">
+
+                    <div class="flex flex-col items-center justify-center">
+                      <PepiconsPopDollarOff class="text-[1.143rem] m-auto"/>
+                      <span class="text-[0.714rem] sm:text-[1rem] font-semibold">N/A</span>
+                    </div>
+                  </span>
                   <div v-else class="flex flex-col items-center justify-center">
-                    <RiToggleFill class="text-[1.637rem] text-[--success-color]" v-if="payment.months[month].isPaid"/>
+                    <RiToggleFill @click="(ev) => markAsPaid(ev, paymentId, payment.months[month].trackerId, false)" class="text-[1.637rem] text-[--success-color]" v-if="payment.months[month].isPaid"/>
                     <RiToggleLine 
+                      @click="(ev) => markAsPaid(ev, paymentId, payment.months[month].trackerId, true)" 
                       class="text-[1.637rem]" 
-                      v-if="!payment.months[month].isPaid"
+                      v-else
                       :class="{
                         ['text-[--danger-color]']: isDelayed(payment.months[month].dueDate) && !payment.months[month].isPaid
                       }"
                     />
-                    <span class="text-[0.714rem] sm:text-[1rem]">{{ formatPrice(payment.months[month].amount) }}</span>
+                    <span class="text-[0.714rem] sm:text-[1rem] font-semibold">{{ formatPrice(payment.months[month].amount) }}</span>
                   </div>
                 </th>
               </tr>
@@ -49,6 +56,7 @@
 <script setup>
 import RiToggleFill from '~icons/ri/toggle-fill';
 import RiToggleLine from '~icons/ri/toggle-line';
+import PepiconsPopDollarOff from '~icons/pepicons-pop/dollar-off';
 
 definePageMeta({
   middleware: ['auth']
@@ -63,7 +71,8 @@ const indexStore = useIndexStore();
 const { getHistory: history, getTracker: tracker, isDataFetched } = storeToRefs(indexStore)
 
 // ----- Define Vars ---------
-const isLoading = ref(true);
+const isLoading = ref(false);
+const markingPaid = ref(false);
 const payments = ref({});
 const isOpen = ref(false);
 const searchedPayments = ref([]);
@@ -83,10 +92,6 @@ if(!isDataFetched.value) {
   await indexStore.fetchData();
   await indexStore.loadHistory();
 }
-
-// Order payments
-// payments.value = (history && history.value.payments) ? orderPayments(history.value.payments) : [];
-isLoading.value = false
 
 // ----- Define Vars -------
 const paymentId = ref(false)
@@ -129,12 +134,48 @@ function searchPayment(query) {
   })
 }
 
+async function markAsPaid(ev, paymentId, trackerId, value) {
+  // To avoid opening modal of details
+  ev.stopPropagation();
+  
+  // If already sending, return
+  if(isLoading.value) {
+      return;
+  }
+
+  console.log(paymentId, trackerId, value);
+
+  // Block add button and show loader
+  isLoading.value = true;
+
+  // Edit only in history
+  const result = await indexStore.editIsPaidInHistory(paymentId, trackerId, value);
+
+
+  if (!result || typeof result == "string") {
+      useToast('error', typeof result == "string" ? result : "Something went wrong, please try again")
+      // Un-Block add button
+      isLoading.value = false;
+      return;
+  }
+
+  // Reset payment object
+  // populatePayments(history.value, tracker.value);
+
+  isLoading.value = false;
+  useToast('success', 'Payment mark as paid successfully.')
+}
+
 function sortPayments(options) {
   payments.value = orderPayments(Object.assign([], history.value.payments), options);
   isOpen.value = false; // Close the popup
 }
 
 function populatePayments(history, tracker) {
+
+  console.log("JSON.stringify(history): ", JSON.stringify(history));
+  console.log("JSON.stringify(tracker): ", JSON.stringify(tracker))
+
   // Create object to be used in the table
   history.forEach(el => {
     el.payments.forEach(pay => {
@@ -173,6 +214,7 @@ function populatePayments(history, tracker) {
       payments.value[pay.payment_id].months[payMonth] = {
         amount: pay.amount,
         dueDate: pay.dueDate,
+        trackerId: el.id,
         isPaid: pay.isPaid
       }
     })
@@ -190,9 +232,7 @@ onMounted(() => {
 
 // ----- Define Watchers ---------
 watch([history, tracker], (newValue) => {
-  isLoading.value = true; // This let us reload the full list and avoid rendering problems
   populatePayments(newValue[0], newValue[1]);
-  isLoading.value = false;
 }, { deep: true })
 
 // ----- Define Methods ---------
