@@ -1,7 +1,7 @@
 <template>
   <div>
-    <PaymentsManagePayment ref="editPayment" :paymentId="paymentId" isTrackerOnly isEdit />
-    <PaymentsDetails ref="paymentDetails" :paymentId="paymentId" />
+    <PaymentsManagePayment ref="editPayment" :paymentId="paymentId" isEdit />
+    <PaymentsDetails ref="paymentDetails" :paymentId="paymentId" @openEdit="showEdit" />
     <Loader v-if="isLoading"/>
     <div class="flex flex-col gap-[0.429rem]">
       <Filters @onSearch="searchPayment" />

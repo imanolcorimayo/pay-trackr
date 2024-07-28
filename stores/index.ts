@@ -399,14 +399,18 @@ export const useIndexStore = defineStore('index', {
             const db = useFirestore()
             const paymentRef = doc(db, "payment", paymentId);
             const payIndex = this.$state.payments.map(el => el.id).indexOf(paymentId);
+            // Aux variable
+            const isPaid = payment.isPaid;
+            // Delete property
+            delete payment.isPaid;
 
             try {
                 // Update doc using paymentRef
                 await updateDoc(paymentRef, payment);
                 this.$state.payments[payIndex] = Object.assign(payment)
 
-                // Update only if not paid yet
-                this.editPayInTracker(payment, paymentId);
+                // Update including the isPaid property
+                this.editPayInTracker({...payment, isPaid}, paymentId);
 
                 return true
             } catch (error) {
@@ -422,42 +426,40 @@ export const useIndexStore = defineStore('index', {
 
             try {
                 
-                if(trackerToEdit.payments[trackerPayIndex] && !trackerToEdit.payments[trackerPayIndex].isPaid) {
-                    const trackerPayment = createPaymentTracker(newPayment);
-                    
-                    // Update in the original object
-                    trackerToEdit.payments[trackerPayIndex] = trackerPayment;
-    
-                    // Update in firebase
-                    if (!trackerToEdit.id) {
-                        console.error("Error: Tracker id does not exist");
-                        return false;
-                    }
+                const trackerPayment = createPaymentTracker(newPayment);
+                
+                // Update in the original object
+                trackerToEdit.payments[trackerPayIndex] = trackerPayment;
 
-                    // Create custom object to edit the id and send to Firestore
-                    const customTrackerForFirebase = Object.assign({}, trackerToEdit);
-                    delete customTrackerForFirebase.id;
-                    const trackerRef = doc(db, "tracker", trackerToEdit.id);
-                    // @ts-ignore
-                    await updateDoc(trackerRef, customTrackerForFirebase);
+                // Update in firebase
+                if (!trackerToEdit.id) {
+                    console.error("Error: Tracker id does not exist");
+                    return false;
+                }
 
-                    // Update history array
-                    this.updateTrackerInHistory(Object.assign({}, trackerToEdit));
+                // Create custom object to edit the id and send to Firestore
+                const customTrackerForFirebase = Object.assign({}, trackerToEdit);
+                delete customTrackerForFirebase.id;
+                const trackerRef = doc(db, "tracker", trackerToEdit.id);
+                // @ts-ignore
+                await updateDoc(trackerRef, customTrackerForFirebase);
 
-                    // Only if there is no tracker param, update in Pinia -> current tracker
-                    if(!trackerParam) {
-                        this.$state.tracker = trackerToEdit;
-                    }
+                // Update history array
+                this.updateTrackerInHistory(Object.assign({}, trackerToEdit));
 
-                    // Update History in Pinia
-                    const trackerIds = this.$state.history.map(e => e.id);
-                    // Search index in history using trackerId
-                    const trackerIndex = trackerIds.indexOf(trackerToEdit.id);
+                // Only if there is no tracker param, update in Pinia -> current tracker
+                if(!trackerParam) {
+                    this.$state.tracker = trackerToEdit;
+                }
 
-                    // If tracker index is found, update in history array
-                    if (trackerIndex !== -1) {
-                        this.$state.history[trackerIndex] = trackerToEdit;
-                    }
+                // Update History in Pinia
+                const trackerIds = this.$state.history.map(e => e.id);
+                // Search index in history using trackerId
+                const trackerIndex = trackerIds.indexOf(trackerToEdit.id);
+
+                // If tracker index is found, update in history array
+                if (trackerIndex !== -1) {
+                    this.$state.history[trackerIndex] = trackerToEdit;
                 }
 
                 return true;
@@ -573,7 +575,7 @@ function createPaymentTracker(payment: any):Payment {
     return {
         payment_id: payment.id ? payment.id : payment.payment_id, // It could come from payments array or tracker.payments array
         dueDate: updatedDateString,
-        isPaid: false,
+        isPaid: payment.isPaid ? payment.isPaid : false,
         title: payment.title,
         description: payment.description,
         amount: payment.amount,

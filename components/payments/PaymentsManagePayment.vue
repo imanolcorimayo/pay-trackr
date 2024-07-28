@@ -1,35 +1,33 @@
 <template>
     <ModalStructure @onClose="() => emit('onClose')" ref="mainModal">
         <template #header>
-            <p class="text-[1.143rem] font-semibold" v-if="!isEdit">New Payment</p>
-            <p class="text-[1.143rem] font-semibold" v-else>Edit Payment</p>
-            <span class="text-[0.857rem] text-stone-400">You can create a regular payment or a one time payment</span>
+            <img class="max-w-[21.428rem] m-auto" src="/img/edit-modal.svg" alt="">
+            <div class="flex flex-col">
+                <p class="text-[1.143rem] font-semibold m-auto text-center" v-if="!isEdit">New Payment</p>
+                <p class="text-[1.143rem] font-semibold m-auto text-center" v-else>Edit Payment</p>
+                <span class="">This edit will affect only the current month. Previous months are not allowed to edition</span>
+            </div>
         </template>
         <template #default>
-            <form @submit.prevent="addOrEditPayment()" id="payment-form">
+            <form @submit.prevent="submit()" id="payment-form">
                 <div class="flex flex-col gap-[1.714rem] w-full">
-                    <div class="w-full flex flex-col relative">
-                        <label class="absolute top-[-0.4rem] font-semibold text-[0.857rem] leading-[1rem] bg-[--secondary-bg-color] ml-[0.571rem] px-[0.286rem]">Payment title *</label>
+                    <div class="w-full flex flex-col gap-[0.213rem]">
+                        <label class="font-medium">Payment title *</label>
                         <input class="form-input" v-model="payment.title" required name="title" autocomplete="off" />
                     </div>
-                    <div class="w-full flex flex-col relative">
-                        <label class="absolute top-[-0.4rem] font-semibold text-[0.857rem] leading-[1rem] bg-[--secondary-bg-color] ml-[0.571rem] px-[0.286rem]">Description</label>
+                    <div class="w-full flex flex-col gap-[0.213rem]">
+                        <label class="font-medium">Description</label>
                         <textarea v-model="payment.description" name="description" autocomplete="off" class="min-h-[7rem] pt-4 form-input" />
                     </div>
-
                     <div class="grid grid-cols-2 gap-y-[1.714rem] gap-x-[0.571rem] lg:gap-x-[1.714rem]">
-                        <div class="w-full flex flex-col relative">
-                            <label class="absolute top-[-0.4rem] font-semibold text-[0.857rem] leading-[1rem] bg-[--secondary-bg-color] ml-[0.571rem] px-[0.286rem]">Amount *</label>
+                        <div class="w-full flex flex-col gap-[0.213rem]">
+                            <label class="font-medium">Amount *</label>
                             <input class="form-input" v-model="payment.amount" type="number" step="0.01" min="0" name="amount" placeholder="0.00" required
                                 autocomplete="off">
                         </div>
-                        <div class="w-full flex flex-col relative">
-                            <label class="absolute top-[-0.4rem] font-semibold text-[0.857rem] leading-[1rem] bg-[--secondary-bg-color] ml-[0.571rem] px-[0.286rem]">Category *</label>
-                            <input v-model="payment.category" name="category" required autocomplete="off" class="capitalize form-input" />
-                        </div>
                         <ClientOnly>
-                            <div class="w-full flex flex-col relative">
-                                <label class="absolute top-[-0.4rem] font-semibold text-[0.857rem] leading-[1rem] bg-[--secondary-bg-color] ml-[0.571rem] px-[0.286rem]">Next Due Date *</label>
+                            <div class="w-full flex flex-col gap-[0.213rem] relative">
+                                <label class="font-medium">Next Due Date *</label>
                                 <input class="form-input" id="valid-until" name="dueDate" placeholder="mm/dd/yyyy" autocomplete="off"
                                     v-model="payment.dueDate" required @click="showPicker" />
                                 <div v-if="pickerVisible" ref="picker" class="absolute w-full bottom-0">
@@ -37,18 +35,31 @@
                                 </div>
                             </div>
                         </ClientOnly>
-                        <div class="w-full flex flex-col relative">
-                            <label class="absolute top-[-0.4rem] font-semibold text-[0.857rem] leading-[1rem] bg-[--secondary-bg-color] ml-[0.571rem] px-[0.286rem]">Payment Time Period *</label>
-                            <select v-model="payment.timePeriod" name="period" id="time-period" class="p-2.5 form-input">
-                                <option disabled value="weekly">Weekly</option>
-                                <!-- Every two weeks -->
-                                <option disabled value="bi-weekly">Bi-Weekly</option>
-                                <!-- 2 times in a month -->
-                                <option disabled value="semi-monthly">Semi Monthly</option>
-                                <option :disabled="!isEdit && isHistoryOnly" value="monthly" selected>Monthly</option>
-                                <option value="one-time">One Time Pay</option>
-                            </select>
-                        </div>
+                    </div>
+                    <div class="w-full flex gap-[0.426rem]">
+                        <input type="hidden" name="period" id="time-period" v-model="payment.timePeriod" />
+                        <button 
+                            type="button"
+                            @click="payment.timePeriod = 'monthly'" 
+                            :class="{'bg-secondary': payment.timePeriod == 'monthly', 'bg-white text-black': payment.timePeriod !== 'monthly'}" 
+                            class="w-full flex-1 p-[0.571rem] rounded-[0.214rem]"
+                        >Recurrent</button>
+                        <button 
+                            type="button"
+                            @click="payment.timePeriod = 'one-time'" 
+                            :class="{'bg-secondary': payment.timePeriod == 'one-time', 'bg-white text-black': payment.timePeriod !== 'one-time'}" 
+                            class="w-full flex-1 p-[0.571rem] rounded-[0.214rem]"
+                        >One-time</button>
+                    </div>
+                    <div class="w-full flex flex-col gap-[0.213rem]">
+                        <label class="font-medium">Category *</label>
+                        <input v-model="payment.category" name="category" required autocomplete="off" class="capitalize form-input" />
+                    </div>
+                    <div class="w-full flex items-center gap-4">
+                        <label class="font-medium">Paid</label>
+                        <RiToggleFill @click="payment.isPaid = false" class="cursor-pointer text-[1.637rem] text-[--success-color]" v-if="payment.isPaid"/>
+                        <RiToggleLine @click="payment.isPaid = true" class="cursor-pointer text-[1.637rem] text-[--danger-color]" v-else/>
+                        <input v-model="payment.isPaid" name="isPaid" required type="hidden" />
                     </div>
                 </div>
             </form>
@@ -61,6 +72,9 @@
 </template>
 
 <script setup>
+import RiToggleFill from '~icons/ri/toggle-fill';
+import RiToggleLine from '~icons/ri/toggle-line';
+
 const props = defineProps({
     paymentId: {
         required: false,
@@ -69,11 +83,6 @@ const props = defineProps({
     trackerId: {
         required: false,
         default: false,
-    },
-    isTrackerOnly: {
-        required: false,
-        default: false,
-        type: Boolean
     },
     isHistoryOnly: {
         required: false,
@@ -101,6 +110,7 @@ const payment = ref({
     description: '',
     amount: null,
     dueDate: '',
+    isPaid: false,
     timePeriod: (!props.isEdit && props.isHistoryOnly) ? 'one-time' : 'monthly',
     category: 'other',
 })
@@ -163,10 +173,10 @@ function updatePaymentObject(payId, trackerId) {
             filteredPayment = history.value[trackerIndex].payments.filter(el => el.payment_id == payId)
         }
 
-    } else if(props.isTrackerOnly && tracker.value.payments?.length) {
+    } else if (tracker.value.payments?.length) {
         filteredPayment = tracker.value.payments.filter(el => el.payment_id == payId)
-    } else {
-        filteredPayment = payments.value.filter(el => el.id == payId)
+
+        console.log("filteredPayment: ", filteredPayment);
     }
 
     // Check if there is a payment
@@ -187,7 +197,7 @@ function updatePaymentObject(payId, trackerId) {
 }
 
 // ----- Define Methods ---------
-async function addOrEditPayment() {
+async function submit() {
     // Block add button and show loader
     disableButton.value = true;
     sending.value = true;
@@ -208,9 +218,6 @@ async function addOrEditPayment() {
         if(props.isHistoryOnly) {
             // Edit only in history
             result = await indexStore.editPayInHistory(payment.value, props.paymentId, props.trackerId);
-        } else if(props.isTrackerOnly) {
-            // Edit only in tracker (this will be reflected on history too)
-            result = await indexStore.editPayInTracker(payment.value, props.paymentId);
         } else {
             // Edit recurrent and history and tracker if it's the case (if not marked as paid)
             result = await indexStore.editPayment(payment.value, props.paymentId);

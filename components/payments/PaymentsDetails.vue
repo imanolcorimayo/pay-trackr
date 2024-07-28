@@ -47,7 +47,7 @@
             </div>
         </template>
         <template #footer>
-            <button class="bg-white text-black rounded-[0.214rem] p-[0.571rem] font-medium">Edit Payment</button>
+            <button @click="closeAndOpenEdit" class="bg-white text-black rounded-[0.214rem] p-[0.571rem] font-medium">Edit Payment</button>
         </template>
     </ModalStructure>
 </template>
@@ -63,14 +63,14 @@ const props = defineProps({
         default: false,
     }
 })
-const emit = defineEmits(["onClose"]);
+const emit = defineEmits(["onClose", "openEdit"]);
 
 // ------ Define Useful Properties ----------
 const { $dayjs } = useNuxtApp()
 
 // ------ Define Pinia Vars --------
 const indexStore = useIndexStore();
-const { getPayments: payments, getTracker: tracker, getHistory: history } = storeToRefs(indexStore)
+const { getTracker: tracker, getHistory: history } = storeToRefs(indexStore)
 
 // ----- Define Vars ------
 const payment = ref({
@@ -84,8 +84,6 @@ const payment = ref({
 const pickerVisible = ref(false);
 const picker = ref(null);
 const date = ref(new Date());
-const disableButton = ref(false);
-const sending = ref(false);
 const payHistory = ref([]);
 
 // Refs
@@ -125,6 +123,10 @@ function showModal(payId = false, trackerId = false, isEdit = false) {
 function closeModal() {
     mainModal.value.closeModal();
 }
+function closeAndOpenEdit() {
+    emit("openEdit", props.paymentId);
+    closeModal();
+}
 function updatePaymentObject(payId) {
 
     payHistory.value = []; // Rest object
@@ -149,9 +151,9 @@ function updatePaymentObject(payId) {
     // Update pay history
     payHistory.value = history.value.map(e => {
         // Get payment info in e.payments
-        const pay =  e.payments.filter(p => {
+        const pay = JSON.parse(JSON.stringify(e.payments.filter(p => {
             return p.payment_id == payId
-        })
+        })));  
 
         if(pay[0]) {
             // format dueDate to be MMM DD, YYYY
@@ -162,71 +164,6 @@ function updatePaymentObject(payId) {
         return false;
     })
 }
-
-// ----- Define Methods ---------
-async function addOrEditPayment() {
-    // Block add button and show loader
-    disableButton.value = true;
-    sending.value = true;
-
-    const validate = validatePayment(payment.value);
-    if(typeof validate == 'string') {
-        useToast('error', validate)
-        disableButton.value = false;
-        sending.value = false;
-        closeModal();
-        return;
-    }
-
-    // Save data in Firestore. If Payment id exists it's an editing process
-    let result;
-    if(props.isEdit) {
-        // Analyze which function to execute
-        if(props.isHistoryOnly) {
-            // Edit only in history
-            result = await indexStore.editPayInHistory(payment.value, props.paymentId, props.trackerId);
-        } else if(props.isTrackerOnly) {
-            // Edit only in tracker (this will be reflected on history too)
-            result = await indexStore.editPayInTracker(payment.value, props.paymentId);
-        } else {
-            // Edit recurrent and history and tracker if it's the case (if not marked as paid)
-            result = await indexStore.editPayment(payment.value, props.paymentId);
-        }
-    } else {
-        if(props.isHistoryOnly && props.trackerId) {
-            result = await indexStore.addPaymentInHistory(payment.value, props.trackerId);
-        } else {
-            result = await indexStore.addPayment(payment.value);
-        }
-    }
-    if (!result || typeof result == "string") {
-        useToast('error', typeof result == "string" ? result : "Something went wrong, please try again")
-        // Un-Block add button
-        sending.value = false;
-        disableButton.value = false;
-        return;
-    }
-
-    // Reset payment object
-    payment.value = {
-        title: '',
-        description: '',
-        amount: null,
-        dueDate: '',
-        category: 'other',
-        timePeriod: (!props.isEdit && props.isHistoryOnly) ? 'one-time' : 'monthly'
-    }
-
-    disableButton.value = false;
-    sending.value = false;
-    useToast('success', 'Payment saved successfully. Click to go home.', { onClick: "goHome", autoClose: 2000 })
-    closeModal();
-}
-// Calendar methods
-function showPicker() {
-    pickerVisible.value = true;
-}
-
 // ----- Define Watchers -------------
 watch(date, (newVal) => {
     pickerVisible.value = false;
