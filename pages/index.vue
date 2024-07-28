@@ -20,7 +20,7 @@
             <img src="/img/home_hero.svg" alt="Hero image representative of tracking payments">
           </div>
         </div>
-        <a href="/landing#features" class="flex flex-col items-center justify-center animate-jump">
+        <a href="/#features" class="flex flex-col items-center justify-center animate-jump">
           <span class="text-[--primary-color] font-semibold">Learn More</span>
           <PhArrowDownBold class="text-[2.5rem] text-[--primary-color]"/>
         </a>

@@ -1,6 +1,6 @@
 <template>
     <section class="w-full py-12 lg:py-24">
-        <div class="container px-4 grid gap-12 lg:px-6">
+        <div class="container px-4 grid gap-12 lg:px-6 max-w-[80rem] px-[1.429rem] m-auto">
             <div class="space-y-3">
                 <h1 class="text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl">FAQ</h1>
                 <p class="text-gray-500 md:text-xl/relaxed dark:text-gray-400">

@@ -52,7 +52,7 @@
         </div>
         <div class="ms-4" v-else>
           <ul class="flex w-50 sm:w-80 justify-between flex-wrap">
-            <li class="border-opacity-35 border-white border-b mx-1 hidden sm:block"><NuxtLink to="/landing">Home</NuxtLink></li>
+            <li class="border-opacity-35 border-white border-b mx-1 hidden sm:block"><NuxtLink to="/">Home</NuxtLink></li>
             <!-- TODO: Potentially needed in the future -->
             <!-- <li class="border-opacity-35 border-white border-b mx-1"><NuxtLink to="/blog">Blog</NuxtLink></li> -->
             <li class="border-opacity-35 border-white border-b mx-1"><NuxtLink to="/faq">FAQ</NuxtLink></li>
@@ -90,8 +90,8 @@ async function signOut() {
     await auth.signOut();
 
     // Redirect to welcome page
-    if(!route.fullPath.includes("/landing")) {
-      return await navigateTo("/landing");
+    if(!route.fullPath.includes("/")) {
+      return await navigateTo("/");
     }
     // If already in landing page, reload
     location.reload();

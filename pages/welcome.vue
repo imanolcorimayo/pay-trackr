@@ -1,6 +1,6 @@
 <template>
   <div>
-    <div class="container flex flex-col justify-center align-center gap-[2.857rem] h-[90vh]">
+    <div class="container flex flex-col justify-center align-center gap-[2.857rem] h-[90vh] max-w-[80rem] px-[1.429rem] m-auto">
       <div class="w-full flex justify-center align-center">
         <img class="no-flex" src="/img/new-logo.png" alt="Logo Created With my.logomakr.com" width="200">
       </div>

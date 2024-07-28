@@ -22,6 +22,6 @@ export default defineNuxtRouteMiddleware(async (to, from) => {
 
     // redirect the user to the login page if not signed in
     return navigateTo({
-        path: '/landing',
+        path: '/',
     })
 })
