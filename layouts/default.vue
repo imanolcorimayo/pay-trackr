@@ -1,5 +1,5 @@
 <template>
-  <div class="w-full">
+  <div class="w-full min-h-full">
     <TheHeader />
     <div class="flex flex-col gap-[3rem] py-[2rem] max-w-[80rem] m-auto px-[1.429rem]">
       <div class="flex justify-between gap-[2rem] max-w-[60rem] w-full m-auto overflow-x-scroll scrollbar-none no-scrollbar">
@@ -36,7 +36,7 @@
         </NuxtLink>
         <NuxtLink
           class="text-[1.143rem] p-[0.571rem] rounded-[0.214rem] text-center bg-white text-black hover:bg-secondary hover:text-white hover:font-semibold"
-          :class="{ selected: route.path == '/edit' }" to="/one-time">One Time</NuxtLink>
+          :class="{ selected: route.path == '/one-time' }" to="/one-time">One Time</NuxtLink>
         <NuxtLink
           class="text-[1.143rem] p-[0.571rem] rounded-[0.214rem] text-center bg-white text-black hover:bg-secondary hover:text-white hover:font-semibold"
           :class="{ selected: route.path == '/summary' }" to="/summary">Summary</NuxtLink>

@@ -175,8 +175,6 @@ function updatePaymentObject(payId, trackerId) {
 
     } else if (tracker.value.payments?.length) {
         filteredPayment = tracker.value.payments.filter(el => el.payment_id == payId)
-
-        console.log("filteredPayment: ", filteredPayment);
     }
 
     // Check if there is a payment

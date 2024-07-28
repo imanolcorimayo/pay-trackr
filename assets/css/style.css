@@ -35,6 +35,10 @@ body.modal-opened {
     overflow: hidden;
 }
 
+body, #__nuxt {
+    min-height: 100vh;
+}
+
 .v-enter-active,
 .v-leave-active {
   transition: opacity 0.2s ease;

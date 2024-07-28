@@ -1,6 +1,6 @@
 <template>
   <div class="flex flex-col gap-[2.143rem]">
-    <div class="flex items-center justify-center gap-[1.143rem] w-full">
+    <div v-if="showDates" class="flex items-center justify-center gap-[1.143rem] w-full">
       <div class="flex justify-center items-center w-[2.357rem] h-[2.357rem] bg-white rounded-[0.214rem]">
         <WeuiArrowFilled class="text-[0.875rem] h-full text-black rotate-180" />
       </div>
@@ -36,6 +36,14 @@
 import WeuiArrowFilled from '~icons/weui/arrow-filled';
 import MdiFilterOutline from '~icons/mdi/filter-outline';
 import IcSharpSearch from '~icons/ic/sharp-search';
+
+const props = defineProps({
+  showDates: {
+    required: false,
+    default: false,
+    type: Boolean
+  }
+});
 
 function focusInput() {
   console.log('Focus input');

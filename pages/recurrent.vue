@@ -4,7 +4,7 @@
     <PaymentsDetails ref="paymentDetails" :paymentId="paymentId" @openEdit="showEdit" />
     <Loader v-if="isLoading"/>
     <div class="flex flex-col gap-[0.429rem]">
-      <Filters @onSearch="searchPayment" />
+      <Filters @onSearch="searchPayment" showDates />
       <div class="p-3 px-0 sm:px-3">
         <table class="w-full table-fixed">
           <thead class="text-center">

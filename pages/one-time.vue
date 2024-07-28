@@ -1,16 +1,17 @@
 <template>
     <div>
-        <h2>Select to edit</h2>
-        <PaymentsNewPayment/>
+        <Filters @onSearch="searchPayment" />
         <PaymentsManagePayment ref="editPayment" :paymentId="paymentId" isEdit />
-        <div class="p-3 sm:px-0" v-if="!isLoading">
+        <div class="mt-[2rem] flex flex-col gap-[1.714rem]" v-if="!isLoading">
             <PaymentCard 
-                v-for="(payment, index) in payments" :key="index"
+                v-for="(payment, index) in oneTimePayments" :key="index"
                 :amount="payment.amount" 
                 :description="payment.description" 
+                :category="payment.category" 
                 :title="payment.title" 
                 :dueDate="payment.dueDate"
-                :id="payment.id"
+                :isPaid="payment.isPaid"
+                :id="payment.payment_id"
                 edit
                 @editPayment="showEdit"
             />
@@ -18,7 +19,7 @@
         <div v-else class="flex justify-center m-10 p-10">
             <Loader size="10"/>
         </div>
-        <h4 v-if="payments.length === 0 && !isLoading">Empty list.</h4>
+        <h4 v-if="oneTimePayments.length === 0 && !isLoading">Empty list.</h4>
     </div>
 </template>
 
@@ -35,15 +36,24 @@ const editPayment = ref(null)
 
 // ----- Define Pinia Vars -----------
 const indexStore = useIndexStore();
-const { getPayments: payments, isDataFetched } = storeToRefs(indexStore);
+const { getTracker: tracker, isDataFetched } = storeToRefs(indexStore);
 
-if(!isDataFetched.value) {
-    await indexStore.fetchData();
+// Fetch necessary data to continue
+if (!isDataFetched.value) {
+  await indexStore.fetchData();
+  await indexStore.loadHistory();
 }
 
+// ----- Define Computed --------
+const oneTimePayments = computed(() => {
+    return orderPayments(tracker.value.payments.filter(payment => payment.timePeriod === 'one-time'))
+})
 
 // ----- Define Methods --------
 function showEdit(payId) {
+
+    console.log('Show edit', payId)
+
     // Save payId that will passed to the edit modal component
     paymentId.value = payId; 
 

@@ -405,9 +405,13 @@ export const useIndexStore = defineStore('index', {
             delete payment.isPaid;
 
             try {
-                // Update doc using paymentRef
-                await updateDoc(paymentRef, payment);
-                this.$state.payments[payIndex] = Object.assign(payment)
+
+                // Update doc using paymentRef only if it's not one time payment
+                if(payment.timePeriod !== "one-time") {
+                    await updateDoc(paymentRef, payment);
+                    this.$state.payments[payIndex] = Object.assign(payment)
+                }
+
 
                 // Update including the isPaid property
                 this.editPayInTracker({...payment, isPaid}, paymentId);
