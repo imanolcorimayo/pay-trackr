@@ -9,7 +9,7 @@
             <MaterialSymbolsPaidRounded class="text-[1.714rem] text-[--secondary-color]" />
             <span class="font-normal">Paid</span>
           </div>
-          <span class="text-[1.429rem] font-semibold text-[--success-color]">$1,500,000.00</span>
+          <span class="text-[1.429rem] font-semibold text-[--success-color]">{{ formatPrice(totalPaid) }}</span>
         </div>
         <div
           class="flex flex-col items-start justify-center gap-[0.578rem] border p-[1rem] bg-base w-full rounded-[1rem] min-h-[7rem] shadow-lg max-w-[20rem]">
@@ -17,7 +17,7 @@
             <WpfPaid class="text-[1.714rem] text-[--secondary-color]" />
             <span class="font-normal">Owed This Month</span>
           </div>
-          <span class="text-[1.429rem] text-[--danger-color] font-semibold">$1,500,000.00</span>
+          <span class="text-[1.429rem] text-[--danger-color] font-semibold">{{ formatPrice(totalOwed) }}</span>
         </div>
         <div
           class="flex flex-col items-start justify-center gap-[0.578rem] border p-[1rem] bg-base w-full rounded-[1rem] min-h-[7rem] shadow-lg max-w-[20rem]">
@@ -25,7 +25,7 @@
             <HugeiconsSummationCircle class="text-[1.714rem] text-[--secondary-color]" />
             <span class="font-normal">Month Total</span>
           </div>
-          <span class="text-[1.429rem] font-semibold">$3,000,000.00</span>
+          <span class="text-[1.429rem] font-semibold">{{ formatPrice(totalMonth) }}</span>
         </div>
       </div>
       <div v-if="user" class="flex flex-row justify-between w-full max-w-[40rem] mx-auto">
@@ -42,7 +42,7 @@
           :class="{ selected: route.path == '/summary' }" to="/summary">Summary</NuxtLink>
       </div>
       <main>
-        <slot />
+        <slot @totals="updateTotals" />
       </main>
     </div>
     <TheFooter />
@@ -55,14 +55,32 @@ import MaterialSymbolsPaidRounded from '~icons/material-symbols/paid-rounded';
 import HugeiconsSummationCircle from '~icons/hugeicons/summation-circle';
 
 const user = useCurrentUser();
-const route = useRoute()
+const route = useRoute();
 
 // ----- Define Pinia Vars -----------
 const indexStore = useIndexStore();
+const { getTracker: tracker } = storeToRefs(indexStore);
 // TODO: Look for a way to speed up this in case the user has already fetched the data
 if (user) {
   // await indexStore.fetchData();
 }
+
+// ----- Define Computed ---------
+const totalPaid = computed(() => {
+  return tracker.value.payments.reduce((acc, item) => {
+    return item.isPaid ? (acc + item.amount) : acc;
+  }, 0);
+});
+
+const totalOwed = computed(() => {
+  return tracker.value.payments.reduce((acc, item) => {
+    return item.isPaid ? acc : (acc + item.amount);
+  }, 0);
+});
+
+const totalMonth = computed(() => {
+  return totalPaid.value + totalOwed.value;
+});
 </script>
 
 

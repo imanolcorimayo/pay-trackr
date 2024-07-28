@@ -528,8 +528,15 @@ export const useIndexStore = defineStore('index', {
 
             // Order the payments positions in history
             for (let index in this.$state.history) {
-                console.log("this.$state.history[index]:", this.$state.history[index])
                 this.$state.history[index].payments = orderPayments(this.$state.history[index].payments)
+            }
+
+            // Check if the payment is in the current tracker
+            if(this.$state.tracker.id === trackerId) {
+                const trackerPayIndex = this.$state.tracker.payments.map(el => el.payment_id).indexOf(paymentId);
+                if(trackerPayIndex !== -1) {
+                    this.$state.tracker.payments[trackerPayIndex].isPaid = value;
+                }
             }
 
             return true;
