@@ -28,7 +28,7 @@
                         <ClientOnly>
                             <div class="w-full flex flex-col gap-[0.213rem] relative">
                                 <label class="font-medium">Next Due Date *</label>
-                                <input class="form-input" id="valid-until" name="dueDate" placeholder="mm/dd/yyyy" autocomplete="off"
+                                <input class="form-input" id="valid-until" readonly name="dueDate" placeholder="mm/dd/yyyy" autocomplete="off"
                                     v-model="payment.dueDate" required @click="showPicker" />
                                 <div v-if="pickerVisible && width > 768" ref="picker" class="absolute w-full bottom-0">
                                     <VDatePicker :minDate="minDate" :maxDate="maxDate" isDark class="picker" expanded v-model="date" />
@@ -281,7 +281,7 @@ function showPicker() {
 // ----- Define Watchers -------------
 watch(date, (newVal) => {
     pickerVisible.value = false;
-    payment.value.dueDate = $dayjs(newVal).format('MM/DD/YYYY')
+    payment.value.dueDate = newVal ? $dayjs(newVal).format('MM/DD/YYYY') : "";
 })
 
 // ----- Define Expose ---------

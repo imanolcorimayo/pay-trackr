@@ -7,7 +7,7 @@
           class="flex flex-col items-start justify-center gap-[0.578rem] border p-[1rem] bg-base w-full rounded-[1rem] min-h-[7rem] shadow-lg max-w-[20rem]">
           <div class="flex gap-4 items-center">
             <MaterialSymbolsPaidRounded class="text-[1.714rem] text-[--secondary-color]" />
-            <span class="font-normal">Paid</span>
+            <span class="font-normal">Paid This Month</span>
           </div>
           <span class="text-[1.429rem] font-semibold text-[--success-color]">{{ formatPrice(totalPaid) }}</span>
         </div>
@@ -68,12 +68,34 @@ if (user) {
 // ----- Define Computed ---------
 const totalPaid = computed(() => {
   return tracker.value.payments.reduce((acc, item) => {
+
+    // Check if /recurrent and pay is one time payment
+    if (route.path === '/recurrent' && item.payment_id.length === 36) {
+      return acc;
+    }
+
+    // Check if /one-time and pay is not one time payment
+    if (route.path === '/one-time' && item.payment_id.length !== 36) {
+      return acc;
+    }
+
     return item.isPaid ? (acc + item.amount) : acc;
   }, 0);
 });
 
 const totalOwed = computed(() => {
   return tracker.value.payments.reduce((acc, item) => {
+
+    // Check if /recurrent and pay is one time payment
+    if (route.path === '/recurrent' && item.payment_id.length === 36) {
+      return acc;
+    }
+
+    // Check if /one-time and pay is not one time payment
+    if (route.path === '/one-time' && item.payment_id.length !== 36) {
+      return acc;
+    }
+
     return item.isPaid ? acc : (acc + item.amount);
   }, 0);
 });
