@@ -1,11 +1,11 @@
 <template>
     <ModalStructure @onClose="() => emit('onClose')" ref="mainModal">
         <template #header>
-            <img class="max-w-[21.428rem] m-auto" src="/img/edit-modal.svg" alt="">
+            <img class="max-w-[10rem] md:max-w-[21.428rem] m-auto" src="/img/edit-modal.svg" alt="">
             <div class="flex flex-col">
                 <p class="text-[1.143rem] font-semibold m-auto text-center" v-if="!isEdit">New Payment</p>
                 <p class="text-[1.143rem] font-semibold m-auto text-center" v-else>Edit Payment</p>
-                <span class="">This edit will affect only the current month. Previous months are not allowed to edition</span>
+                <span v-if="isEdit" class="">This edit will affect only the current month. Previous months are not allowed to edition</span>
             </div>
         </template>
         <template #default>
@@ -30,9 +30,14 @@
                                 <label class="font-medium">Next Due Date *</label>
                                 <input class="form-input" id="valid-until" name="dueDate" placeholder="mm/dd/yyyy" autocomplete="off"
                                     v-model="payment.dueDate" required @click="showPicker" />
-                                <div v-if="pickerVisible" ref="picker" class="absolute w-full bottom-0">
-                                    <VDatePicker class="picker" expanded v-model="date" />
+                                <div v-if="pickerVisible && width > 768" ref="picker" class="absolute w-full bottom-0">
+                                    <VDatePicker :minDate="minDate" :maxDate="maxDate" isDark class="picker" expanded v-model="date" />
                                 </div>
+                                <teleport v-else-if="pickerVisible && width <= 768" to="body">
+                                    <div ref="secondPicker" id="mobilePicker" class="absolute w-full bottom-0 z-[100]">
+                                        <VDatePicker :minDate="minDate" :maxDate="maxDate" isDark class="picker" expanded v-model="date" />
+                                    </div>
+                                </teleport>
                             </div>
                         </ClientOnly>
                     </div>
@@ -99,6 +104,7 @@ const emit = defineEmits(["onClose"]);
 
 // ------ Define Useful Properties ----------
 const { $dayjs } = useNuxtApp()
+const { width } = useWindowSize();
 
 // ------ Define Pinia Vars --------
 const indexStore = useIndexStore();
@@ -115,13 +121,19 @@ const payment = ref({
     category: 'other',
 })
 const pickerVisible = ref(false);
-const picker = ref(null);
 const date = ref(new Date());
+// Add min date the beginning of the current month
+const minDate = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
+// Add max date the end of the current month
+const maxDate = new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0);
 const disableButton = ref(false);
 const sending = ref(false);
 
 // Refs
-const mainModal = ref(null) 
+const mainModal = ref(null);
+const picker = ref(null);
+const secondPicker = ref(null);
+
 
 // Pre process information if needed
 // Get specific payment when it's editing
@@ -130,9 +142,20 @@ if(props.paymentId) {
 }
 
 // ---- Vue Core Events -------
-onClickOutside(picker, event => {
+onClickOutside(picker, ev => {
+    // Get elements classes and check if any class contains "vc-" (vc- is the class of the date picker)
+    if(Array.from(ev.target.classList).some(cl => cl.includes("vc-"))) {
+        return;
+    }
     pickerVisible.value = false
-})
+});
+onClickOutside(secondPicker, ev => {
+    // Get elements classes and check if any class contains "vc-" (vc- is the class of the date picker)
+    if(Array.from(ev.target.classList).some(cl => cl.includes("vc-"))) {
+        return;
+    }
+    pickerVisible.value = false
+});
 
 // ----- Define Methods ---------
 function showModal(payId = false, trackerId = false, isEdit = false) {

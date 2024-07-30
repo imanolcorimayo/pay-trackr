@@ -2,7 +2,7 @@
   <div>
     <PaymentsManagePayment ref="editPayment" :paymentId="paymentId" isEdit />
     <PaymentsDetails ref="paymentDetails" :paymentId="paymentId" @openEdit="showEdit" />
-    <Loader v-if="isLoading"/>
+    <Loader v-if="isLoading" />
     <div class="flex flex-col gap-[0.429rem]">
       <Filters @onSearch="searchPayment" showDates />
       <div class="p-3 px-0 sm:px-3">
@@ -123,8 +123,6 @@ function searchPayment(query) {
   // Filter payments based on the query
   searchedPayments.value = Object.keys(payments.value).reduce((acc, key) => {
 
-    console.log(payments.value[key]);
-
     const isInTitle = payments.value[key].title.toLowerCase().includes(query.toLowerCase());
     const isInAmount = payments.value[key].amount.toString().toLowerCase().includes(query.toLowerCase());
 
@@ -132,11 +130,6 @@ function searchPayment(query) {
       acc[key] = payments.value[key];
     }
     return acc;
-  }, {})
-
-  searchedPayments.value = payments.value.filter(el => {
-
-    return isInTitle || isInAmount;
   })
 }
 
@@ -148,8 +141,6 @@ async function markAsPaid(ev, paymentId, trackerId, value) {
   if (isLoading.value) {
     return;
   }
-
-  console.log(paymentId, trackerId, value);
 
   // Block add button and show loader
   isLoading.value = true;

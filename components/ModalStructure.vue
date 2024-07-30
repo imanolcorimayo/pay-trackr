@@ -19,7 +19,6 @@
         </Transition>
     </Teleport>
 </template>
-ModalStructure
 <script setup>
 import IconoirCancel from '~icons/iconoir/cancel';
 const emit = defineEmits(["onClose"]);
@@ -30,7 +29,13 @@ const isVisible = ref(false)
 const innerContainer = ref(null) 
 
 // If click outside innerContainer, we close the modal
-onClickOutside(innerContainer, closeModal)
+onClickOutside(innerContainer, (ev) => {
+    // Get elements classes and check if any class contains "vc-" (vc- is the class of the date picker)
+    if(Array.from(ev.target.classList).some(cl => cl.includes("vc-"))) {
+        return;
+    }
+    closeModal()
+})
 
 // ----- Define Methods ---------
 function showModal() {
