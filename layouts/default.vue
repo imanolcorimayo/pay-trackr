@@ -70,12 +70,12 @@ const totalPaid = computed(() => {
   return tracker.value.payments.reduce((acc, item) => {
 
     // Check if /recurrent and pay is one time payment
-    if (route.path === '/recurrent' && item.payment_id.length === 36) {
+    if (route.path === '/recurrent' && item.timePeriod === "one-time") {
       return acc;
     }
 
     // Check if /one-time and pay is not one time payment
-    if (route.path === '/one-time' && item.payment_id.length !== 36) {
+    if (route.path === '/one-time' && item.timePeriod !== "one-time") {
       return acc;
     }
 
@@ -87,12 +87,12 @@ const totalOwed = computed(() => {
   return tracker.value.payments.reduce((acc, item) => {
 
     // Check if /recurrent and pay is one time payment
-    if (route.path === '/recurrent' && item.payment_id.length === 36) {
+    if (route.path === '/recurrent' && item.timePeriod === "one-time") {
       return acc;
     }
 
     // Check if /one-time and pay is not one time payment
-    if (route.path === '/one-time' && item.payment_id.length !== 36) {
+    if (route.path === '/one-time' && item.timePeriod !== "one-time") {
       return acc;
     }
 

@@ -44,7 +44,7 @@
           </tbody>
         </table>
       </div>
-      <h4 v-if="payments.length === 0 && !isLoading">Empty list.</h4>
+      <h4 v-if="Object.keys(searchedPayments).length === 0 && !isLoading">Empty list.</h4>
     </div>
   </div>
 </template>
@@ -130,7 +130,7 @@ function searchPayment(query) {
       acc[key] = payments.value[key];
     }
     return acc;
-  })
+  }, {})
 }
 
 async function markAsPaid(ev, paymentId, trackerId, value) {
@@ -175,7 +175,7 @@ function populatePayments(history, tracker) {
     el.payments.forEach(pay => {
 
       // Avoid one time payments
-      if (pay.payment_id.length === 36) {
+      if (pay.timePeriod === "one-time") {
         return;
       }
 
