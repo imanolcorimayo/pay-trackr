@@ -4,7 +4,7 @@
     <PaymentsDetails ref="paymentDetails" :paymentId="paymentId" @openEdit="showEdit" />
     <Loader v-if="isLoading" />
     <div class="flex flex-col gap-[0.429rem]">
-      <Filters @onSearch="searchPayment" showDates />
+      <Filters @onSearch="searchPayment" showDates @onOrder="orderRecurrent" />
       <div class="p-3 px-0 sm:px-3">
         <table class="w-full table-fixed">
           <thead class="text-center">
@@ -31,10 +31,10 @@
                 </span>
                 <div v-else class="flex flex-col items-center justify-center">
                   <RiToggleFill @click="(ev) => markAsPaid(ev, paymentId, payment.months[month].trackerId, false)"
-                    class="text-[1.637rem] text-[--success-color]" v-if="payment.months[month].isPaid" />
+                    class="text-[1.637rem] text-success" v-if="payment.months[month].isPaid" />
                   <RiToggleLine @click="(ev) => markAsPaid(ev, paymentId, payment.months[month].trackerId, true)"
                     class="text-[1.637rem]" v-else :class="{
-                      ['text-[--danger-color]']: isDelayed(payment.months[month].dueDate) && !payment.months[month].isPaid
+                      ['text-danger']: isDelayed(payment.months[month].dueDate) && !payment.months[month].isPaid
                     }" />
                   <span class="text-[0.714rem] sm:text-[1rem] font-semibold">{{
                     formatPrice(payment.months[month].amount) }}</span>
@@ -118,6 +118,57 @@ function showDetails(payId) {
   paymentDetails.value.showModal(payId);
 }
 
+function orderRecurrent(orderQuery) {
+
+  const isDefault = !orderQuery || (orderQuery && !orderQuery.name);
+
+  // Sort positions in object searchedPayments by isPaid and by dueDate
+  // Convert the object to an array of [key, value] pairs
+  const entries = Object.entries(!isDefault ? searchedPayments.value : payments.value);
+
+  // Sort the array based on the query
+  entries.sort((a, b) => {
+
+    // Sort only by date
+    if(!isDefault && orderQuery.name === "date") {
+      const dateA = $dayjs(a[1].dueDate, { format: 'MM/DD/YYYY' }).unix();
+      const dateB = $dayjs(b[1].dueDate, { format: 'MM/DD/YYYY' }).unix();
+      return orderQuery.order === "asc" ? dateA - dateB : dateB - dateA;
+    }
+
+    // Sort only by amount
+    if(!isDefault && orderQuery.name === "amount") {
+      const amountA = a[1].amount;
+      const amountB = b[1].amount;
+      return orderQuery.order === "asc" ? amountA - amountB : amountB - amountA;
+    }
+
+    // Sort only by title
+    if(!isDefault && orderQuery.name === "title") {
+      const titleA = a[1].title.toLowerCase();
+      const titleB = b[1].title.toLowerCase();
+      return orderQuery.order === "asc" ? titleA.localeCompare(titleB) : titleB.localeCompare(titleA);
+    }
+
+
+    // Default sort by isPaid and dueDate
+    const isPaidA = a[1].isPaid;
+    const isPaidB = b[1].isPaid;
+
+    // Sort by isPaid (false first)
+    if (isPaidA !== isPaidB) {
+      return isPaidA ? 1 : -1;
+    }
+
+    // Then by dueDate
+    const dateA = $dayjs(a.dueDate, { format: 'MM/DD/YYYY' }).unix();
+    const dateB = $dayjs(b.dueDate, { format: 'MM/DD/YYYY' }).unix();
+    return dateA - dateB;
+  });
+
+  // Duplicate value in aux variable so we can filter it
+  searchedPayments.value = Object.fromEntries(entries);
+}
 function searchPayment(query) {
 
   // Filter payments based on the query
@@ -158,11 +209,6 @@ async function markAsPaid(ev, paymentId, trackerId, value) {
 
   isLoading.value = false;
   useToast('success', 'Payment mark as paid successfully.')
-}
-
-function sortPayments(options) {
-  payments.value = orderPayments(Object.assign([], history.value.payments), options);
-  isOpen.value = false; // Close the popup
 }
 
 function populatePayments(history, tracker) {
@@ -217,28 +263,8 @@ function populatePayments(history, tracker) {
     })
   })
 
-  // Sort positions in object searchedPayments by isPaid and by dueDate
-  // Convert the object to an array of [key, value] pairs
-  const entries = Object.entries(payments.value);
-
-  // Sort the array based on isPaid and dueDate
-  entries.sort((a, b) => {
-    const isPaidA = a[1].isPaid;
-    const isPaidB = b[1].isPaid;
-
-    // Sort by isPaid (false first)
-    if (isPaidA !== isPaidB) {
-      return isPaidA ? 1 : -1;
-    }
-
-    // Then by dueDate
-    const dateA = $dayjs(a.dueDate, { format: 'MM/DD/YYYY' }).unix();
-    const dateB = $dayjs(b.dueDate, { format: 'MM/DD/YYYY' }).unix();
-    return dateA - dateB;
-  });
-
-  // Duplicate value in aux variable so we can filter it
-  searchedPayments.value = Object.fromEntries(entries);
+  // Order with the default configuration
+  orderRecurrent();
 }
 
 // ----- Define Hooks ---------

@@ -17,7 +17,11 @@ export const orderPayments = (items: PaymentList, options?: SortOptions) => {
         if(options && options.field == "amount") {
             firstValue = a.amount;
             secondValue = b.amount;
-        } else {
+        } else if(options && options.field == "title") {
+            firstValue = a.title;
+            secondValue = b.title
+        }
+        else {
             firstValue = $dayjs(a.dueDate, { format: 'MM/DD/YYYY' }).unix();
             secondValue = $dayjs(b.dueDate, { format: 'MM/DD/YYYY' }).unix();
         }

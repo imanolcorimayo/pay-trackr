@@ -1,6 +1,6 @@
 <template>
     <div>
-        <Filters @onSearch="searchPayment" />
+        <Filters @onSearch="searchPayment" @onOrder="orderOneTime"/>
         <PaymentsManagePayment ref="editPayment" :paymentId="paymentId" isEdit />
         <div class="mt-[2rem] flex flex-col gap-[1.714rem]" v-if="!isLoading">
             <PaymentCard v-for="(payment, index) in searchedPayments" :key="index" :amount="payment.amount"
@@ -52,7 +52,16 @@ function showEdit(payId) {
     editPayment.value.showModal(payId);
 }
 
+function orderOneTime(orderQuery) {
 
+    // Order one-time payments
+    if (orderQuery && orderQuery.name) {
+        searchedPayments.value = orderPayments(searchedPayments.value, { filed: orderQuery.name, type: orderQuery.order });
+        return;
+    }
+
+    searchedPayments.value = orderPayments(searchedPayments.value);
+}
 function searchPayment(query) {
     // Filter payments based on the query
     searchedPayments.value = oneTimePayments.value.filter(payment => {

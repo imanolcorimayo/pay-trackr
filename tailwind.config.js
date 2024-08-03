@@ -26,6 +26,15 @@ export default {
         ['accent-transparent']: "#0085FFAA",
         ['success-transparent']: "#28A745AA",
       },
+      colors: {
+        primary: "#6ABAA4",
+        secondary: "#7A73FF",
+        danger: "#FF6BA5",
+        base: "#27292D",
+        warning: "#FFC95C",
+        accent: "#0085FF",
+        success: "#28A745",
+      },
       keyframes: {
         jump: {
           '0%, 100%': { transform: 'translateY(0)' },

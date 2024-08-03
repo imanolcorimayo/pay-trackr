@@ -1,7 +1,7 @@
 <template>
     <div class="relative">
         <slot></slot>
-        <div v-if="isOpen" ref="tooltipBody"class="absolute z-[25] mt-2 bg-white border border-gray-200 rounded-lg shadow-lg min-w-[15rem]">
+        <div v-if="isOpen" ref="tooltipBody" class="absolute z-[25] right-0 sm:left-0 mt-2 bg-white border border-gray-200 rounded-lg shadow-lg min-w-[18rem] max-w-[30rem] max-h-[13rem]">
             <slot name="content"></slot>
         </div>
     </div>
