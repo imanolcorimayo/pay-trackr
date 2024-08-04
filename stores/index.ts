@@ -106,9 +106,9 @@ export const useIndexStore = defineStore('index', {
             };
         },
         // History is all trackers from all time
-        async loadHistory() {
+        async loadHistory(monthsBack:number|string = "null") {
             // If already loaded, return
-            if (this.$state.history.length && this.isHistoryFetched) {
+            if (this.$state.history.length && this.isHistoryFetched && monthsBack === "null") {
                 return;
             }
 
@@ -120,9 +120,29 @@ export const useIndexStore = defineStore('index', {
                 return;
             }
 
+            // Get useful Properties
+            const { $dayjs } = useNuxtApp();
+            const { width } = useWindowSize();
+
+            // Based on the screen width select 3 months or 6 months
+            const nMonths = (width && width.value) > 768 ? 6 : 3;
+            
+            monthsBack = monthsBack !== "null" ? monthsBack : 0;
+            // Get start of 3 months back
+            const threeMonthsAgo = $dayjs().subtract(nMonths - 1 + monthsBack, 'month').startOf('month');
+            // Current month end
+            const currentMonthEnd = $dayjs().subtract(monthsBack, 'month').endOf('month');
+
             // Connect with firebase and get payments structure
             const db = useFirestore();
-            const querySnapshot = await getDocs(query(collection(db, 'tracker'), where('user_id', '==', user.value.uid), orderBy("createdAt", "desc")));
+
+            const querySnapshot = await getDocs(query(
+                collection(db, 'tracker'), 
+                where('user_id', '==', user.value.uid),
+                where('createdAt', '>=', threeMonthsAgo.toDate()),
+                where('createdAt', '<=', currentMonthEnd.toDate()), 
+                orderBy("createdAt", "desc")
+            ));
 
             // Tracker history object 
             const trackerHistory:TrackerList = [];

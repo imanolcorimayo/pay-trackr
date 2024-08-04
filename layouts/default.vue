@@ -4,7 +4,7 @@
     <div class="flex flex-col gap-[3rem] py-[2rem] max-w-[80rem] m-auto px-[1.429rem]">
       <div class="flex justify-between gap-[2rem] max-w-[60rem] w-full m-auto overflow-x-scroll scrollbar-none no-scrollbar">
         <div
-          class="flex flex-col items-start justify-center gap-[0.578rem] border p-[1rem] bg-base w-full rounded-[1rem] min-h-[7rem] shadow-lg max-w-[20rem]">
+          class="flex flex-col items-start justify-center gap-[0.578rem] border p-[1rem] bg-base w-full rounded-[1rem] min-w-[11rem] min-h-[7rem] shadow-lg max-w-[20rem]">
           <div class="flex gap-4 items-center">
             <MaterialSymbolsPaidRounded class="text-[1.714rem] text-[--secondary-color]" />
             <span class="font-normal">Paid This Month</span>
@@ -12,7 +12,7 @@
           <span class="text-[1.429rem] font-semibold text-[--success-color]">{{ formatPrice(totalPaid) }}</span>
         </div>
         <div
-          class="flex flex-col items-start justify-center gap-[0.578rem] border p-[1rem] bg-base w-full rounded-[1rem] min-h-[7rem] shadow-lg max-w-[20rem]">
+          class="flex flex-col items-start justify-center gap-[0.578rem] border p-[1rem] bg-base w-full rounded-[1rem] min-w-[11rem] min-h-[7rem] shadow-lg max-w-[20rem]">
           <div class="flex gap-4 items-center">
             <WpfPaid class="text-[1.714rem] text-[--secondary-color]" />
             <span class="font-normal">Owed This Month</span>
@@ -20,7 +20,7 @@
           <span class="text-[1.429rem] text-[--danger-color] font-semibold">{{ formatPrice(totalOwed) }}</span>
         </div>
         <div
-          class="flex flex-col items-start justify-center gap-[0.578rem] border p-[1rem] bg-base w-full rounded-[1rem] min-h-[7rem] shadow-lg max-w-[20rem]">
+          class="flex flex-col items-start justify-center gap-[0.578rem] border p-[1rem] bg-base w-full rounded-[1rem] min-w-[11rem] min-h-[7rem] shadow-lg max-w-[20rem]">
           <div class="flex gap-4 items-center">
             <HugeiconsSummationCircle class="text-[1.714rem] text-[--secondary-color]" />
             <span class="font-normal">Month Total</span>
@@ -60,10 +60,6 @@ const route = useRoute();
 // ----- Define Pinia Vars -----------
 const indexStore = useIndexStore();
 const { getTracker: tracker } = storeToRefs(indexStore);
-// TODO: Look for a way to speed up this in case the user has already fetched the data
-if (user) {
-  // await indexStore.fetchData();
-}
 
 // ----- Define Computed ---------
 const totalPaid = computed(() => {

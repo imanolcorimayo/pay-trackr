@@ -4,7 +4,7 @@
     <PaymentsDetails ref="paymentDetails" :paymentId="paymentId" @openEdit="showEdit" />
     <Loader v-if="isLoading" />
     <div class="flex flex-col gap-[0.429rem]">
-      <Filters @onSearch="searchPayment" showDates @onOrder="orderRecurrent" />
+      <Filters @onSearch="searchPayment" showDates @onOrder="orderRecurrent" @monthsBack="updateMonths" />
       <div class="p-3 px-0 sm:px-3">
         <table class="w-full table-fixed">
           <thead class="text-center">
@@ -68,9 +68,7 @@ const { getHistory: history, getTracker: tracker, isDataFetched } = storeToRefs(
 
 // ----- Define Vars ---------
 const isLoading = ref(false);
-const markingPaid = ref(false);
 const payments = ref({});
-const isOpen = ref(false);
 const searchedPayments = ref([]);
 
 // Based on the screen width select 3 months or 6 months
@@ -108,6 +106,12 @@ function showEdit(payId) {
 
   // Open the modal
   editPayment.value.showModal(payId);
+}
+
+function updateMonths(monthsBack) {
+  // Update months based on the monthsBack
+  months.value = Array.from({ length: nMonths }, (_, i) => $dayjs().subtract(i + monthsBack, 'month').format('MMM'));
+  months.value = months.value.reverse();
 }
 
 function showDetails(payId) {

@@ -108,7 +108,7 @@ const { width } = useWindowSize();
 
 // ------ Define Pinia Vars --------
 const indexStore = useIndexStore();
-const { getPayments: payments, getTracker: tracker, getHistory: history } = storeToRefs(indexStore)
+const { getTracker: tracker, getHistory: history } = storeToRefs(indexStore)
 
 // ----- Define Vars ------
 const payment = ref({
