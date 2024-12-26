@@ -1,0 +1,379 @@
+[
+  {
+    "unit": "Bolsa",
+    "description": "",
+    "productName": "Calabacín ",
+    "userUid": "UATNlxhj8oYPSZ3HIsSp5E25uu63",
+    "createdAt": { "_seconds": 1724155582, "_nanoseconds": 134000000 },
+    "step": 1,
+    "price": 9000,
+    "id": "2dlxgpBFzu5Bv2NCjKsR"
+  },
+  {
+    "unit": "Cajon",
+    "description": "",
+    "productName": "Manzana red",
+    "userUid": "UATNlxhj8oYPSZ3HIsSp5E25uu63",
+    "createdAt": { "_seconds": 1724155641, "_nanoseconds": 72000000 },
+    "step": 0.5,
+    "price": 25000,
+    "id": "4rhYe94AaYv2yVMVXa3O"
+  },
+  {
+    "unit": "Cajon",
+    "description": "",
+    "productName": "Acelga ",
+    "userUid": "UATNlxhj8oYPSZ3HIsSp5E25uu63",
+    "createdAt": { "_seconds": 1724155438, "_nanoseconds": 324000000 },
+    "price": 2500,
+    "step": 1,
+    "id": "5VspHUBtBzfo9Gm3lyjS"
+  },
+  {
+    "unit": "Cajon",
+    "description": "",
+    "productName": "Limón ",
+    "userUid": "UATNlxhj8oYPSZ3HIsSp5E25uu63",
+    "createdAt": { "_seconds": 1724155415, "_nanoseconds": 376000000 },
+    "step": 0.5,
+    "price": 9000,
+    "id": "H2e797fEIUCHpBwh1D45"
+  },
+  {
+    "unit": "Docena",
+    "description": "",
+    "productName": "Rucula",
+    "userUid": "UATNlxhj8oYPSZ3HIsSp5E25uu63",
+    "createdAt": { "_seconds": 1724155543, "_nanoseconds": 742000000 },
+    "step": 0.5,
+    "price": 8000,
+    "id": "Ho400SWleOrMyYOVetSG"
+  },
+  {
+    "unit": "Cajon",
+    "description": "",
+    "productName": "Banana boli",
+    "userUid": "UATNlxhj8oYPSZ3HIsSp5E25uu63",
+    "createdAt": { "_seconds": 1724155650, "_nanoseconds": 991000000 },
+    "step": 0.5,
+    "price": 28000,
+    "id": "I4boBqBHsGIkRyzNNy9A"
+  },
+  {
+    "unit": "Bolsa",
+    "description": "Dado",
+    "productName": "Zanahoria ",
+    "userUid": "UATNlxhj8oYPSZ3HIsSp5E25uu63",
+    "createdAt": { "_seconds": 1724155569, "_nanoseconds": 855000000 },
+    "price": 9000,
+    "step": 1,
+    "id": "IqikBrGHEV9K0wUwlsD3"
+  },
+  {
+    "description": "",
+    "userUid": "UATNlxhj8oYPSZ3HIsSp5E25uu63",
+    "createdAt": { "_seconds": 1724879300, "_nanoseconds": 184000000 },
+    "unit": "Bolsa",
+    "step": 1,
+    "price": 14500,
+    "productName": "papa cepillada",
+    "id": "KlX03q2aSvZH6BHA15GA"
+  },
+  {
+    "unit": "Bolsa",
+    "description": "",
+    "productName": "Batata",
+    "userUid": "UATNlxhj8oYPSZ3HIsSp5E25uu63",
+    "createdAt": { "_seconds": 1724155469, "_nanoseconds": 583000000 },
+    "price": 6500,
+    "step": 1,
+    "id": "LcfD9aqEP2EfA6VqvcWx"
+  },
+  {
+    "unit": "Bolsa",
+    "description": "",
+    "productName": "Papa blanca",
+    "userUid": "UATNlxhj8oYPSZ3HIsSp5E25uu63",
+    "createdAt": { "_seconds": 1724155279, "_nanoseconds": 120000000 },
+    "step": 1,
+    "price": 12000,
+    "id": "M0bhMooKy1qORwkaJxCa"
+  },
+  {
+    "unit": "Cajon",
+    "price": "38000",
+    "description": "",
+    "step": "1",
+    "productName": "Kiwi ",
+    "userUid": "UATNlxhj8oYPSZ3HIsSp5E25uu63",
+    "createdAt": { "_seconds": 1726619951, "_nanoseconds": 692000000 },
+    "id": "MX5Qzqv9Gv1kgid29jkH"
+  },
+  {
+    "unit": "Kg",
+    "description": "",
+    "productName": "papa negra",
+    "userUid": "UATNlxhj8oYPSZ3HIsSp5E25uu63",
+    "createdAt": { "_seconds": 1724879265, "_nanoseconds": 133000000 },
+    "archivedAt": { "_seconds": 1726319800, "_nanoseconds": 996000000 },
+    "id": "Pk49CcnC6KEil0ofOYbf"
+  },
+  {
+    "unit": "Cajon",
+    "description": "",
+    "productName": "Zapallitos ",
+    "userUid": "UATNlxhj8oYPSZ3HIsSp5E25uu63",
+    "createdAt": { "_seconds": 1724155627, "_nanoseconds": 691000000 },
+    "step": 0.5,
+    "price": 32000,
+    "id": "Q1aVOilcMo6U1uzCtd4l"
+  },
+  {
+    "unit": "Unitario",
+    "description": "",
+    "productName": "Repollo morado",
+    "userUid": "UATNlxhj8oYPSZ3HIsSp5E25uu63",
+    "createdAt": { "_seconds": 1724155614, "_nanoseconds": 662000000 },
+    "price": 2500,
+    "step": 1,
+    "id": "SGUlYOFv5j4eYKm0Ymlt"
+  },
+  {
+    "unit": "Cajon",
+    "description": "",
+    "productName": "Naranja ombligo",
+    "userUid": "UATNlxhj8oYPSZ3HIsSp5E25uu63",
+    "createdAt": { "_seconds": 1724155676, "_nanoseconds": 437000000 },
+    "price": 11000,
+    "step": 0.5,
+    "id": "VRkZ2WL7ctIbcy1ObTKV"
+  },
+  {
+    "unit": "Bolsa",
+    "description": "",
+    "productName": "Zapallo negro",
+    "userUid": "UATNlxhj8oYPSZ3HIsSp5E25uu63",
+    "createdAt": { "_seconds": 1724155589, "_nanoseconds": 435000000 },
+    "step": 1,
+    "price": 16000,
+    "id": "VhWn8mUCDnw6JhBwdjmz"
+  },
+  {
+    "unit": "Cajon",
+    "description": "",
+    "productName": "Pimiento verde",
+    "userUid": "UATNlxhj8oYPSZ3HIsSp5E25uu63",
+    "createdAt": { "_seconds": 1724155454, "_nanoseconds": 540000000 },
+    "step": 0.5,
+    "price": 25000,
+    "id": "Y8ltURbXouK1Y0tOqA88"
+  },
+  {
+    "unit": "Bolsa",
+    "description": "",
+    "productName": "Cebolla ",
+    "userUid": "UATNlxhj8oYPSZ3HIsSp5E25uu63",
+    "createdAt": { "_seconds": 1724155304, "_nanoseconds": 845000000 },
+    "step": 0.5,
+    "price": 16000,
+    "id": "Z2V5aKX6u7afQo3dDKie"
+  },
+  {
+    "unit": "Unitario",
+    "description": "",
+    "productName": "Remolacha ",
+    "userUid": "UATNlxhj8oYPSZ3HIsSp5E25uu63",
+    "createdAt": { "_seconds": 1724155554, "_nanoseconds": 797000000 },
+    "price": 1800,
+    "step": 1,
+    "id": "bk232NFryaQhaM4Hk0OR"
+  },
+  {
+    "unit": "Docena",
+    "description": "",
+    "productName": "Lechuguin ",
+    "userUid": "UATNlxhj8oYPSZ3HIsSp5E25uu63",
+    "createdAt": { "_seconds": 1724155406, "_nanoseconds": 714000000 },
+    "price": 7000,
+    "step": 0.5,
+    "id": "d6B09r0BRkhjWLdCN5PB"
+  },
+  {
+    "unit": "Unitario",
+    "description": "",
+    "productName": "Apio",
+    "userUid": "UATNlxhj8oYPSZ3HIsSp5E25uu63",
+    "createdAt": { "_seconds": 1724155494, "_nanoseconds": 435000000 },
+    "price": 3000,
+    "step": 1,
+    "id": "dT52ww0QEnSKruKW1qgM"
+  },
+  {
+    "unit": "Cajon",
+    "description": "",
+    "productName": "tomate perita chico",
+    "userUid": "UATNlxhj8oYPSZ3HIsSp5E25uu63",
+    "createdAt": { "_seconds": 1724801363, "_nanoseconds": 606000000 },
+    "step": 0.5,
+    "price": 40000,
+    "id": "e4bVZv0vdWugxNneWIrF"
+  },
+  {
+    "unit": "Cajon",
+    "description": "",
+    "productName": "frutilla",
+    "userUid": "UATNlxhj8oYPSZ3HIsSp5E25uu63",
+    "createdAt": { "_seconds": 1725576632, "_nanoseconds": 214000000 },
+    "price": 18000,
+    "step": 1,
+    "id": "gTjxpddG5W9qvP5YWXZq"
+  },
+  {
+    "unit": "Cajon",
+    "description": "",
+    "userUid": "UATNlxhj8oYPSZ3HIsSp5E25uu63",
+    "createdAt": { "_seconds": 1724155882, "_nanoseconds": 646000000 },
+    "step": 0.5,
+    "price": 12000,
+    "productName": "Mandarina ",
+    "id": "hgtRjlRJkNg1MZwpuJfY"
+  },
+  {
+    "unit": "Cajon",
+    "description": "",
+    "productName": "Berenjena ",
+    "userUid": "UATNlxhj8oYPSZ3HIsSp5E25uu63",
+    "createdAt": { "_seconds": 1724155463, "_nanoseconds": 135000000 },
+    "step": 0.5,
+    "price": 20000,
+    "id": "lQoFpBTHF0U6FDsILSVL"
+  },
+  {
+    "unit": "Docena",
+    "description": "",
+    "productName": "Espinaca ",
+    "userUid": "UATNlxhj8oYPSZ3HIsSp5E25uu63",
+    "createdAt": { "_seconds": 1724155501, "_nanoseconds": 340000000 },
+    "price": 6000,
+    "step": 0.5,
+    "id": "nj0huUQ3y50GEonQ5JMu"
+  },
+  {
+    "unit": "Unitario",
+    "description": "",
+    "productName": "Verdeo",
+    "userUid": "UATNlxhj8oYPSZ3HIsSp5E25uu63",
+    "createdAt": { "_seconds": 1724155489, "_nanoseconds": 131000000 },
+    "price": 3500,
+    "step": 1,
+    "id": "oOmmhb96HYBwMuHZBoZe"
+  },
+  {
+    "unit": "Cajon",
+    "description": "",
+    "productName": "Naranja jugo ",
+    "userUid": "UATNlxhj8oYPSZ3HIsSp5E25uu63",
+    "createdAt": { "_seconds": 1724155665, "_nanoseconds": 390000000 },
+    "price": 11000,
+    "step": 0.5,
+    "id": "p7PFtCKC05hFwPvyDFlZ"
+  },
+  {
+    "unit": "Docena",
+    "description": "",
+    "productName": "Achicoria",
+    "userUid": "UATNlxhj8oYPSZ3HIsSp5E25uu63",
+    "createdAt": { "_seconds": 1724155507, "_nanoseconds": 798000000 },
+    "step": 0.5,
+    "price": 8000,
+    "id": "p8kI9A00YqaZnp6Jxgqi"
+  },
+  {
+    "unit": "Kg",
+    "description": "",
+    "productName": "Puerro",
+    "userUid": "UATNlxhj8oYPSZ3HIsSp5E25uu63",
+    "createdAt": { "_seconds": 1724155512, "_nanoseconds": 898000000 },
+    "id": "qU2ocVyN7J7eOr8pm483"
+  },
+  {
+    "unit": "Cajon",
+    "description": "",
+    "productName": "Pera packan",
+    "userUid": "UATNlxhj8oYPSZ3HIsSp5E25uu63",
+    "createdAt": { "_seconds": 1724155703, "_nanoseconds": 289000000 },
+    "step": 0.5,
+    "price": 18000,
+    "id": "qzSrF2hjTJlD37CU0kPt"
+  },
+  {
+    "unit": "Unitario",
+    "description": "",
+    "productName": "Repollo blanco",
+    "userUid": "UATNlxhj8oYPSZ3HIsSp5E25uu63",
+    "createdAt": { "_seconds": 1724155605, "_nanoseconds": 154000000 },
+    "price": 2500,
+    "step": 1,
+    "id": "sjzbV3cw8nyw2UVwsQrn"
+  },
+  {
+    "unit": "Unitario",
+    "description": "",
+    "productName": "Perejil ",
+    "userUid": "UATNlxhj8oYPSZ3HIsSp5E25uu63",
+    "createdAt": { "_seconds": 1724155480, "_nanoseconds": 954000000 },
+    "price": 1800,
+    "step": 1,
+    "id": "tOhZvTqnM4FoYzCvmsqf"
+  },
+  {
+    "unit": "Cajon",
+    "description": "Numero 5",
+    "productName": "Ajos",
+    "userUid": "UATNlxhj8oYPSZ3HIsSp5E25uu63",
+    "createdAt": { "_seconds": 1724155369, "_nanoseconds": 58000000 },
+    "step": 0.25,
+    "price": 70000,
+    "id": "taghhkjKqtL0YVJh2w4Y"
+  },
+  {
+    "unit": "Bolsa",
+    "description": "",
+    "productName": "Cebollín ",
+    "userUid": "UATNlxhj8oYPSZ3HIsSp5E25uu63",
+    "createdAt": { "_seconds": 1724155314, "_nanoseconds": 193000000 },
+    "step": 0.5,
+    "price": 13000,
+    "id": "trh1mg4XgXNuSwa72BzU"
+  },
+  {
+    "unit": "Cajon",
+    "description": "",
+    "productName": "Tomate perita ",
+    "userUid": "UATNlxhj8oYPSZ3HIsSp5E25uu63",
+    "createdAt": { "_seconds": 1724155295, "_nanoseconds": 617000000 },
+    "step": 0.5,
+    "price": 26000,
+    "id": "vYJnLJarp9IYYegtXlDK"
+  },
+  {
+    "unit": "Cajon",
+    "description": "",
+    "productName": "Lechuga Repollada",
+    "userUid": "UATNlxhj8oYPSZ3HIsSp5E25uu63",
+    "createdAt": { "_seconds": 1724155391, "_nanoseconds": 23000000 },
+    "step": 0.5,
+    "price": 10000,
+    "id": "xepOScOOUeS8L2pz5L45"
+  },
+  {
+    "unit": "Cajon",
+    "description": "",
+    "productName": "Pimiento rojo",
+    "userUid": "UATNlxhj8oYPSZ3HIsSp5E25uu63",
+    "createdAt": { "_seconds": 1724155447, "_nanoseconds": 536000000 },
+    "step": 0.5,
+    "price": 35000,
+    "id": "zdlMGjpXEdStyVrgbUAG"
+  }
+]

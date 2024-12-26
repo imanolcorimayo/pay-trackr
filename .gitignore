@@ -26,3 +26,5 @@ logs
 # Firebase
 service-account.json
 .firebase
+.firebase/*
+.vscode
