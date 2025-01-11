@@ -227,7 +227,7 @@ export const useIndexStore = defineStore('index', {
                 if(tracker.id === "" && !trackerParam) {
                     // Add this to the tracker object and update it if exist or create it
                     tracker = createTrackerObject(user as Ref<User>, [payment]);
-    
+
                     // Post tracker object on Firestore
                     const newTracker = await addDoc(collection(db, "tracker"), tracker);
 
@@ -590,9 +590,9 @@ function createTrackerObject(user:Ref<User>, payments: PaymentList):Tracker {
 function createPaymentTracker(payment: any):Payment {
     const { $dayjs } = useNuxtApp();
 
-    // Update payment month
+    // Update month and year to the current one
     const parsedDate = $dayjs(payment.dueDate, { format: 'MM/DD/YYYY' });
-    const updatedDate = parsedDate.month($dayjs().month());
+    const updatedDate = parsedDate.month($dayjs().month()).year($dayjs().year()); 
     const updatedDateString = updatedDate.format('MM/DD/YYYY');
     
     // Send some data twice to save a log history
