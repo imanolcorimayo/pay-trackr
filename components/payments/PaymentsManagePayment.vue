@@ -1,294 +1,413 @@
 <template>
-    <ModalStructure @onClose="() => emit('onClose')" ref="mainModal">
-        <template #header>
-            <img class="max-w-[10rem] md:max-w-[21.428rem] m-auto" src="/img/edit-modal.svg" alt="">
-            <div class="flex flex-col">
-                <p class="text-[1.143rem] font-semibold m-auto text-center" v-if="!isEdit">New Payment</p>
-                <p class="text-[1.143rem] font-semibold m-auto text-center" v-else>Edit Payment</p>
-                <span v-if="isEdit" class="">This edit will affect only the current month. Previous months are not allowed to edition</span>
+  <div>
+    <Modal ref="modal">
+      <template #header>
+        <div class="flex items-center">
+          <div v-if="isLoading" class="w-3 h-14 rounded-full mr-3 bg-gray-200 animate-pulse"></div>
+          <div
+            v-else-if="form.category"
+            class="w-3 h-14 rounded-full mr-3"
+            :class="`bg-${form.category.toLowerCase()}`"
+          ></div>
+          <div>
+            <h2 class="text-xl font-bold">
+              {{ isEdit ? "Edit" : "Create" }} {{ isRecurrent ? "Recurring" : "One-time" }} Payment
+            </h2>
+            <p class="text-sm text-gray-500" v-if="isEdit && form.title">{{ form.title }}</p>
+          </div>
+        </div>
+      </template>
+
+      <template #body>
+        <div v-if="isLoading" class="flex justify-center items-center min-h-[200px]">
+          <Loader />
+        </div>
+
+        <form v-else @submit.prevent="savePayment" class="space-y-6">
+          <!-- Payment Title & Description -->
+          <div class="space-y-2">
+            <label for="title" class="block text-sm font-medium text-gray-400">Payment Title*</label>
+            <input
+              id="title"
+              v-model="form.title"
+              type="text"
+              :disabled="props.isRecurrent"
+              required
+              class="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+              placeholder="e.g. Netflix Subscription"
+            />
+          </div>
+
+          <div class="space-y-2" v-if="!props.isRecurrent">
+            <label for="description" class="block text-sm font-medium text-gray-400">Description (Optional)</label>
+            <textarea
+              id="description"
+              v-model="form.description"
+              class="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+              placeholder="Add some details about this payment"
+              rows="2"
+            ></textarea>
+          </div>
+
+          <!-- Amount & Category -->
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div class="space-y-2">
+              <label for="amount" class="block text-sm font-medium text-gray-400">Amount*</label>
+              <div class="relative">
+                <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-500">$</span>
+                <input
+                  id="amount"
+                  v-model="form.amount"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  required
+                  class="w-full p-2 pl-7 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                  placeholder="0.00"
+                />
+              </div>
             </div>
-        </template>
-        <template #default>
-            <form @submit.prevent="submit()" id="payment-form">
-                <div class="flex flex-col gap-[1.714rem] w-full">
-                    <div class="w-full flex flex-col gap-[0.213rem]">
-                        <label class="font-medium">Payment title *</label>
-                        <input class="form-input" v-model="payment.title" required name="title" autocomplete="off" />
-                    </div>
-                    <div class="w-full flex flex-col gap-[0.213rem]">
-                        <label class="font-medium">Description</label>
-                        <textarea v-model="payment.description" name="description" autocomplete="off" class="min-h-[7rem] pt-4 form-input" />
-                    </div>
-                    <div class="grid grid-cols-2 gap-y-[1.714rem] gap-x-[0.571rem] lg:gap-x-[1.714rem]">
-                        <div class="w-full flex flex-col gap-[0.213rem]">
-                            <label class="font-medium">Amount *</label>
-                            <input class="form-input" v-model="payment.amount" type="number" step="0.01" min="0" name="amount" placeholder="0.00" required
-                                autocomplete="off">
-                        </div>
-                        <ClientOnly>
-                            <div class="w-full flex flex-col gap-[0.213rem] relative">
-                                <label class="font-medium">Next Due Date *</label>
-                                <input class="form-input" id="valid-until" readonly name="dueDate" placeholder="mm/dd/yyyy" autocomplete="off"
-                                    v-model="payment.dueDate" required @click="showPicker" />
-                                <div v-if="pickerVisible && width > 768" ref="picker" class="absolute w-full bottom-0">
-                                    <VDatePicker :minDate="minDate" :maxDate="maxDate" isDark class="picker" expanded v-model="date" />
-                                </div>
-                                <teleport v-else-if="pickerVisible && width <= 768" to="body">
-                                    <div ref="secondPicker" id="mobilePicker" class="absolute w-full bottom-0 z-[100]">
-                                        <VDatePicker :minDate="minDate" :maxDate="maxDate" isDark class="picker" expanded v-model="date" />
-                                    </div>
-                                </teleport>
-                            </div>
-                        </ClientOnly>
-                    </div>
-                    <div class="w-full flex gap-[0.426rem]">
-                        <input type="hidden" name="period" id="time-period" v-model="payment.timePeriod" />
-                        <button 
-                            type="button"
-                            @click="payment.timePeriod = 'monthly'" 
-                            :class="{'bg-secondary': payment.timePeriod == 'monthly', 'bg-white text-black': payment.timePeriod !== 'monthly'}" 
-                            class="w-full flex-1 p-[0.571rem] rounded-[0.214rem]"
-                        >Recurrent</button>
-                        <button 
-                            type="button"
-                            @click="payment.timePeriod = 'one-time'" 
-                            :class="{'bg-secondary': payment.timePeriod == 'one-time', 'bg-white text-black': payment.timePeriod !== 'one-time'}" 
-                            class="w-full flex-1 p-[0.571rem] rounded-[0.214rem]"
-                        >One-time</button>
-                    </div>
-                    <div class="w-full flex flex-col gap-[0.213rem]">
-                        <label class="font-medium">Category *</label>
-                        <input v-model="payment.category" name="category" required autocomplete="off" class="capitalize form-input" />
-                    </div>
-                    <div class="w-full flex items-center gap-4">
-                        <label class="font-medium">Paid</label>
-                        <RiToggleFill @click="payment.isPaid = false" class="cursor-pointer text-[1.637rem] text-[--success-color]" v-if="payment.isPaid"/>
-                        <RiToggleLine @click="payment.isPaid = true" class="cursor-pointer text-[1.637rem] text-[--danger-color]" v-else/>
-                        <input v-model="payment.isPaid" name="isPaid" required type="hidden" />
-                    </div>
-                </div>
-            </form>
-        </template>
-        <template #footer>
-            <div v-if="sending" class="btn btn-primary flex justify-center items-center"><Loader class="max-w-[2rem]"/></div>
-            <input v-else class="btn btn-primary" :disabled="disableButton" form="payment-form" type="submit" :value="(!paymentId ? 'Add Payment' : 'Edit Payment')">
-        </template>
-    </ModalStructure>
+
+            <div class="space-y-2" v-if="!props.isRecurrent">
+              <label for="category" class="block text-sm font-medium text-gray-400">Category*</label>
+              <select
+                id="category"
+                v-model="form.category"
+                required
+                class="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+              >
+                <option value="utilities">Utilities</option>
+                <option value="food">Food</option>
+                <option value="transport">Transport</option>
+                <option value="entertainment">Entertainment</option>
+                <option value="health">Health</option>
+                <option value="other">Other</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- One-time Payment Fields -->
+          <div class="space-y-2" v-if="!props.isRecurrent">
+            <label for="dueDate" class="block text-sm font-medium text-gray-400">Due Date*</label>
+            <input
+              id="dueDate"
+              v-model="form.dueDate"
+              type="date"
+              required
+              class="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+            />
+          </div>
+
+          <div class="space-y-2" v-if="!props.isRecurrent">
+            <label class="flex items-center space-x-2 cursor-pointer">
+              <input
+                type="checkbox"
+                v-model="form.isPaid"
+                class="form-checkbox h-5 w-5 text-primary rounded focus:ring-primary"
+              />
+              <span class="text-sm font-medium text-gray-400">Mark as paid</span>
+            </label>
+
+            <div v-if="form.isPaid" class="mt-2">
+              <label for="paidDate" class="block text-sm font-medium text-gray-400">Date Paid</label>
+              <input
+                id="paidDate"
+                v-model="form.paidDate"
+                type="date"
+                class="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+              />
+            </div>
+          </div>
+        </form>
+      </template>
+
+      <template #footer>
+        <div class="flex justify-between w-full">
+          <button
+            @click="closeModal"
+            class="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+          >
+            Cancel
+          </button>
+
+          <div class="flex space-x-2">
+            <button
+              v-if="isEdit"
+              @click="confirmDelete"
+              class="px-4 py-2 bg-danger/10 text-danger rounded-lg hover:bg-danger/20 transition-colors"
+            >
+              Delete
+            </button>
+
+            <button
+              @click="savePayment"
+              class="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark transition-colors"
+              :disabled="isSubmitting"
+            >
+              <span v-if="isSubmitting">
+                <span
+                  class="inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"
+                ></span>
+                Saving...
+              </span>
+              <span v-else>{{ isEdit ? "Update" : "Create" }}</span>
+            </button>
+          </div>
+        </div>
+      </template>
+    </Modal>
+
+    <ConfirmDialogue
+      ref="confirmDialog"
+      title="Delete Payment"
+      :message="`Are you sure you want to delete ${form.title}?`"
+      confirmLabel="Delete"
+      @confirm="deletePayment"
+    />
+  </div>
 </template>
 
 <script setup>
-import RiToggleFill from '~icons/ri/toggle-fill';
-import RiToggleLine from '~icons/ri/toggle-line';
+import { ref, computed, watch, onMounted } from "vue";
+import { useCurrentUser } from "vuefire";
+import { serverTimestamp, Timestamp } from "firebase/firestore";
 
 const props = defineProps({
-    paymentId: {
-        required: false,
-        default: false,
-    },
-    trackerId: {
-        required: false,
-        default: false,
-    },
-    isHistoryOnly: {
-        required: false,
-        default: false,
-        type: Boolean
-    },
-    isEdit: {
-        required: false,
-        default: false,
-        type: Boolean
-    },
-})
-const emit = defineEmits(["onClose"]);
-
-// ------ Define Useful Properties ----------
-const { $dayjs } = useNuxtApp()
-const { width } = useWindowSize();
-
-// ------ Define Pinia Vars --------
-const indexStore = useIndexStore();
-const { getTracker: tracker, getHistory: history } = storeToRefs(indexStore)
-
-// ----- Define Vars ------
-const payment = ref({
-    title: '',
-    description: '',
-    amount: null,
-    dueDate: '',
-    isPaid: false,
-    timePeriod: (!props.isEdit && props.isHistoryOnly) ? 'one-time' : 'monthly',
-    category: 'other',
-})
-const pickerVisible = ref(false);
-const date = ref(new Date());
-// Add min date the beginning of the current month
-const minDate = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
-// Add max date the end of the current month
-const maxDate = new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0);
-const disableButton = ref(false);
-const sending = ref(false);
-
-// Refs
-const mainModal = ref(null);
-const picker = ref(null);
-const secondPicker = ref(null);
-
-
-// Pre process information if needed
-// Get specific payment when it's editing
-if(props.paymentId) {
-    updatePaymentObject(props.paymentId);
-}
-
-// ---- Vue Core Events -------
-onClickOutside(picker, ev => {
-    // Get elements classes and check if any class contains "vc-" (vc- is the class of the date picker)
-    if(Array.from(ev.target.classList).some(cl => cl.includes("vc-"))) {
-        return;
-    }
-    pickerVisible.value = false
+  paymentId: {
+    type: String,
+    default: null
+  },
+  isEdit: {
+    type: Boolean,
+    default: false
+  },
+  isRecurrent: {
+    type: Boolean,
+    default: false
+  }
 });
-onClickOutside(secondPicker, ev => {
-    // Get elements classes and check if any class contains "vc-" (vc- is the class of the date picker)
-    if(Array.from(ev.target.classList).some(cl => cl.includes("vc-"))) {
-        return;
-    }
-    pickerVisible.value = false
+
+const emit = defineEmits(["onClose", "onCreated"]);
+
+// ----- Define Refs ---------
+const modal = ref(null);
+const confirmDialog = ref(null);
+const isLoading = ref(false);
+const isSubmitting = ref(false);
+
+// Default form state
+const defaultForm = computed(() => {
+  const { $dayjs } = useNuxtApp();
+  const today = $dayjs().format("YYYY-MM-DD");
+
+  if (props.isRecurrent) {
+    return {
+      title: "",
+      amount: ""
+    };
+  } else {
+    return {
+      title: "",
+      description: "",
+      amount: "",
+      category: "other",
+      dueDate: today,
+      isPaid: false,
+      paidDate: today,
+      paymentType: "one-time"
+    };
+  }
 });
+
+const form = ref({ ...defaultForm.value });
+
+// ----- Define Stores ---------
+const recurrentStore = useRecurrentStore();
+const paymentStore = usePaymentStore();
+const user = useCurrentUser();
 
 // ----- Define Methods ---------
-function showModal(payId = false, trackerId = false, isEdit = false) {
-    // Set default value if no payId has been set
-    if(!isEdit && props.isHistoryOnly && !payId) {
-        payment.value = {
-            title: "",
-            description: "",
-            amount: null,
-            dueDate: "",
-            timePeriod: "one-time",
-            category: "other",
-        };
-    }
+function showModal(paymentId = null) {
+  if (paymentId) {
+    fetchPaymentDetails(paymentId);
+  } else {
+    // Reset form when creating new payment
+    form.value = { ...defaultForm.value };
+  }
 
-    // Update the payment object every time it is opened (only if payId exists)
-    payId && updatePaymentObject(payId ? payId : props.paymentId, trackerId ? trackerId : props.trackerId);
-
-    // Show modal
-    mainModal.value.showModal();
+  modal.value?.open();
 }
+
 function closeModal() {
-    mainModal.value.closeModal();
+  modal.value?.close();
+  emit("onClose");
 }
-function updatePaymentObject(payId, trackerId) {
 
-    let filteredPayment;
-    // Look for the payment in the specific place
-    if(props.isHistoryOnly && history.value.length) {
-        // Get tracker
-        const trackerIds = history.value.map(e => e.id);
-        // Search index in history using trackerId
-        const trackerIndex = trackerIds.indexOf(trackerId);
+async function fetchPaymentDetails(paymentId) {
+  isLoading.value = true;
 
-        // Check this to be on the safe side
-        if(trackerIndex !== -1 && history.value[trackerIndex] && history.value[trackerIndex].payments?.length) {
-            // Find payment in tracker
-            filteredPayment = history.value[trackerIndex].payments.filter(el => el.payment_id == payId)
-        }
+  try {
+    if (props.isRecurrent) {
+      // Get recurrent payment
+      const payment = recurrentStore.getPaymentInstances.find((p) => p.id === paymentId);
 
-    } else if (tracker.value.payments?.length) {
-        filteredPayment = tracker.value.payments.filter(el => el.payment_id == payId)
-    }
-
-    // Check if there is a payment
-    if (!filteredPayment || !filteredPayment.length) {
-        console.error("No such document!");
-        useToast("error", "This payment does not exists.")
-        closeModal();
-        return;
+      if (payment) {
+        form.value = {
+          title: payment.title || "",
+          amount: payment.amount || ""
+        };
+      }
     } else {
+      // Get regular payment
+      const payment = await paymentStore.getPaymentById(paymentId);
 
-        // Check if it contains category
-        if(!filteredPayment[0].category) {
-            filteredPayment[0].category = "other"
-        }
+      if (payment) {
+        const { $dayjs } = useNuxtApp();
+        const dueDate = payment.createdAt ? $dayjs(payment.createdAt.toDate()).format("YYYY-MM-DD") : "";
 
-        payment.value = Object.assign({}, filteredPayment[0]);
+        const paidDate = payment.paidDate
+          ? $dayjs(payment.paidDate.toDate()).format("YYYY-MM-DD")
+          : $dayjs().format("YYYY-MM-DD");
+
+        form.value = {
+          title: payment.title || "",
+          description: payment.description || "",
+          amount: payment.amount || "",
+          category: payment.category || "other",
+          dueDate: dueDate,
+          isPaid: payment.isPaid || false,
+          paidDate: paidDate,
+          paymentType: payment.paymentType || "one-time"
+        };
+      }
     }
+  } catch (error) {
+    console.error("Error fetching payment details:", error);
+    useToast("error", "Failed to load payment details");
+  } finally {
+    isLoading.value = false;
+  }
 }
 
-// ----- Define Methods ---------
-async function submit() {
-    // Block add button and show loader
-    disableButton.value = true;
-    sending.value = true;
+async function savePayment() {
+  if (!user.value) {
+    useToast("error", "You must be logged in to save payments");
+    return;
+  }
 
-    const validate = validatePayment(payment.value);
-    if(typeof validate == 'string') {
-        useToast('error', validate)
-        disableButton.value = false;
-        sending.value = false;
-        closeModal();
-        return;
-    }
+  if (isSubmitting.value) return;
+  isSubmitting.value = true;
 
-    // Save data in Firestore. If Payment id exists it's an editing process
+  try {
     let result;
-    if(props.isEdit) {
-        // Analyze which function to execute
-        if(props.isHistoryOnly) {
-            // Edit only in history
-            result = await indexStore.editPayInHistory(payment.value, props.paymentId, props.trackerId);
-        } else {
-            // Edit recurrent and history and tracker if it's the case (if not marked as paid)
-            result = await indexStore.editPayment(payment.value, props.paymentId);
-        }
+
+    // Handle one-time payment save/update
+    const { $dayjs } = useNuxtApp();
+
+    let paymentData = {
+      title: form.value.title,
+      description: form.value.description,
+      amount: parseFloat(form.value.amount),
+      category: form.value.category,
+      isPaid: form.value.isPaid,
+      paidDate: form.value.isPaid ? Timestamp.fromDate($dayjs(form.value.paidDate).toDate()) : null,
+      recurrentId: null,
+      paymentType: "one-time"
+    };
+
+    if (props.isRecurrent) {
+      paymentData = {
+        title: form.value.title,
+        amount: parseFloat(form.value.amount)
+      };
+    }
+
+    if (props.isRecurrent && !props.isEdit) {
+      useToast("error", "Recurrent payments cannot be created from this form");
+      isSubmitting.value = false;
+      return;
+    }
+
+    if (props.isEdit && props.paymentId) {
+      // Update existing payment
+      result = await paymentStore.updatePayment(props.paymentId, paymentData);
+
+      if (result) {
+        useToast("success", "Payment updated successfully");
+        emit("onCreated");
+        closeModal();
+      } else {
+        useToast("error", paymentStore.error || "Failed to update payment");
+      }
     } else {
-        if(props.isHistoryOnly && props.trackerId) {
-            result = await indexStore.addPaymentInHistory(payment.value, props.trackerId);
-        } else {
-            result = await indexStore.addPayment(payment.value);
-        }
-    }
-    if (!result || typeof result == "string") {
-        useToast('error', typeof result == "string" ? result : "Something went wrong, please try again")
-        // Un-Block add button
-        sending.value = false;
-        disableButton.value = false;
-        return;
-    }
+      // Create new payment
+      result = await paymentStore.createPayment({
+        ...paymentData,
+        userId: user.value.uid,
+        createdAt: Timestamp.fromDate($dayjs(form.value.dueDate).toDate())
+      });
 
-    // Reset payment object
-    payment.value = {
-        title: '',
-        description: '',
-        amount: null,
-        dueDate: '',
-        category: 'other',
-        timePeriod: (!props.isEdit && props.isHistoryOnly) ? 'one-time' : 'monthly'
+      if (result && result.success) {
+        useToast("success", "Payment created successfully");
+        emit("onCreated");
+        closeModal();
+      } else {
+        useToast("error", paymentStore.error || "Failed to create payment");
+      }
     }
-
-    disableButton.value = false;
-    sending.value = false;
-    useToast('success', 'Payment saved successfully. Click to go home.', { onClick: "goHome", autoClose: 2000 })
-    closeModal();
-}
-// Calendar methods
-function showPicker() {
-    pickerVisible.value = true;
+  } catch (error) {
+    console.error("Error saving payment:", error);
+    useToast("error", "An unexpected error occurred");
+  } finally {
+    isSubmitting.value = false;
+  }
 }
 
-// ----- Define Watchers -------------
-watch(date, (newVal) => {
-    pickerVisible.value = false;
-    payment.value.dueDate = newVal ? $dayjs(newVal).format('MM/DD/YYYY') : "";
-})
+function confirmDelete() {
+  console.log("confirmDelete", confirmDialog.value);
+  confirmDialog.value.open();
+}
 
-// ----- Define Expose ---------
-defineExpose({showModal, closeModal})
+async function deletePayment() {
+  isSubmitting.value = true;
 
+  try {
+    const result = await paymentStore.deletePayment(props.paymentId);
+
+    if (result) {
+      useToast("success", "Payment deleted successfully");
+      emit("onCreated");
+      closeModal();
+    } else {
+      useToast("error", paymentStore.error || "Failed to delete payment");
+    }
+  } catch (error) {
+    console.error("Error deleting payment:", error);
+    useToast("error", "An unexpected error occurred");
+  } finally {
+    isSubmitting.value = false;
+  }
+}
+
+// ----- Define Watchers ---------
+watch(
+  () => props.paymentId,
+  (newVal) => {
+    if (newVal && props.isEdit && modal.value?.isOpen) {
+      fetchPaymentDetails(newVal);
+    }
+  }
+);
+
+// Expose methods to parent
+defineExpose({
+  showModal,
+  closeModal
+});
 </script>
 
 <style scoped>
-
+.form-checkbox {
+  @apply text-primary border-gray-300 rounded;
+}
 </style>

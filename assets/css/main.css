@@ -4,17 +4,58 @@
 
 /* Remove scroll bar */
 @layer utilities {
+  /* Hide scrollbar for Chrome, Safari and Opera */
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
 
-    /* Hide scrollbar for Chrome, Safari and Opera */
-    .no-scrollbar::-webkit-scrollbar {
-        display: none;
-    }
+  /* Hide scrollbar for IE, Edge and Firefox */
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    /* IE and Edge */
+    scrollbar-width: none;
+    /* Firefox */
+  }
 
-    /* Hide scrollbar for IE, Edge and Firefox */
-    .no-scrollbar {
-        -ms-overflow-style: none;
-        /* IE and Edge */
-        scrollbar-width: none;
-        /* Firefox */
-    }
+  .modal-backdrop {
+    @apply fixed inset-0 flex items-center justify-center bg-black bg-opacity-40 z-50;
+  }
+
+  .modal-container {
+    @apply bg-base rounded-lg shadow-xl max-w-xl w-full max-h-[90vh] overflow-hidden;
+  }
+
+  .modal-header {
+    @apply flex justify-between items-center p-4 border-b;
+  }
+
+  .modal-close {
+    @apply text-gray-400 hover:text-gray-500 transition-colors;
+  }
+
+  .modal-body {
+    @apply p-4 overflow-y-auto max-h-[calc(90vh-140px)];
+  }
+
+  .modal-footer {
+    @apply p-4 border-t flex justify-end;
+  }
+
+  .btn-primary {
+    @apply px-4 py-2 bg-primary text-white rounded-md transition-colors;
+  }
+
+  .modal-enter-active,
+  .modal-leave-active {
+    transition: opacity 0.3s ease;
+  }
+
+  .modal-enter-from,
+  .modal-leave-to {
+    opacity: 0;
+  }
+
+  :global(body.modal-open) {
+    overflow: hidden;
+  }
 }

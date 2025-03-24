@@ -1,295 +1,410 @@
 <template>
-  <div>
-    <PaymentsManagePayment ref="editPayment" :paymentId="paymentId" isEdit />
-    <PaymentsDetails ref="paymentDetails" :paymentId="paymentId" @openEdit="showEdit" />
-    <Loader v-if="isLoading" />
-    <div class="flex flex-col gap-[0.429rem]">
-      <Filters @onSearch="searchPayment" showDates @onOrder="orderRecurrent" @monthsBack="updateMonths" />
-      <div class="p-3 px-0 sm:px-3">
+  <div class="recurrent-page">
+    <RecurrentsManagePayment ref="editPayment" :paymentId="activeRecurrentId" isEdit />
+    <RecurrentsDetails ref="recurrentDetails" :paymentId="activeRecurrentId" @openEdit="showEdit" />
+    <RecurrentsNewPayment v-if="!isLoading" @onCreated="fetchData" />
+
+    <!-- Loading State -->
+    <div v-if="isLoading" class="flex justify-center items-center min-h-[400px]">
+      <Loader />
+    </div>
+
+    <!-- Content -->
+    <div v-else class="flex flex-col gap-4">
+      <!-- Header & Summary -->
+      <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 p-3">
+        <!-- Month Navigation & Title -->
+        <div class="flex items-center">
+          <button @click="changeMonthRange(3)" class="btn btn-icon">
+            <MdiChevronLeft />
+          </button>
+          <h2 class="text-xl font-semibold mx-2">
+            {{ months[0].key }} - {{ months[months.length - 1].key }} {{ currentYear }}
+          </h2>
+          <button
+            @click="changeMonthRange(-3)"
+            class="btn btn-icon"
+            :disabled="isCurrentPeriod"
+            :class="{ 'opacity-50 !cursor-not-allowed': isCurrentPeriod }"
+          >
+            <MdiChevronRight />
+          </button>
+        </div>
+
+        <!-- Summary Cards -->
+        <div class="flex flex-wrap gap-3">
+          <div class="summary-card bg-success/10 p-3 rounded-lg flex items-center">
+            <MdiCashCheck class="text-success text-2xl mr-2" />
+            <div>
+              <p class="text-xs font-medium">Paid This Month</p>
+              <p class="font-semibold">{{ formatPrice(currentMonthTotals.paid) }}</p>
+            </div>
+          </div>
+
+          <div class="summary-card bg-danger/10 p-3 rounded-lg flex items-center">
+            <MdiCashRemove class="text-danger text-2xl mr-2" />
+            <div>
+              <p class="text-xs font-medium">Unpaid This Month</p>
+              <p class="font-semibold">{{ formatPrice(currentMonthTotals.unpaid) }}</p>
+            </div>
+          </div>
+
+          <div class="summary-card bg-info/10 p-3 rounded-lg flex items-center">
+            <MdiCalendarMonth class="text-info text-2xl mr-2" />
+            <div>
+              <p class="text-xs font-medium">Total This Month</p>
+              <p class="font-semibold">{{ formatPrice(currentMonthTotals.paid + currentMonthTotals.unpaid) }}</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Filters -->
+      <Filters @onSearch="searchPayments" @onOrder="orderRecurrents" />
+
+      <!-- Table View -->
+      <div class="overflow-x-auto px-3">
         <table class="w-full table-fixed">
           <thead class="text-center">
-            <tr class="border-b h-[4.571rem]">
-              <th scope="col" class="text-start">Payment</th>
-              <th scope="col" class="w-[3.714rem]">Next Due</th>
-              <th v-for="monthName in months" :key="monthName">{{ monthName }}</th>
+            <tr class="border-b h-12">
+              <th scope="col" class="text-start font-semibold">Payment</th>
+              <th scope="col" class="w-20 font-semibold">Amount</th>
+              <th scope="col" class="w-16 font-semibold">Day</th>
+              <th v-for="month in months" :key="`${month.key}-${month.year}`" class="font-semibold">
+                {{ month.display }}
+                <span v-if="month.year !== currentYear" class="text-xs text-gray-500"
+                  >'{{ month.year.substring(2) }}</span
+                >
+              </th>
+              <th scope="col" class="w-16"></th>
             </tr>
           </thead>
           <tbody class="text-center">
-            <tr v-for="(payment, paymentId) in searchedPayments" :key="paymentId"
-              class="border-b h-[4.571rem] drop-shadow-md hover:cursor-pointer min-h-[5rem]"
-              @click="showDetails(paymentId)">
-              <td class="text-start font-semibold">{{ payment.title }}</td>
-              <td class="font-semibold">{{ $dayjs(payment.dueDate, { format: 'MM/DD/YYYY' }).format('MMM DD') }}</td>
-              <th v-for="(month, monthIndex) in months" :key="`${monthIndex}-${month}`">
-
-                <span v-if="!payment.months[month]">
-
-                  <div class="flex flex-col items-center justify-center">
-                    <PepiconsPopDollarOff class="text-[1.143rem] m-auto" />
-                    <span class="text-[0.714rem] sm:text-[1rem] font-semibold">N/A</span>
+            <tr
+              v-for="payment in recurrents"
+              :key="payment.id"
+              class="border-b hover:bg-slate-500 cursor-pointer transition-colors"
+              @click="showDetails(payment.id)"
+            >
+              <td class="text-start py-4">
+                <div class="flex items-center">
+                  <div class="w-2 h-10 rounded-full mr-3" :class="`bg-${payment.category.toLowerCase()}`"></div>
+                  <div class="flex flex-col text-start">
+                    <span class="font-medium">{{ payment.title }}</span>
+                    <span class="text-xs text-gray-500">{{ payment.description }}</span>
                   </div>
-                </span>
-                <div v-else class="flex flex-col items-center justify-center">
-                  <RiToggleFill @click="(ev) => markAsPaid(ev, paymentId, payment.months[month].trackerId, false)"
-                    class="text-[1.637rem] text-success" v-if="payment.months[month].isPaid" />
-                  <RiToggleLine @click="(ev) => markAsPaid(ev, paymentId, payment.months[month].trackerId, true)"
-                    class="text-[1.637rem]" v-else :class="{
-                      ['text-danger']: isDelayed(payment.months[month].dueDate) && !payment.months[month].isPaid
-                    }" />
-                  <span class="text-[0.714rem] sm:text-[1rem] font-semibold">{{
-                    formatPrice(payment.months[month].amount) }}</span>
                 </div>
-              </th>
+              </td>
+              <td class="font-medium">{{ formatPrice(payment.amount) }}</td>
+              <td>{{ payment.dueDateDay }}</td>
+
+              <!-- Month cells -->
+              <td v-for="month in months" :key="`${payment.id}-${month.key}-${month.year}`" class="py-3 relative">
+                <div v-if="payment.months[month.key]" class="flex flex-col items-center justify-center">
+                  <!-- Toggle Button -->
+                  <button
+                    @click.stop="togglePaymentStatus(payment.id, month.key)"
+                    class="inline-flex items-center justify-center h-8 w-8 rounded-full transition-colors"
+                    :class="[
+                      payment.months[month.key].isPaid
+                        ? 'bg-success/10'
+                        : isDelayed(payment.months[month.key].dueDate)
+                        ? 'bg-danger/10'
+                        : 'bg-gray-100'
+                    ]"
+                  >
+                    <MdiCheck v-if="payment.months[month.key].isPaid" class="text-success text-xl" />
+                    <MdiClockOutline
+                      v-else-if="isDelayed(payment.months[month.key].dueDate)"
+                      class="text-danger text-xl"
+                    />
+                    <MdiCircleOutline v-else class="text-gray-400 text-xl" />
+                  </button>
+
+                  <!-- Amount -->
+                  <span class="text-xs mt-1">{{ formatPrice(payment.months[month.key].amount) }}</span>
+                </div>
+                <button
+                  v-else
+                  @click.stop="createPaymentForMonth(payment.id, month.key)"
+                  class="text-gray-400 hover:text-primary px-2 py-1 rounded transition-colors"
+                >
+                  <MdiPlusCircleOutline class="text-xl" />
+                </button>
+              </td>
+
+              <!-- Actions -->
+              <td>
+                <div class="flex justify-center">
+                  <button @click.stop="showEdit(payment.id)" class="btn btn-icon">
+                    <MdiPencil class="text-gray-500" />
+                  </button>
+                </div>
+              </td>
+            </tr>
+
+            <!-- Empty State -->
+            <tr v-if="recurrents.length === 0">
+              <td colspan="100%" class="py-10 text-center text-gray-500">
+                <MdiCashOff class="text-5xl mx-auto mb-3 opacity-30" />
+                <p>No recurrent payments found</p>
+                <button @click="showNewPaymentModal" class="btn btn-primary mt-3">Add Payment</button>
+              </td>
             </tr>
           </tbody>
         </table>
       </div>
-      <h4 v-if="Object.keys(searchedPayments).length === 0 && !isLoading">Empty list.</h4>
     </div>
   </div>
 </template>
 
 <script setup>
-import RiToggleFill from '~icons/ri/toggle-fill';
-import RiToggleLine from '~icons/ri/toggle-line';
-import PepiconsPopDollarOff from '~icons/pepicons-pop/dollar-off';
+import MdiChevronLeft from "~icons/mdi/chevron-left";
+import MdiChevronRight from "~icons/mdi/chevron-right";
+import MdiCheck from "~icons/mdi/check";
+import MdiClockOutline from "~icons/mdi/clock-outline";
+import MdiCircleOutline from "~icons/mdi/circle-outline";
+import MdiPencil from "~icons/mdi/pencil";
+import MdiPlusCircleOutline from "~icons/mdi/plus-circle-outline";
+import MdiCashCheck from "~icons/mdi/cash-check";
+import MdiCashRemove from "~icons/mdi/cash-remove";
+import MdiCashOff from "~icons/mdi/cash-off";
+import MdiCalendarMonth from "~icons/mdi/calendar-month";
 
 definePageMeta({
-  middleware: ['auth']
-})
+  middleware: ["auth"]
+});
 
 // ----- Define Useful Properties ---------
 const { $dayjs } = useNuxtApp();
 const { width } = useWindowSize();
 
 // ----- Define Pinia Vars ----------
-const indexStore = useIndexStore();
-const { getHistory: history, getTracker: tracker, isDataFetched } = storeToRefs(indexStore)
+const recurrentStore = useRecurrentStore();
+const { getProcessedRecurrents, isDataLoaded, isLoading: storeLoading, getMonthlyTotals } = storeToRefs(recurrentStore);
 
-// ----- Define Vars ---------
-const isLoading = ref(false);
-const payments = ref({});
-const searchedPayments = ref([]);
-
-// Based on the screen width select 3 months or 6 months
-const nMonths = width.value > 768 ? 6 : 3;
-
-// Based on today, create an array of the current and the past two months
-// Like this const months = ref(["May", "Jun", "Jul"])
-const months = ref(Array.from({ length: nMonths }, (_, i) => $dayjs().subtract(i, 'month').format('MMM')));
-
-// Invert month's array to show the most recent month first
-months.value = months.value.reverse();
-
-// Fetch necessary data to continue
-if (!isDataFetched.value) {
-  await indexStore.fetchData();
-  await indexStore.loadHistory();
-}
-
-// ----- Define Vars -------
-const paymentId = ref(false)
-// Refs
+// ----- Define Refs ---------
+const isLoading = ref(true);
+const activeRecurrentId = ref(null);
 const editPayment = ref(null);
-const paymentDetails = ref(null);
+const recurrentDetails = ref(null);
+const recurrents = ref([]);
+const monthsOffset = ref(0);
+
+// ----- Define Computed ---------
+// Based on the screen width, determine how many months to show
+const monthsToShow = computed(() => (width.value > 768 ? 6 : 3));
+
+// Generate the array of months to display based on current offset
+const months = computed(() => {
+  const monthArray = [];
+  for (let i = 0; i < monthsToShow.value; i++) {
+    const date = $dayjs().subtract(i + monthsOffset.value, "month");
+    monthArray.push({
+      key: date.format("MMM"),
+      display: date.format("MMM"),
+      year: date.format("YYYY")
+    });
+  }
+  return monthArray.reverse();
+});
+
+const currentMonthTotals = computed(() => {
+  const totals = { paid: 0, unpaid: 0 };
+
+  const monthlyTotals = getMonthlyTotals.value;
+  // Use current month key (regardless of what period we're viewing)
+  const currentMonthKey = $dayjs().format("MMM");
+
+  if (monthlyTotals[currentMonthKey]) {
+    totals.paid = monthlyTotals[currentMonthKey].paid;
+    totals.unpaid = monthlyTotals[currentMonthKey].unpaid;
+  }
+
+  return totals;
+});
+
+// Current year for display
+const currentYear = computed(() => {
+  // For multi-year spans, show range
+  const firstMonth = months.value[0];
+  const lastMonth = months.value[months.value.length - 1];
+
+  if (firstMonth.year === lastMonth.year) {
+    return firstMonth.year;
+  }
+  return `${firstMonth.year} - ${lastMonth.year}`;
+});
+// Determine if we're looking at the current period
+const isCurrentPeriod = computed(() => monthsOffset.value === 0);
 
 // ----- Define Methods ---------
+// Check if a date is in the past
 function isDelayed(dueDate) {
-  // Check if its delayed
-  const dueDateObject = $dayjs(dueDate, { format: 'MM/DD/YYYY' });
-  return dueDateObject.isBefore($dayjs(), 'day');
+  return $dayjs(dueDate, { format: "MM/DD/YYYY" }).isBefore($dayjs(), "day");
 }
 
-function showEdit(payId) {
-  // Save id that will passed to the edit modal component
-  paymentId.value = payId;
-
-  // Open the modal
-  editPayment.value.showModal(payId);
+// Change the range of months displayed
+function changeMonthRange(delta) {
+  const newOffset = monthsOffset.value + delta;
+  monthsOffset.value = newOffset;
+  fetchData();
 }
 
-function updateMonths(monthsBack) {
-  // Update months based on the monthsBack
-  months.value = Array.from({ length: nMonths }, (_, i) => $dayjs().subtract(i + monthsBack, 'month').format('MMM'));
-  months.value = months.value.reverse();
-}
+// Toggle payment status
+async function togglePaymentStatus(recurrentId, month) {
+  if (this.isLoading) return;
+  this.isLoading = true;
 
-function showDetails(payId) {
-  // Save id that will passed to the edit modal component
-  paymentId.value = payId;
-
-  // Open the modal
-  paymentDetails.value.showModal(payId);
-}
-
-function orderRecurrent(orderQuery) {
-
-  const isDefault = !orderQuery || (orderQuery && !orderQuery.name);
-
-  // Sort positions in object searchedPayments by isPaid and by dueDate
-  // Convert the object to an array of [key, value] pairs
-  const entries = Object.entries(!isDefault ? searchedPayments.value : payments.value);
-
-  // Sort the array based on the query
-  entries.sort((a, b) => {
-
-    // Sort only by date
-    if(!isDefault && orderQuery.name === "date") {
-      const dateA = $dayjs(a[1].dueDate, { format: 'MM/DD/YYYY' }).unix();
-      const dateB = $dayjs(b[1].dueDate, { format: 'MM/DD/YYYY' }).unix();
-      return orderQuery.order === "asc" ? dateA - dateB : dateB - dateA;
-    }
-
-    // Sort only by amount
-    if(!isDefault && orderQuery.name === "amount") {
-      const amountA = a[1].amount;
-      const amountB = b[1].amount;
-      return orderQuery.order === "asc" ? amountA - amountB : amountB - amountA;
-    }
-
-    // Sort only by title
-    if(!isDefault && orderQuery.name === "title") {
-      const titleA = a[1].title.toLowerCase();
-      const titleB = b[1].title.toLowerCase();
-      return orderQuery.order === "asc" ? titleA.localeCompare(titleB) : titleB.localeCompare(titleA);
-    }
-
-
-    // Default sort by isPaid and dueDate
-    const isPaidA = a[1].isPaid;
-    const isPaidB = b[1].isPaid;
-
-    // Sort by isPaid (false first)
-    if (isPaidA !== isPaidB) {
-      return isPaidA ? 1 : -1;
-    }
-
-    // Then by dueDate
-    const dateA = $dayjs(a.dueDate, { format: 'MM/DD/YYYY' }).unix();
-    const dateB = $dayjs(b.dueDate, { format: 'MM/DD/YYYY' }).unix();
-    return dateA - dateB;
-  });
-
-  // Duplicate value in aux variable so we can filter it
-  searchedPayments.value = Object.fromEntries(entries);
-}
-function searchPayment(query) {
-
-  // Filter payments based on the query
-  searchedPayments.value = Object.keys(payments.value).reduce((acc, key) => {
-
-    const isInTitle = payments.value[key].title.toLowerCase().includes(query.toLowerCase());
-    const isInAmount = payments.value[key].amount.toString().toLowerCase().includes(query.toLowerCase());
-
-    if (isInTitle || isInAmount) {
-      acc[key] = payments.value[key];
-    }
-    return acc;
-  }, {})
-}
-
-async function markAsPaid(ev, paymentId, trackerId, value) {
-  // To avoid opening modal of details
-  ev.stopPropagation();
-
-  // If already sending, return
-  if (isLoading.value) {
+  const payment = recurrents.value.find((p) => p.id === recurrentId);
+  if (!payment || !payment.months[month]) {
+    this.isLoading = false;
     return;
   }
 
-  // Block add button and show loader
+  const paymentId = payment.months[month].paymentId;
+  const currentStatus = payment.months[month].isPaid;
+
+  if (!paymentId) {
+    // Create payment
+    await createPaymentForMonth(recurrentId, month, true);
+    this.isLoading = false;
+    return;
+  }
+  const result = await recurrentStore.togglePaymentStatus(paymentId, !currentStatus);
+
+  this.isLoading = false;
+  if (result) {
+    useToast("success", `Payment marked as ${!currentStatus ? "paid" : "unpaid"}`);
+  } else {
+    useToast("error", recurrentStore.error || "Failed to update payment status");
+  }
+}
+
+// Create a payment instance for a month where one doesn't exist
+async function createPaymentForMonth(recurrentId, month, isPaid = false) {
+  console.log("SOME");
+
+  const result = await recurrentStore.addNewPaymentInstance(recurrentId, month, isPaid);
+
+  if (result) {
+    useToast("success", "Payment instance created");
+  } else {
+    useToast("error", recurrentStore.error || "Failed to create payment instance");
+  }
+}
+
+// Show edit payment modal
+function showEdit(recurrentId) {
+  activeRecurrentId.value = recurrentId;
+
+  console.log("Show edit for", recurrentId);
+  console.log("editPayment", editPayment.value);
+  editPayment.value.showModal(recurrentId);
+}
+
+// Show payment details modal
+function showDetails(recurrentId) {
+  activeRecurrentId.value = recurrentId;
+  console.log("Show details for", recurrentId);
+  console.log("recurrentDetails", recurrentDetails.value);
+  recurrentDetails.value.showModal(recurrentId);
+}
+
+// Search payments
+function searchPayments(query) {
+  recurrentStore.searchRecurrents(query);
+  recurrents.value = [...getProcessedRecurrents.value];
+}
+
+// Order recurrents
+function orderRecurrents(orderQuery) {
+  if (!orderQuery || !orderQuery.name) {
+    recurrents.value = [...getProcessedRecurrents.value];
+    return;
+  }
+
+  recurrentStore.sortRecurrents(orderQuery.name, orderQuery.order);
+  recurrents.value = [...getProcessedRecurrents.value];
+}
+
+// Show new payment modal
+function showNewPaymentModal() {
+  // Implement this based on your payment creation flow
+  // e.g., navigating to a new payment page or showing a modal
+}
+
+// Format price/currency
+function formatPrice(amount) {
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+    minimumFractionDigits: 2
+  }).format(amount);
+}
+
+// Fetch all required data
+async function fetchData() {
   isLoading.value = true;
 
-  // Edit only in history
-  const result = await indexStore.editIsPaidInHistory(paymentId, trackerId, value);
+  await recurrentStore.fetchRecurrentPayments();
+  await recurrentStore.fetchPaymentInstances(monthsOffset.value + monthsToShow.value);
 
-
-  if (!result || typeof result == "string") {
-    useToast('error', typeof result == "string" ? result : "Something went wrong, please try again")
-    // Un-Block add button
-    isLoading.value = false;
-    return;
-  }
-
+  recurrents.value = [...getProcessedRecurrents.value];
   isLoading.value = false;
-  useToast('success', 'Payment mark as paid successfully.')
 }
 
-function populatePayments(history, tracker) {
+// ----- Initial Data Load ---------
+onMounted(async () => {
+  await fetchData();
 
-  // Reset payments object
-  payments.value = {};
+  // Apply default sorting by due date
+  orderRecurrents({ name: "date", order: "asc" });
+});
 
-  // Create object to be used in the table
-  history.forEach(el => {
-    el.payments.forEach(pay => {
+// ----- Watchers ---------
+watch(getProcessedRecurrents, (newVal) => {
+  recurrents.value = [...newVal];
+});
 
-      // Avoid one time payments
-      if (pay.timePeriod === "one-time") {
-        return;
-      }
-
-      // Check if payment has already been processed
-      if (!payments.value[pay.payment_id]) {
-        // Get current payment information
-        const currentPay = tracker.payments.filter(payInTracker => payInTracker.payment_id === pay.payment_id)[0];
-
-        if (currentPay) {
-          // Payment title && due date
-          payments.value[pay.payment_id] = {
-            title: currentPay.title,
-            dueDate: currentPay.dueDate,
-            amount: pay.amount, // This is the current amount
-            isPaid: pay.isPaid, // This is the current isPaid state to be able to order payments
-            months: {}
-          }
-        } else {
-          // Payment title && due date for one time payments or deleted payments
-          payments.value[pay.payment_id] = {
-            title: pay.title,
-            dueDate: pay.dueDate,
-            amount: pay.amount, // This is the current amount
-            isPaid: pay.isPaid, // This is the current isPaid state to be able to order payments
-            months: {}
-          }
-        }
-
-      }
-
-      const payMonth = $dayjs(pay.dueDate, { format: 'MM/DD/YYYY' }).format('MMM');
-      // Create payment amount and is paid object for each month
-      payments.value[pay.payment_id].months[payMonth] = {
-        amount: pay.amount,
-        dueDate: pay.dueDate,
-        trackerId: el.id,
-        isPaid: pay.isPaid
-      }
-    })
-  })
-
-  // Order with the default configuration
-  orderRecurrent();
-}
-
-// ----- Define Hooks ---------
-onMounted(() => {
-  populatePayments(history.value, tracker.value);
-})
-
-
-// ----- Define Watchers ---------
-watch([history, tracker], (newValue) => {
-  populatePayments(newValue[0], newValue[1]);
-}, { deep: true })
-
-// ----- Define Methods ---------
+// ----- Meta ---------
 useHead({
-  title: 'Optimize your finances - PayTrackr',
+  title: "Recurring Payments - PayTrackr",
   meta: [
     {
-      name: 'description',
-      content: 'Web page to keep tracking of your main expenses and keep your life organized'
+      name: "description",
+      content: "Track and manage your recurring monthly expenses"
     }
   ]
-})
+});
 </script>
+
+<style scoped>
+.btn-icon {
+  @apply p-2 rounded-full hover:bg-gray-100 transition-colors;
+}
+
+.summary-card {
+  @apply min-w-[150px];
+}
+
+/* Category colors */
+.bg-utilities {
+  @apply bg-blue-500;
+}
+.bg-food {
+  @apply bg-green-500;
+}
+.bg-transport {
+  @apply bg-yellow-500;
+}
+.bg-entertainment {
+  @apply bg-purple-500;
+}
+.bg-health {
+  @apply bg-red-500;
+}
+.bg-other {
+  @apply bg-gray-500;
+}
+</style>

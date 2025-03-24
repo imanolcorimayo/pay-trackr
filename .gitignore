@@ -30,6 +30,7 @@ service-account.json
 
 # Firebase service account
 /scripts/*.json
+/scripts/*.txt
 /scripts/update-privileges-to-users*.js
 /scripts/export-prod-to-develop.js
 

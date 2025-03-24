@@ -1,17 +1,6 @@
 <template>
   <div class="flex flex-col gap-[2.143rem]">
     <Loader v-if="actionRunning" class="max-w-[2rem]"/>
-    <div v-if="showDates" class="flex items-center justify-center gap-[1.143rem] w-full">
-      <button @click="updateHistory('back')" class="flex justify-center items-center w-[2.357rem] h-[2.357rem] bg-white rounded-[0.214rem]">
-        <WeuiArrowFilled class="text-[0.875rem] h-full text-black rotate-180" />
-      </button>
-      <span class="text-[1.143rem] font-medium">{{ lastMonth }} - {{ currentMonth }}</span>
-      <button 
-        :disabled="monthsBack == 0" @click="updateHistory('forward')" 
-        class="flex justify-center items-center w-[2.357rem] h-[2.357rem] bg-white rounded-[0.214rem] disabled:cursor-not-allowed disabled:opacity-40">
-        <WeuiArrowFilled class="text-[0.875rem] h-full text-black" />
-      </button>
-    </div>
     <div class="flex flex-col gap-[1rem] sm:flex-row w-full sm:px-[1.143rem] justify-between items-end sm:items-center">
       <div class="flex gap-[1rem]">
         <div tabindex="0" class="relative h-[2.357rem] rounded-[0.428rem]">
@@ -53,7 +42,6 @@
           </template>
         </Tooltip>
       </div>
-      <PaymentsNewPayment />
     </div>
   </div>
 </template>
@@ -61,7 +49,6 @@
 <script setup>
 import TablerCalendarFilled from '~icons/tabler/calendar-filled';
 import MaterialSymbolsPaidRounded from '~icons/material-symbols/paid-rounded';
-import WeuiArrowFilled from '~icons/weui/arrow-filled';
 import MdiFilterOutline from '~icons/mdi/filter-outline';
 import IcSharpSearch from '~icons/ic/sharp-search';
 import MingcuteArrowUpFill from '~icons/mingcute/arrow-up-fill';
@@ -79,24 +66,12 @@ const emits = defineEmits(['onOrder', 'monthsBack']);
 
 // ----- Define Useful Properties ---------
 const { width } = useWindowSize();
-const { $dayjs } = useNuxtApp();
 
 // ----- Define Pinia Vars ----------
-const indexStore = useIndexStore()
 
 // ----- Define Vars ------
-const monthsBack = ref(0);
 const actionRunning = ref(false);
 const selectedFilter = ref({ name: '', order: '' });
-
-// Based on the screen width select 3 months or 6 months
-const nMonths = width.value > 768 ? 6 : 3;
-
-// Based on today, get the full name of the current month and the past two months
-// Like this const lastMonth = "January" and currentMonth = "March"
-const lastMonth = ref($dayjs().subtract(nMonths - 1, 'month').format('MMMM'));
-const currentMonth = ref($dayjs().format('MMMM'));
-
 
 // Refs
 const tooltipFilter = ref(null);
@@ -129,29 +104,4 @@ function selectFilter(filter) {
   // Emit current filter configuration
   emits("onOrder", selectedFilter.value);
 };
-
-async function updateHistory(type) {
-  // Set action running
-  actionRunning.value = true;
-
-  // Add or subtract months based on type
-  if (type === 'back') {
-    monthsBack.value = monthsBack.value + 1;
-  } else if (type === 'forward') {
-    monthsBack.value = monthsBack.value - 1;
-  }
-
-  // Update history
-  await indexStore.loadHistory(monthsBack.value);
-  
-  // Emit months back event
-  emits("monthsBack", monthsBack.value);
-
-  // Update last and current month
-  lastMonth.value = $dayjs().subtract(nMonths - 1 + monthsBack.value, 'month').format('MMMM');
-  currentMonth.value = $dayjs().subtract(monthsBack.value, 'month').format('MMMM');
-
-  // Set action running
-  actionRunning.value = false;
-}
 </script>

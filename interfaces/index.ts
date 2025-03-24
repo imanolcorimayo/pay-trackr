@@ -1,5 +1,5 @@
 // Interfaces, this will potentially go to a specific folder in the future
-interface Payment {
+export interface Payment {
     isPaid: Boolean;
     dueDate: string;
     amount:2499.1
@@ -10,11 +10,11 @@ interface Payment {
     timePeriod: string;
     id?: string|number;
 }
-interface PaymentList extends Array<Payment>{}
-interface TrackerList extends Array<Tracker>{}
+export interface PaymentList extends Array<Payment>{}
+export interface TrackerList extends Array<Tracker>{}
 
 
-interface General {
+export interface General {
     payments: PaymentList;
     tracker: Tracker;
     history: TrackerList;
@@ -22,24 +22,24 @@ interface General {
     historyFetched: Boolean;
 }
 
-interface Tracker {
+export interface Tracker {
     payments: PaymentList;
     id?: string;
     user_id: string;
     createdAt: string;
 }
 
-enum SortType {
+export enum SortType {
     Asc = "asc",
     Desc = "desc",
 }
 
-enum SortFields {
+export enum SortFields {
     Date = "date",
     Amount = "amount",
 }
 
-interface SortOptions {
+export interface SortOptions {
     type: SortType, 
     field: SortFields
 } 

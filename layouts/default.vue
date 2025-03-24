@@ -1,46 +1,7 @@
 <template>
   <div class="w-full min-h-full">
     <TheHeader />
-    <div class="flex flex-col gap-[3rem] py-[2rem] max-w-[80rem] m-auto px-[1.429rem]">
-      <div class="flex justify-between gap-[2rem] max-w-[60rem] w-full m-auto overflow-x-scroll scrollbar-none no-scrollbar">
-        <div
-          class="flex flex-col items-start justify-center gap-[0.578rem] border p-[1rem] bg-base w-full rounded-[1rem] min-w-[11rem] min-h-[7rem] shadow-lg max-w-[20rem]">
-          <div class="flex gap-4 items-center">
-            <MaterialSymbolsPaidRounded class="text-[1.714rem] text-[--secondary-color]" />
-            <span class="font-normal">Paid This Month</span>
-          </div>
-          <span class="text-[1.429rem] font-semibold text-[--success-color]">{{ formatPrice(totalPaid) }}</span>
-        </div>
-        <div
-          class="flex flex-col items-start justify-center gap-[0.578rem] border p-[1rem] bg-base w-full rounded-[1rem] min-w-[11rem] min-h-[7rem] shadow-lg max-w-[20rem]">
-          <div class="flex gap-4 items-center">
-            <WpfPaid class="text-[1.714rem] text-[--secondary-color]" />
-            <span class="font-normal">Owed This Month</span>
-          </div>
-          <span class="text-[1.429rem] text-[--danger-color] font-semibold">{{ formatPrice(totalOwed) }}</span>
-        </div>
-        <div
-          class="flex flex-col items-start justify-center gap-[0.578rem] border p-[1rem] bg-base w-full rounded-[1rem] min-w-[11rem] min-h-[7rem] shadow-lg max-w-[20rem]">
-          <div class="flex gap-4 items-center">
-            <HugeiconsSummationCircle class="text-[1.714rem] text-[--secondary-color]" />
-            <span class="font-normal">Month Total</span>
-          </div>
-          <span class="text-[1.429rem] font-semibold">{{ formatPrice(totalMonth) }}</span>
-        </div>
-      </div>
-      <div v-if="user" class="flex flex-row justify-between w-full max-w-[40rem] mx-auto">
-        <NuxtLink
-          class="text-[1.143rem] p-[0.571rem] rounded-[0.214rem] text-center bg-white text-black hover:bg-secondary hover:text-white hover:font-semibold shadow-md"
-          :class="{ selected: route.path == '/recurrent' }" to="/recurrent">
-          Recurrent
-        </NuxtLink>
-        <NuxtLink
-          class="text-[1.143rem] p-[0.571rem] rounded-[0.214rem] text-center bg-white text-black hover:bg-secondary hover:text-white hover:font-semibold"
-          :class="{ selected: route.path == '/one-time' }" to="/one-time">One Time</NuxtLink>
-        <NuxtLink
-          class="text-[1.143rem] p-[0.571rem] rounded-[0.214rem] text-center bg-white text-black hover:bg-secondary hover:text-white hover:font-semibold"
-          :class="{ selected: route.path == '/summary' }" to="/summary">Summary</NuxtLink>
-      </div>
+    <div class="flex flex-col gap-[3rem] max-w-[80rem] m-auto px-[1.429rem]">
       <main>
         <slot @totals="updateTotals" />
       </main>
@@ -50,55 +11,8 @@
 </template>
 
 <script setup>
-import WpfPaid from '~icons/wpf/paid';
-import MaterialSymbolsPaidRounded from '~icons/material-symbols/paid-rounded';
-import HugeiconsSummationCircle from '~icons/hugeicons/summation-circle';
-
-const user = useCurrentUser();
-const route = useRoute();
-
 // ----- Define Pinia Vars -----------
-const indexStore = useIndexStore();
-const { getTracker: tracker } = storeToRefs(indexStore);
-
 // ----- Define Computed ---------
-const totalPaid = computed(() => {
-  return tracker.value.payments.reduce((acc, item) => {
-
-    // Check if /recurrent and pay is one time payment
-    if (route.path === '/recurrent' && item.timePeriod === "one-time") {
-      return acc;
-    }
-
-    // Check if /one-time and pay is not one time payment
-    if (route.path === '/one-time' && item.timePeriod !== "one-time") {
-      return acc;
-    }
-
-    return item.isPaid ? (acc + item.amount) : acc;
-  }, 0);
-});
-
-const totalOwed = computed(() => {
-  return tracker.value.payments.reduce((acc, item) => {
-
-    // Check if /recurrent and pay is one time payment
-    if (route.path === '/recurrent' && item.timePeriod === "one-time") {
-      return acc;
-    }
-
-    // Check if /one-time and pay is not one time payment
-    if (route.path === '/one-time' && item.timePeriod !== "one-time") {
-      return acc;
-    }
-
-    return item.isPaid ? acc : (acc + item.amount);
-  }, 0);
-});
-
-const totalMonth = computed(() => {
-  return totalPaid.value + totalOwed.value;
-});
 </script>
 
 

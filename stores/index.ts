@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { collection, query, where, getDocs, getDoc, addDoc, serverTimestamp, doc, updateDoc, deleteDoc, orderBy } from 'firebase/firestore';
 import type { User } from 'firebase/auth';
+import type { General, Payment, PaymentList, Tracker, TrackerList } from '~/interfaces';
 
 
 const defaultObject = {
@@ -125,13 +126,13 @@ export const useIndexStore = defineStore('index', {
             const { width } = useWindowSize();
 
             // Based on the screen width select 3 months or 6 months
-            const nMonths = (width && width.value) > 768 ? 6 : 3;
+            const nMonths:number = (width && width.value) > 768 ? 6 : 3;
             
             monthsBack = monthsBack !== "null" ? monthsBack : 0;
             // Get start of 3 months back
-            const threeMonthsAgo = $dayjs().subtract(nMonths - 1 + monthsBack, 'month').startOf('month');
+            const threeMonthsAgo = $dayjs().subtract(nMonths - 1 + (monthsBack as number), 'month').startOf('month');
             // Current month end
-            const currentMonthEnd = $dayjs().subtract(monthsBack, 'month').endOf('month');
+            const currentMonthEnd = $dayjs().subtract((monthsBack as number), 'month').endOf('month');
 
             // Connect with firebase and get payments structure
             const db = useFirestore();
@@ -145,7 +146,7 @@ export const useIndexStore = defineStore('index', {
             ));
 
             // Tracker history object 
-            const trackerHistory:TrackerList = [];
+            const trackerHistory: TrackerList = [];
             querySnapshot.forEach((doc) => {
 
                 // Add id to the object
