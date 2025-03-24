@@ -37,9 +37,6 @@ interface PaymentFilters {
 interface PaymentState {
   payments: Payment[];
   totalPayments: number;
-  lastVisible: any;
-  firstVisible: any;
-  hasMore: boolean;
   isLoading: boolean;
   error: string | null;
   currentPayment: Payment | null;
@@ -49,9 +46,6 @@ export const usePaymentStore = defineStore('payment', {
   state: (): PaymentState => ({
     payments: [],
     totalPayments: 0,
-    lastVisible: null,
-    firstVisible: null,
-    hasMore: true,
     isLoading: false,
     error: null,
     currentPayment: null
@@ -93,7 +87,7 @@ export const usePaymentStore = defineStore('payment', {
   
   actions: {
     // Fetch payments with pagination and filtering
-    async fetchPayments(filters: PaymentFilters = {}, pageSize = 20, direction: 'next' | 'prev' = 'next') {
+    async fetchPayments(filters: PaymentFilters = {}) {
       const user = useCurrentUser();
       const db = useFirestore();
       
@@ -135,28 +129,9 @@ export const usePaymentStore = defineStore('payment', {
           constraints.push(where('category', '==', filters.category));
         }
         
-        // Add pagination constraints
-        if (direction === 'next' && this.lastVisible) {
-          constraints.push(startAfter(this.lastVisible));
-        } else if (direction === 'prev' && this.firstVisible) {
-          constraints.push(endBefore(this.firstVisible));
-        }
-        
-        // Add limit
-        constraints.push(limit(pageSize));
-        
         // Execute query
         const paymentsQuery = query(collection(db, 'payment2'), ...constraints);
         const snapshot = await getDocs(paymentsQuery);
-        
-        // Update pagination markers
-        if (!snapshot.empty) {
-          this.lastVisible = snapshot.docs[snapshot.docs.length - 1];
-          this.firstVisible = snapshot.docs[0];
-          this.hasMore = snapshot.docs.length === pageSize;
-        } else {
-          this.hasMore = false;
-        }
         
         // Process results
         const payments: Payment[] = [];
@@ -167,28 +142,7 @@ export const usePaymentStore = defineStore('payment', {
           } as Payment);
         });
         
-        // Apply search filter client-side if needed
-        let filteredPayments = payments;
-        if (filters.searchTerm) {
-          const searchTerm = filters.searchTerm.toLowerCase();
-          filteredPayments = payments.filter(payment => 
-            payment.title.toLowerCase().includes(searchTerm) ||
-            payment.description.toLowerCase().includes(searchTerm) ||
-            payment.category.toLowerCase().includes(searchTerm)
-          );
-        }
-        
-        this.payments = filteredPayments;
-        
-        // Count total if this is the first page
-        if (direction === 'next' && !this.lastVisible) {
-          const countQuery = query(
-            collection(db, 'payment2'),
-            where('userId', '==', user.value.uid)
-          );
-          const countSnapshot = await getDocs(countQuery);
-          this.totalPayments = countSnapshot.size;
-        }
+        this.payments = payments;
         
         return true;
       } catch (error) {
@@ -371,9 +325,6 @@ export const usePaymentStore = defineStore('payment', {
     clearState() {
       this.payments = [];
       this.totalPayments = 0;
-      this.lastVisible = null;
-      this.firstVisible = null;
-      this.hasMore = true;
       this.error = null;
       this.currentPayment = null;
     }
