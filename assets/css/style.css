@@ -1,11 +1,11 @@
 :root {
     --base-color: #27292D;
-    --primary-color: #6ABAA4;
-    --secondary-color: #7A73FF;
-    --danger-color: #FF6BA5;
-    --success-color: #28A745;
-    --warning-color: #FFC95C;
-    --accent-color: #0085FF;
+    --primary-color: #4DA892;
+    --secondary-color: #6158FF;
+    --danger-color: #E84A8A;
+    --success-color: #1D9A38;
+    --warning-color: #E6AE2C;
+    --accent-color: #0072DF;
     --base-color: #27292D;
     --popper-theme-background-color: #333333;
     --popper-theme-background-color-hover: #333333;
@@ -109,12 +109,13 @@ textarea, select {
     cursor: pointer;
     background-color: var(--primary-color);
     border: 1px solid var(--primary-color);
-    color: #1f2023;
+    color: white; /* Changed from #1f2023 to white for better contrast */
     font-weight: bold;
     outline: none;
     border-radius: 6px;
     padding: 0.286rem;
 }
+
 
 h2 {
     font-size: 20px;

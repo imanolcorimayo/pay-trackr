@@ -5,35 +5,36 @@ export default {
     "./layouts/**/*.vue",
     "./pages/**/*.vue",
     "./plugins/**/*.{js,ts}",
+    "./utils/**/*.{js,ts}",
     "./app.vue",
     "./error.vue",
   ],
   theme: {
     extend: {
       backgroundColor: {
-        primary: "#6ABAA4",
-        secondary: "#7A73FF",
-        danger: "#FF6BA5",
+        primary: "#4DA892", // Darker for better contrast
+        secondary: "#6158FF", // Darker for better contrast
+        danger: "#E84A8A", // Adjusted for better contrast
         base: "#27292D",
-        warning: "#FFC95C",
-        accent: "#0085FF",
-        success: "#28A745",
-        ['primary-transparent']: "#6ABAA4AA",
-        ['secondary-transparent']: "#7A73FFAA",
-        ['danger-transparent']: "#FF6BA5AA",
-        ['base-transparent']: "#27292DAA",
-        ['warning-transparent']: "#FFC95CAA",
-        ['accent-transparent']: "#0085FFAA",
-        ['success-transparent']: "#28A745AA",
+        warning: "#E6AE2C", // Adjusted for better visibility
+        accent: "#0072DF", // Adjusted for better contrast
+        success: "#1D9A38", // Slightly darker for better contrast
+        ['primary-transparent']: "rgba(77, 168, 146, 0.7)",
+        ['secondary-transparent']: "rgba(97, 88, 255, 0.7)",
+        ['danger-transparent']: "rgba(232, 74, 138, 0.7)",
+        ['base-transparent']: "rgba(39, 41, 45, 0.7)",
+        ['warning-transparent']: "rgba(230, 174, 44, 0.7)",
+        ['accent-transparent']: "rgba(0, 114, 223, 0.7)",
+        ['success-transparent']: "rgba(29, 154, 56, 0.7)",
       },
       colors: {
-        primary: "#6ABAA4",
-        secondary: "#7A73FF",
-        danger: "#FF6BA5",
+        primary: "#4DA892",
+        secondary: "#6158FF",
+        danger: "#E84A8A",
         base: "#27292D",
-        warning: "#FFC95C",
-        accent: "#0085FF",
-        success: "#28A745",
+        warning: "#E6AE2C",
+        accent: "#0072DF",
+        success: "#1D9A38",
       },
       keyframes: {
         jump: {
@@ -48,4 +49,3 @@ export default {
   },
   plugins: [],
 }
-

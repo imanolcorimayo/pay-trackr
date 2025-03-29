@@ -1,18 +1,18 @@
 <template>
   <div>
     <RecurrentsManagePayment ref="newPayment" @onClose="() => showAddButton = true" @onCreated="emitCreated"/>
-    <div class="w-full m-auto" v-if="showAddButton">
-      <button 
-        @click="() => {showAddButton = false; $refs.newPayment.showModal()}" 
-        class="
-          flex justify-center items-center max-w-[25rem] w-full gap-[0.714rem] rounded-[0.714rem]
-          bg-primary text-black m-auto px-[0.857rem] py-[0.714rem]
-        "
-      >
-        <MdiPlus class="font-semibold"/>
-        <span class="capitalize font-medium">Add Recurrent Payment</span>
-      </button>
-    </div>
+    <button
+      @click="
+        () => {
+          showAddButton = false;
+          newPayment.showModal();
+        }
+      "
+      class="fixed bottom-6 right-6 z-10 flex items-center justify-center w-14 h-14 rounded-full bg-primary text-white shadow-lg hover:bg-primary-transparent transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary"
+      aria-label="Add new payment"
+    >
+      <MdiPlus class="text-2xl" />
+    </button>
   </div>
 </template>
 

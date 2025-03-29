@@ -22,7 +22,7 @@ interface Payment {
   paymentType: 'recurrent' | 'one-time';
   userId: string;
   createdAt: any;
-  dueDate?: string;
+  dueDate: any; // Make this a required field
 }
 
 interface PaymentFilters {

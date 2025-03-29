@@ -1,52 +1,74 @@
 <template>
-  <div class="flex flex-col gap-[2.143rem]">
-    <Loader v-if="actionRunning" class="max-w-[2rem]"/>
-    <div class="flex flex-col gap-[1rem] sm:flex-row w-full sm:px-[1.143rem] justify-between items-end sm:items-center">
-      <div class="flex gap-[1rem]">
-        <div tabindex="0" class="relative h-[2.357rem] rounded-[0.428rem]">
-          <IcSharpSearch class="absolute h-[2.357rem] left-[0.214rem] text-black text-[1.190rem] pointer-events-none" />
-          <input type="text" @input="(value) => $emit('onSearch', value.target.value)"
-            class="h-[2.357rem] rounded-[0.428rem] pl-[1.714rem] bg-white text-black" placeholder="Eg. rental">
-        </div>
-
-        <Tooltip ref="tooltipFilter">
-          <div class="flex justify-center items-center w-[2.357rem] h-[2.357rem] bg-white rounded-[0.214rem]" @click="toggleTooltip">
-            <MdiFilterOutline class="text-black text-[1.190rem]" />
+  <div class="mb-4 p-3">
+    <div v-if="actionRunning" class="flex justify-center my-2">
+      <Loader />
+    </div>
+    
+    <div class="flex flex-col sm:flex-row w-full justify-between items-center gap-3 px-1">
+      <!-- Search Bar -->
+      <div class="flex items-center gap-3 w-full sm:w-auto">
+        <div class="relative w-full sm:w-64">
+          <div class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+            <IcSharpSearch class="text-gray-600 text-lg" />
           </div>
+          <input 
+            type="text" 
+            @input="(value) => $emit('onSearch', value.target.value)"
+            class="w-full h-10 rounded-md bg-gray-400 border border-gray-400 pl-10 text-black placeholder:text-gray-600 focus:ring-2 focus:ring-primary focus:border-transparent" 
+            placeholder="Search payments..."
+          >
+        </div>
+        
+        <!-- Filter Button -->
+        <Tooltip ref="tooltipFilter">
+          <button 
+            class="h-10 w-10 flex items-center justify-center bg-base/80 hover:bg-gray-700 rounded-md border border-gray-400 text-white transition-colors"
+            @click="toggleTooltip"
+            aria-label="Filter options"
+          >
+            <MdiFilterOutline class="text-xl" />
+          </button>
+          
+          <!-- Filter Dropdown Content -->
           <template #content>
-            <div class="flex flex-col">
+            <div class="bg-base/80 border border-gray-400 rounded-lg shadow-lg overflow-hidden">
               <div
                 v-for="filter in filters"
                 :key="filter.name"
                 @click="selectFilter(filter)"
-                :class="['flex justify-between items-center p-3 cursor-pointer font-medium', 
-                        selectedFilter.name === filter.name ? 'bg-gray-200' : 'hover:bg-gray-200', 
-                        'text-black', filter.class]"
+                :class="[
+                  'flex justify-between items-center p-3 cursor-pointer hover:bg-gray-700 transition-colors', 
+                  selectedFilter.name === filter.name ? 'bg-gray-700' : '',
+                  filter.class
+                ]"
               >
-                <div class="flex items-center gap-[0.571rem]">
-                  <component :is="filter.icon" class="text-[1.3rem] text-gray-800" /> 
-                  <span>{{ filter.label }}</span>
+                <div class="flex items-center gap-2">
+                  <component :is="filter.icon" class="text-primary text-lg" /> 
+                  <span class="text-white">{{ filter.label }}</span>
                 </div>
-                <div v-if="selectedFilter.name === filter.name">
-                  <div v-if="selectedFilter.order === 'asc'" class="flex items-center gap-[0.286rem]">
-                    <span class="text-sm text-gray-600/75">Low to high</span>
-                    <MingcuteArrowUpFill class="text-secondary"/>
-                  </div>
-                  <div v-else class="flex items-center gap-[0.286rem]">
-                    <span class="text-sm text-gray-600/75">High to low</span>
-                    <MingcuteArrowUpFill class="rotate-180 text-secondary"/>
-                  </div>
+                <div v-if="selectedFilter.name === filter.name" class="flex items-center gap-2 text-gray-300">
+                  <span v-if="selectedFilter.order === 'asc'">
+                    <span class="text-sm">Low to high</span>
+                    <MingcuteArrowUpFill class="text-primary ml-1" />
+                  </span>
+                  <span v-else>
+                    <span class="text-sm">High to low</span>
+                    <MingcuteArrowUpFill class="rotate-180 text-primary ml-1" />
+                  </span>
                 </div>
               </div>
             </div>
           </template>
         </Tooltip>
       </div>
+      
+      <!-- Could add additional elements here if needed -->
     </div>
   </div>
 </template>
 
 <script setup>
+// Keep existing script code
 import TablerCalendarFilled from '~icons/tabler/calendar-filled';
 import MaterialSymbolsPaidRounded from '~icons/material-symbols/paid-rounded';
 import MdiFilterOutline from '~icons/mdi/filter-outline';
@@ -66,8 +88,6 @@ const emits = defineEmits(['onOrder', 'monthsBack']);
 
 // ----- Define Useful Properties ---------
 const { width } = useWindowSize();
-
-// ----- Define Pinia Vars ----------
 
 // ----- Define Vars ------
 const actionRunning = ref(false);
@@ -89,7 +109,6 @@ const filters = [
   { name: 'title', label: 'Title', icon: BiAlphabet, class: 'rounded-b-lg' }
 ];
 
-
 function selectFilter(filter) {
   if (selectedFilter.value.name === filter.name && selectedFilter.value.order === 'asc') {
     selectedFilter.value.order = 'desc';
@@ -103,5 +122,5 @@ function selectFilter(filter) {
 
   // Emit current filter configuration
   emits("onOrder", selectedFilter.value);
-};
+}
 </script>

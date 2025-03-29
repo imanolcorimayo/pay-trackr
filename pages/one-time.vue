@@ -23,8 +23,8 @@
         </div>
 
         <!-- Summary Cards -->
-        <div class="flex flex-wrap gap-3">
-          <div class="summary-card bg-success/10 p-3 rounded-lg flex items-center">
+        <div class="flex flex-col w-full sm:flex-row sm:w-[unset] sm:flex-wrap gap-3">
+          <div class="bg-success bg-opacity-10 p-3 rounded-lg flex items-center">
             <MdiCashCheck class="text-success text-2xl mr-2" />
             <div>
               <p class="text-xs font-medium">Paid This Month</p>
@@ -32,7 +32,7 @@
             </div>
           </div>
 
-          <div class="summary-card bg-danger/10 p-3 rounded-lg flex items-center">
+          <div class="bg-danger bg-opacity-10 p-3 rounded-lg flex items-center">
             <MdiCashRemove class="text-danger text-2xl mr-2" />
             <div>
               <p class="text-xs font-medium">Unpaid This Month</p>
@@ -40,8 +40,8 @@
             </div>
           </div>
 
-          <div class="summary-card bg-info/10 p-3 rounded-lg flex items-center">
-            <MdiCalendarMonth class="text-info text-2xl mr-2" />
+          <div class="bg-accent bg-opacity-10 p-3 rounded-lg flex items-center">
+            <MdiCalendarMonth class="text-accent text-2xl mr-2" />
             <div>
               <p class="text-xs font-medium">Total This Month</p>
               <p class="font-semibold">{{ formatPrice(monthTotals.paid + monthTotals.unpaid) }}</p>
@@ -63,23 +63,35 @@
           <p>No one-time payments found for this month</p>
         </div>
 
+        <!-- Payment Cards -->
         <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           <div
             v-for="payment in payments"
             :key="payment.id"
-            class="bg-gray-800 shadow-sm rounded-lg p-4 border border-gray-100 hover:shadow-md transition-shadow cursor-pointer"
+            class="bg-base shadow-sm rounded-lg p-4 border border-gray-700 shadow hover:shadow-lg transition-shadow cursor-pointer"
             @click="showDetails(payment.id)"
           >
             <div class="flex items-center mb-3">
-              <div class="w-2 h-10 rounded-full mr-3" :class="`bg-${payment.category.toLowerCase()}`"></div>
               <div class="flex-1">
                 <h3 class="font-medium">{{ payment.title }}</h3>
+                <div class="flex items-center mt-1 mb-1">
+                  <span
+                    class="text-xs px-2 py-0.5 rounded-full capitalize"
+                    :class="getCategoryClasses(payment.category)"
+                  >
+                    {{ payment.category }}
+                  </span>
+                </div>
                 <p class="text-xs text-gray-500 line-clamp-1">{{ payment.description }}</p>
               </div>
               <div
                 class="ml-2 h-8 w-8 rounded-full flex items-center justify-center"
                 :class="
-                  payment.isPaid ? 'bg-success/10' : isDelayed(payment.createdAt) ? 'bg-danger/10' : 'bg-gray-100'
+                  payment.isPaid
+                    ? 'bg-success bg-opacity-10'
+                    : isDelayed(payment.dueDate)
+                    ? 'bg-danger bg-opacity-10'
+                    : 'bg-gray-500 bg-opacity-10'
                 "
               >
                 <MdiCheck v-if="payment.isPaid" class="text-success text-xl" />
@@ -91,7 +103,7 @@
             <div class="flex justify-between items-center">
               <div>
                 <p class="text-xs text-gray-500">Due on</p>
-                <p class="text-sm">{{ formatDate(payment.createdAt) }}</p>
+                <p class="text-sm">{{ formatDate(payment.dueDate || payment.createdAt) }}</p>
               </div>
               <div class="text-right">
                 <p class="text-xs text-gray-500">Amount</p>

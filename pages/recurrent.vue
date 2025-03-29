@@ -32,7 +32,7 @@
         </div>
 
         <!-- Summary Cards -->
-        <div class="flex flex-wrap gap-3">
+        <div class="flex flex-col w-full sm:flex-row sm:w-[unset] sm:flex-wrap gap-3">
           <div class="summary-card bg-success/10 p-3 rounded-lg flex items-center">
             <MdiCashCheck class="text-success text-2xl mr-2" />
             <div>
@@ -49,8 +49,8 @@
             </div>
           </div>
 
-          <div class="summary-card bg-info/10 p-3 rounded-lg flex items-center">
-            <MdiCalendarMonth class="text-info text-2xl mr-2" />
+          <div class="bg-accent bg-opacity-10 p-3 rounded-lg flex items-center">
+            <MdiCalendarMonth class="text-accent text-2xl mr-2" />
             <div>
               <p class="text-xs font-medium">Total This Month</p>
               <p class="font-semibold">{{ formatPrice(currentMonthTotals.paid + currentMonthTotals.unpaid) }}</p>

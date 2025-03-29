@@ -189,6 +189,7 @@ const { $dayjs } = useNuxtApp();
 
 // ----- Define Pinia Vars ----------
 const paymentStore = usePaymentStore();
+const recurrentStore = useRecurrentStore();
 const { getPayments } = storeToRefs(paymentStore);
 
 // ----- Define Refs ---------
@@ -222,6 +223,16 @@ const combinedPayments = computed(() => {
     ...payment,
     isRecurring: payment.paymentType === "recurrent"
   }));
+
+  // For type recurrent, update the category based on the recurrent payments
+  oneTimePayments.forEach((payment) => {
+    if (payment.isRecurring) {
+      const recurrentPayment = recurrentStore.getRecurrentPayments.find((rec) => rec.id === payment.recurrentId);
+      if (recurrentPayment) {
+        payment.category = recurrentPayment.category;
+      }
+    }
+  });
 
   // Combine and return all payments
   return [...oneTimePayments];
@@ -290,9 +301,9 @@ function getMonthlyData() {
 async function createMonthlyTrendsChart() {
   const { months, recurringData, oneTimeData, totalData } = getMonthlyData();
   const ctx = document.getElementById("monthlyTrendsChart");
-  
+
   if (!ctx) return;
-  
+
   // Prepare chart data
   const chartData = {
     labels: months,
@@ -335,7 +346,7 @@ async function createMonthlyTrendsChart() {
       }
     ]
   };
-  
+
   const chartOptions = {
     responsive: true,
     maintainAspectRatio: false,
@@ -404,16 +415,16 @@ async function createMonthlyTrendsChart() {
     }
   } catch (error) {
     console.error("Error updating monthly trends chart:", error);
-    
+
     // If we encounter an error, try to fully recreate the chart
     try {
       if (monthlyTrendsChart) {
         monthlyTrendsChart.destroy();
       }
-      
+
       // Wait for the next tick to ensure the canvas is properly cleared
       await nextTick();
-      
+
       // Create a new chart instance
       monthlyTrendsChart = new Chart(ctx, {
         type: "line",
@@ -470,12 +481,15 @@ async function updateCategoryPieChart() {
 
   // Color mapping for categories
   const categoryColors = {
-    utilities: "rgb(54, 162, 235)",
-    food: "rgb(75, 192, 192)",
-    transport: "rgb(255, 205, 86)",
-    entertainment: "rgb(153, 102, 255)",
-    health: "rgb(255, 99, 132)",
-    other: "rgb(201, 203, 207)"
+    utilities: "rgb(0, 114, 223)", // accent blue
+    food: "rgb(29, 154, 56)", // success green
+    transport: "rgb(230, 174, 44)", // warning yellow
+    entertainment: "rgb(97, 88, 255)", // secondary purple
+    health: "rgb(232, 74, 138)", // danger pink
+    pet: "rgb(60, 174, 163)", // teal for pets
+    clothes: "rgb(128, 0, 32)", // burgundy
+    traveling: "rgb(255, 140, 0)", // dark orange
+    other: "rgb(128, 128, 128)" // gray for other/default
   };
 
   const backgroundColors = categories.map((category) => categoryColors[category] || "rgb(201, 203, 207)");

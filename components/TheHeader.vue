@@ -66,7 +66,6 @@
 </template>
 
 <script setup>
-import IcTwotoneWifiOff from '~icons/ic/twotone-wifi-off';
 
 // ----- Define Useful Properties ---------
 const auth = useFirebaseAuth()
@@ -74,8 +73,6 @@ const user = await getCurrentUser();
 const route = useRoute();
 
 // ----- Define Pinia Vars ----------
-const indexStore = useIndexStore();
-
 // ---- Define Vars --------
 const showMenu = ref(false)
 const dropdownMenu = ref(null)

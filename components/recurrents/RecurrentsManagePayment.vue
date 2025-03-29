@@ -1,14 +1,14 @@
 <template>
   <Modal ref="modal">
     <template #header>
-      <h2 class="text-xl font-bold">{{ isEdit ? 'Edit' : 'Add' }} Recurring Payment</h2>
+      <h2 class="text-xl font-bold">{{ isEdit ? "Edit" : "Add" }} Recurring Payment</h2>
     </template>
-    
+
     <template #body>
       <div v-if="isLoading" class="flex justify-center items-center min-h-[200px]">
         <Loader />
       </div>
-      
+
       <form v-else @submit.prevent="savePayment" class="space-y-6">
         <!-- Payment Title & Description -->
         <div class="space-y-2">
@@ -22,7 +22,7 @@
             placeholder="e.g. Netflix Subscription"
           />
         </div>
-        
+
         <div class="space-y-2">
           <label for="description" class="block text-sm font-medium text-gray-400">Description (Optional)</label>
           <textarea
@@ -33,7 +33,7 @@
             rows="2"
           ></textarea>
         </div>
-        
+
         <!-- Amount & Category -->
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div class="space-y-2">
@@ -52,7 +52,7 @@
               />
             </div>
           </div>
-          
+
           <div class="space-y-2">
             <label for="category" class="block text-sm font-medium text-gray-400">Category</label>
             <select
@@ -66,11 +66,14 @@
               <option value="transport">Transport</option>
               <option value="entertainment">Entertainment</option>
               <option value="health">Health</option>
+              <option value="pet">Pet</option>
+              <option value="clothes">Clothes</option>
+              <option value="traveling">Traveling</option>
               <option value="other">Other</option>
             </select>
           </div>
         </div>
-        
+
         <!-- Due Date & Period -->
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div class="space-y-2">
@@ -89,7 +92,7 @@
               Some months have fewer days. Payment may be due on the last day of those months.
             </p>
           </div>
-          
+
           <div class="space-y-2">
             <label for="timePeriod" class="block text-sm font-medium text-gray-400">Payment Period</label>
             <select
@@ -106,7 +109,7 @@
             </select>
           </div>
         </div>
-        
+
         <!-- Start & End Dates -->
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div class="space-y-2">
@@ -119,7 +122,7 @@
               class="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
             />
           </div>
-          
+
           <div class="space-y-2">
             <label for="endDate" class="block text-sm font-medium text-gray-400">End Date (Optional)</label>
             <input
@@ -130,30 +133,32 @@
             />
           </div>
         </div>
-        
+
         <!-- Submit button is in footer -->
       </form>
     </template>
-    
+
     <template #footer>
       <div class="flex justify-between w-full">
-        <button 
+        <button
           @click="closeModal"
           class="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
         >
           Cancel
         </button>
-        
-        <button 
+
+        <button
           @click="savePayment"
           class="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark transition-colors"
           :disabled="isSubmitting"
         >
           <span v-if="isSubmitting">
-            <span class="inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></span>
+            <span
+              class="inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"
+            ></span>
             Saving...
           </span>
-          <span v-else>{{ isEdit ? 'Update' : 'Create' }} Payment</span>
+          <span v-else>{{ isEdit ? "Update" : "Create" }} Payment</span>
         </button>
       </div>
     </template>
@@ -161,9 +166,9 @@
 </template>
 
 <script setup>
-import { ref, watch, onMounted } from 'vue';
-import { useCurrentUser } from 'vuefire';
-import { serverTimestamp, Timestamp } from 'firebase/firestore';
+import { ref, watch, onMounted } from "vue";
+import { useCurrentUser } from "vuefire";
+import { serverTimestamp, Timestamp } from "firebase/firestore";
 
 const props = defineProps({
   paymentId: {
@@ -176,6 +181,8 @@ const props = defineProps({
   }
 });
 
+const emit = defineEmits(["onClose"]);
+
 // ----- Define Refs ---------
 const modal = ref(null);
 const isLoading = ref(false);
@@ -183,14 +190,14 @@ const isSubmitting = ref(false);
 
 // Default form state
 const defaultForm = {
-  title: '',
-  description: '',
-  amount: '',
-  startDate: '',
-  dueDateDay: '',
-  endDate: '',
-  timePeriod: 'monthly',
-  category: 'other',
+  title: "",
+  description: "",
+  amount: "",
+  startDate: "",
+  dueDateDay: "",
+  endDate: "",
+  timePeriod: "monthly",
+  category: "other",
   isCreditCard: false,
   creditCardId: null
 };
@@ -208,9 +215,9 @@ function showModal() {
   } else {
     // Set default date to today
     const { $dayjs } = useNuxtApp();
-    form.value.startDate = $dayjs().format('YYYY-MM-DD');
+    form.value.startDate = $dayjs().format("YYYY-MM-DD");
   }
-  
+
   modal.value?.open();
 }
 
@@ -220,50 +227,47 @@ function closeModal() {
     form.value = { ...defaultForm };
   }
   modal.value?.close();
+  emit("onClose");
 }
 
 async function fetchPaymentDetails(paymentId) {
   isLoading.value = true;
-  
+
   // Get payment from store
-  const payment = recurrentStore.getRecurrentPayments.find(p => p.id === paymentId);
-  
+  const payment = recurrentStore.getRecurrentPayments.find((p) => p.id === paymentId);
+
   if (payment) {
     // Format dates for form inputs
     const { $dayjs } = useNuxtApp();
-    const startDate = payment.startDate 
-      ? $dayjs(payment.startDate, { format: 'MM/DD/YYYY' }).format('YYYY-MM-DD')
-      : '';
-    
-    const endDate = payment.endDate 
-      ? $dayjs(payment.endDate, { format: 'MM/DD/YYYY' }).format('YYYY-MM-DD') 
-      : '';
-    
+    const startDate = payment.startDate ? $dayjs(payment.startDate, { format: "MM/DD/YYYY" }).format("YYYY-MM-DD") : "";
+
+    const endDate = payment.endDate ? $dayjs(payment.endDate, { format: "MM/DD/YYYY" }).format("YYYY-MM-DD") : "";
+
     form.value = {
-      title: payment.title || '',
-      description: payment.description || '',
-      amount: payment.amount || '',
+      title: payment.title || "",
+      description: payment.description || "",
+      amount: payment.amount || "",
       startDate: startDate,
-      dueDateDay: payment.dueDateDay || '',
+      dueDateDay: payment.dueDateDay || "",
       endDate: endDate,
-      timePeriod: payment.timePeriod || 'monthly',
-      category: payment.category || 'other',
+      timePeriod: payment.timePeriod || "monthly",
+      category: payment.category || "other",
       isCreditCard: payment.isCreditCard || false,
       creditCardId: payment.creditCardId || null
     };
   }
-  
+
   isLoading.value = false;
 }
 
 async function savePayment() {
   if (!user.value) {
-    useToast('error', 'You must be logged in to save payments');
+    useToast("error", "You must be logged in to save payments");
     return;
   }
-  
+
   isSubmitting.value = true;
-  
+
   // Convert form data to payment object
   const paymentData = {
     title: form.value.title,
@@ -277,19 +281,19 @@ async function savePayment() {
     isCreditCard: form.value.isCreditCard,
     creditCardId: form.value.creditCardId
   };
-  
+
   try {
     let result;
-    
+
     if (props.isEdit && props.paymentId) {
       // Update existing payment
       result = await recurrentStore.updateRecurrentPayment(props.paymentId, paymentData);
-      
+
       if (result) {
-        useToast('success', 'Payment updated successfully');
+        useToast("success", "Payment updated successfully");
         closeModal();
       } else {
-        useToast('error', recurrentStore.error || 'Failed to update payment');
+        useToast("error", recurrentStore.error || "Failed to update payment");
       }
     } else {
       // Create new payment
@@ -299,28 +303,31 @@ async function savePayment() {
         userId: user.value.uid,
         createdAt: serverTimestamp()
       });
-      
+
       if (result) {
-        useToast('success', 'Payment created successfully');
+        useToast("success", "Payment created successfully");
         closeModal();
       } else {
-        useToast('error', recurrentStore.error || 'Failed to create payment');
+        useToast("error", recurrentStore.error || "Failed to create payment");
       }
     }
   } catch (error) {
-    console.error('Error saving payment:', error);
-    useToast('error', 'An unexpected error occurred');
+    console.error("Error saving payment:", error);
+    useToast("error", "An unexpected error occurred");
   } finally {
     isSubmitting.value = false;
   }
 }
 
 // ----- Define Watchers ---------
-watch(() => props.paymentId, (newVal) => {
-  if (newVal && props.isEdit && modal.value?.isOpen) {
-    fetchPaymentDetails(newVal);
+watch(
+  () => props.paymentId,
+  (newVal) => {
+    if (newVal && props.isEdit && modal.value?.isOpen) {
+      fetchPaymentDetails(newVal);
+    }
   }
-});
+);
 
 // Expose methods to parent
 defineExpose({

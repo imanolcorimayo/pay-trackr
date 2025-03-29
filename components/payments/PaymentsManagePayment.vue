@@ -7,7 +7,7 @@
           <div
             v-else-if="form.category"
             class="w-3 h-14 rounded-full mr-3"
-            :class="`bg-${form.category.toLowerCase()}`"
+            :class="getCategoryClass(form.category)"
           ></div>
           <div>
             <h2 class="text-xl font-bold">
@@ -81,6 +81,9 @@
                 <option value="transport">Transport</option>
                 <option value="entertainment">Entertainment</option>
                 <option value="health">Health</option>
+                <option value="pet">Pet</option>
+                <option value="clothes">Clothes</option>
+                <option value="traveling">Traveling</option>
                 <option value="other">Other</option>
               </select>
             </div>
@@ -212,7 +215,7 @@ const defaultForm = computed(() => {
       amount: "",
       category: "other",
       dueDate: today,
-      isPaid: false,
+      isPaid: true, // It's usually paid when creating a new payment
       paidDate: today,
       paymentType: "one-time"
     };
@@ -243,6 +246,7 @@ function closeModal() {
   emit("onClose");
 }
 
+// In the fetchPaymentDetails function
 async function fetchPaymentDetails(paymentId) {
   isLoading.value = true;
 
@@ -263,7 +267,13 @@ async function fetchPaymentDetails(paymentId) {
 
       if (payment) {
         const { $dayjs } = useNuxtApp();
-        const dueDate = payment.createdAt ? $dayjs(payment.createdAt.toDate()).format("YYYY-MM-DD") : "";
+
+        // Use dueDate if available, otherwise fall back to createdAt
+        const dueDate = payment.dueDate
+          ? $dayjs(payment.dueDate.toDate()).format("YYYY-MM-DD")
+          : payment.createdAt
+          ? $dayjs(payment.createdAt.toDate()).format("YYYY-MM-DD")
+          : "";
 
         const paidDate = payment.paidDate
           ? $dayjs(payment.paidDate.toDate()).format("YYYY-MM-DD")
@@ -275,7 +285,7 @@ async function fetchPaymentDetails(paymentId) {
           amount: payment.amount || "",
           category: payment.category || "other",
           dueDate: dueDate,
-          isPaid: payment.isPaid || false,
+          isPaid: payment.isPaid || true,
           paidDate: paidDate,
           paymentType: payment.paymentType || "one-time"
         };
@@ -286,6 +296,30 @@ async function fetchPaymentDetails(paymentId) {
     useToast("error", "Failed to load payment details");
   } finally {
     isLoading.value = false;
+  }
+}
+
+function getCategoryClass(category) {
+  switch(category.toLowerCase()) {
+    case 'utilities':
+      return 'bg-[#0072DF]'; // accent blue
+    case 'food':
+      return 'bg-[#1D9A38]'; // success green 
+    case 'transport':
+      return 'bg-[#E6AE2C]'; // warning yellow
+    case 'entertainment':
+      return 'bg-[#6158FF]'; // secondary purple
+    case 'health':
+      return 'bg-[#E84A8A]'; // danger pink
+    case 'pet':
+      return 'bg-[#3CAEA3]'; // teal for pets
+    case 'clothes':
+      return 'bg-[#800020]'; // burgundy
+    case 'traveling':
+      return 'bg-[#FF8C00]'; // dark orange
+    case 'other':
+    default:
+      return 'bg-[#808080]'; // gray for other/default
   }
 }
 
@@ -311,6 +345,7 @@ async function savePayment() {
       category: form.value.category,
       isPaid: form.value.isPaid,
       paidDate: form.value.isPaid ? Timestamp.fromDate($dayjs(form.value.paidDate).toDate()) : null,
+      dueDate: Timestamp.fromDate($dayjs(form.value.dueDate).toDate()), // Set dueDate from form
       recurrentId: null,
       paymentType: "one-time"
     };
@@ -343,8 +378,7 @@ async function savePayment() {
       // Create new payment
       result = await paymentStore.createPayment({
         ...paymentData,
-        userId: user.value.uid,
-        createdAt: Timestamp.fromDate($dayjs(form.value.dueDate).toDate())
+        userId: user.value.uid
       });
 
       if (result && result.success) {
