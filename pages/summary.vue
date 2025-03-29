@@ -679,6 +679,7 @@ async function fetchData() {
     // Set up filters for payments
     const startDate = $dayjs().subtract(12, "month").startOf("month").toDate();
     await paymentStore.fetchPayments({ startDate });
+    await recurrentStore.fetchRecurrentPayments();
 
     // Prepare months dropdown
     prepareAvailableMonths();

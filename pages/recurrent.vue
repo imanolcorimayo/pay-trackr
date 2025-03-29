@@ -63,7 +63,7 @@
       <Filters @onSearch="searchPayments" @onOrder="orderRecurrents" />
 
       <!-- Table View -->
-      <div class="overflow-x-auto px-3">
+      <div class="hidden md:block overflow-x-auto px-3">
         <table class="w-full table-fixed">
           <thead class="text-center">
             <tr class="border-b h-12">
@@ -88,7 +88,10 @@
             >
               <td class="text-start py-4">
                 <div class="flex items-center">
-                  <div class="w-2 h-10 rounded-full mr-3" :class="`bg-${payment.category.toLowerCase()}`"></div>
+                  <div
+                    class="w-2 h-10 rounded-full mr-3 shrink-0 !bg-opacity-90"
+                    :class="getCategoryClasses(payment.category.toLowerCase())"
+                  ></div>
                   <div class="flex flex-col text-start">
                     <span class="font-medium">{{ payment.title }}</span>
                     <span class="text-xs text-gray-500">{{ payment.description }}</span>
@@ -153,6 +156,88 @@
             </tr>
           </tbody>
         </table>
+      </div>
+      <!-- Card View (Mobile) -->
+      <div class="md:hidden px-3 space-y-4">
+        <div
+          v-for="payment in recurrents"
+          :key="payment.id"
+          class="bg-base rounded-lg border border-gray-700 overflow-hidden"
+        >
+          <!-- Payment Header -->
+          <div class="p-4 border-b border-gray-700 flex items-center gap-3" @click="showDetails(payment.id)">
+            <div
+              class="w-2 h-10 rounded-full shrink-0 !bg-opacity-90"
+              :class="getCategoryClasses(payment.category.toLowerCase())"
+            ></div>
+
+            <div class="flex-1 min-w-0">
+              <h3 class="font-medium truncate">{{ payment.title }}</h3>
+              <p class="text-xs text-gray-500 line-clamp-1">{{ payment.description }}</p>
+            </div>
+
+            <div class="text-right shrink-0">
+              <span class="font-medium block">{{ formatPrice(payment.amount) }}</span>
+              <span class="text-xs text-gray-500">Day: {{ payment.dueDateDay }}</span>
+            </div>
+          </div>
+
+          <!-- Monthly Status -->
+          <div class="p-4 grid grid-cols-3 gap-3">
+            <div
+              v-for="month in months.slice(-3)"
+              :key="`${payment.id}-${month.key}-${month.year}`"
+              class="flex flex-col items-center"
+            >
+              <span class="text-xs text-gray-500 mb-1">{{ month.display }}</span>
+
+              <div v-if="payment.months[month.key]" class="flex flex-col items-center">
+                <button
+                  @click="togglePaymentStatus(payment.id, month.key)"
+                  class="inline-flex items-center justify-center h-10 w-10 rounded-full transition-colors"
+                  :class="[
+                    payment.months[month.key].isPaid
+                      ? 'bg-success/10'
+                      : isDelayed(payment.months[month.key].dueDate)
+                      ? 'bg-danger/10'
+                      : 'bg-gray-100'
+                  ]"
+                >
+                  <MdiCheck v-if="payment.months[month.key].isPaid" class="text-success text-xl" />
+                  <MdiClockOutline
+                    v-else-if="isDelayed(payment.months[month.key].dueDate)"
+                    class="text-danger text-xl"
+                  />
+                  <MdiCircleOutline v-else class="text-gray-400 text-xl" />
+                </button>
+
+                <span class="text-xs mt-1">{{ formatPrice(payment.months[month.key].amount) }}</span>
+              </div>
+
+              <button
+                v-else
+                @click="createPaymentForMonth(payment.id, month.key)"
+                class="inline-flex items-center justify-center h-10 w-10 rounded-full bg-gray-100"
+              >
+                <MdiPlusCircleOutline class="text-gray-500 text-xl" />
+              </button>
+            </div>
+          </div>
+
+          <!-- Actions -->
+          <div class="flex justify-end p-2 border-t border-gray-700">
+            <button @click="showEdit(payment.id)" class="p-2 text-gray-500 hover:text-primary">
+              <MdiPencil />
+            </button>
+          </div>
+        </div>
+
+        <!-- Empty State -->
+        <div v-if="recurrents.length === 0" class="py-10 text-center text-gray-500">
+          <MdiCashOff class="text-5xl mx-auto mb-3 opacity-30" />
+          <p>No recurrent payments found</p>
+          <button @click="showNewPaymentModal" class="btn btn-primary mt-3">Add Payment</button>
+        </div>
       </div>
     </div>
   </div>
@@ -386,25 +471,5 @@ useHead({
 
 .summary-card {
   @apply min-w-[150px];
-}
-
-/* Category colors */
-.bg-utilities {
-  @apply bg-blue-500;
-}
-.bg-food {
-  @apply bg-green-500;
-}
-.bg-transport {
-  @apply bg-yellow-500;
-}
-.bg-entertainment {
-  @apply bg-purple-500;
-}
-.bg-health {
-  @apply bg-red-500;
-}
-.bg-other {
-  @apply bg-gray-500;
 }
 </style>
