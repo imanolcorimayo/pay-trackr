@@ -338,12 +338,12 @@ function changeMonthRange(delta) {
 
 // Toggle payment status
 async function togglePaymentStatus(recurrentId, month) {
-  if (this.isLoading) return;
-  this.isLoading = true;
+  if (isLoading.value) return;
+  isLoading.value = true;
 
   const payment = recurrents.value.find((p) => p.id === recurrentId);
   if (!payment || !payment.months[month]) {
-    this.isLoading = false;
+    isLoading.value = false;
     return;
   }
 
@@ -353,12 +353,12 @@ async function togglePaymentStatus(recurrentId, month) {
   if (!paymentId) {
     // Create payment
     await createPaymentForMonth(recurrentId, month, true);
-    this.isLoading = false;
+    isLoading.value = false;
     return;
   }
   const result = await recurrentStore.togglePaymentStatus(paymentId, !currentStatus);
 
-  this.isLoading = false;
+  isLoading.value = false;
   if (result) {
     useToast("success", `Payment marked as ${!currentStatus ? "paid" : "unpaid"}`);
   } else {
