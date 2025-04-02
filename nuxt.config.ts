@@ -6,8 +6,8 @@ export default defineNuxtConfig({
   postcss: {
     plugins: {
       tailwindcss: {},
-      autoprefixer: {},
-    },
+      autoprefixer: {}
+    }
   },
 
   modules: [
@@ -24,37 +24,37 @@ export default defineNuxtConfig({
 
   // @ts-ignore
   pwa: {
-    registerType: 'autoUpdate',
+    registerType: "autoUpdate",
     manifest: {
-      name: 'PayTrackr',
-      short_name: 'PayTrackr',
-      description: 'Track and manage your recurring and one-time payments',
-      theme_color: '#4DA892', // Assuming this is your primary color
-      background_color: '#27292D',
-      display: 'standalone',
-      orientation: 'portrait',
-      start_url: '/',
+      name: "PayTrackr",
+      short_name: "PayTrackr",
+      description: "Track and manage your recurring and one-time payments",
+      theme_color: "#27292D", // Assuming this is your primary color
+      background_color: "#27292D",
+      display: "standalone",
+      orientation: "portrait",
+      start_url: "/",
       icons: [
         {
-          src: 'img/new-logo.png',
-          sizes: '192x192',
-          type: 'image/png',
+          src: "/img/new-logo.png",
+          sizes: "192x192",
+          type: "image/png"
         },
         {
-          src: 'img/new-logo.png',
-          sizes: '512x512',
-          type: 'image/png',
+          src: "/img/new-logo.png",
+          sizes: "512x512",
+          type: "image/png"
         },
         {
-          src: 'img/new-logo.png',
-          sizes: '512x512',
-          type: 'image/png',
-          purpose: 'any maskable',
-        },
-      ],
+          src: "/img/new-logo.png",
+          sizes: "512x512",
+          type: "image/png",
+          purpose: "any maskable"
+        }
+      ]
     },
     workbox: {
-      navigateFallback: '/',
+      navigateFallback: "/",
       globPatterns: ['**/*.{js,css,html,png,svg,ico}'],
       runtimeCaching: [
         {
@@ -89,11 +89,11 @@ export default defineNuxtConfig({
     },
     client: {
       installPrompt: true,
-      periodicSyncForUpdates: 20, // check for updates every 20 minutes
+      periodicSyncForUpdates: 20 // check for updates every 20 minutes
     },
     devOptions: {
       enabled: true,
-      type: 'module',
+      type: "module"
     }
   },
 
@@ -109,19 +109,21 @@ export default defineNuxtConfig({
       storageBucket: "pay-tracker-7a5a6.appspot.com",
       messagingSenderId: "16390920244",
       appId: "1:16390920244:web:adc5a4919d9dd457705261"
-    },
+    }
   },
 
   app: {
     head: {
-        htmlAttrs: { dir: 'ltr', lang: 'en' },
-        link: [{ rel: 'icon', type: 'image/png', href: "/img/new-logo.png" }],
-        meta: [{
-          name: 'google-site-verification',
+      htmlAttrs: { dir: "ltr", lang: "en" },
+      link: [{ rel: "icon", type: "image/png", href: "/img/new-logo.png" }],
+      meta: [
+        {
+          name: "google-site-verification",
           content: "E0U6Yf1iG222FwlRLisvf7JLYZLZQnT8CLJ3QKo4tjQ"
-        }]
-    },
-},
+        }
+      ]
+    }
+  },
 
-  compatibilityDate: "2024-07-13",
-})
+  compatibilityDate: "2024-07-13"
+});
