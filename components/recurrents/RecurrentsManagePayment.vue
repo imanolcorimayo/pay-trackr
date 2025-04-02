@@ -61,14 +61,19 @@
               required
               class="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
             >
+              <option value="housing">Housing & Rent</option>
               <option value="utilities">Utilities</option>
-              <option value="food">Food</option>
+              <option value="food">Groceries</option>
+              <option value="dining">Dining Out</option>
               <option value="transport">Transport</option>
               <option value="entertainment">Entertainment</option>
               <option value="health">Health</option>
               <option value="pet">Pet</option>
               <option value="clothes">Clothes</option>
               <option value="traveling">Traveling</option>
+              <option value="education">Education</option>
+              <option value="subscriptions">Subscriptions</option>
+              <option value="taxes">Taxes & Government</option>
               <option value="other">Other</option>
             </select>
           </div>

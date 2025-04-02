@@ -76,14 +76,19 @@
                 required
                 class="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
               >
+                <option value="housing">Housing & Rent</option>
                 <option value="utilities">Utilities</option>
-                <option value="food">Food</option>
+                <option value="food">Groceries</option>
+                <option value="dining">Dining Out</option>
                 <option value="transport">Transport</option>
                 <option value="entertainment">Entertainment</option>
                 <option value="health">Health</option>
                 <option value="pet">Pet</option>
                 <option value="clothes">Clothes</option>
                 <option value="traveling">Traveling</option>
+                <option value="education">Education</option>
+                <option value="subscriptions">Subscriptions</option>
+                <option value="taxes">Taxes & Government</option>
                 <option value="other">Other</option>
               </select>
             </div>
@@ -301,10 +306,14 @@ async function fetchPaymentDetails(paymentId) {
 
 function getCategoryClass(category) {
   switch(category.toLowerCase()) {
+    case 'housing':
+      return 'bg-[#4682B4]'; // steel blue
     case 'utilities':
       return 'bg-[#0072DF]'; // accent blue
     case 'food':
       return 'bg-[#1D9A38]'; // success green 
+    case 'dining':
+      return 'bg-[#FF6347]'; // tomato red
     case 'transport':
       return 'bg-[#E6AE2C]'; // warning yellow
     case 'entertainment':
@@ -317,6 +326,12 @@ function getCategoryClass(category) {
       return 'bg-[#800020]'; // burgundy
     case 'traveling':
       return 'bg-[#FF8C00]'; // dark orange
+    case 'education':
+      return 'bg-[#9370DB]'; // medium purple
+    case 'subscriptions':
+      return 'bg-[#20B2AA]'; // light sea green
+    case 'taxes':
+      return 'bg-[#8B4513]'; // brown
     case 'other':
     default:
       return 'bg-[#808080]'; // gray for other/default

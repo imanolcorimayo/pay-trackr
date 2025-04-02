@@ -24,7 +24,77 @@ export default defineNuxtConfig({
 
   // @ts-ignore
   pwa: {
-    /* your pwa options */
+    registerType: 'autoUpdate',
+    manifest: {
+      name: 'PayTrackr',
+      short_name: 'PayTrackr',
+      description: 'Track and manage your recurring and one-time payments',
+      theme_color: '#4DA892', // Assuming this is your primary color
+      background_color: '#27292D',
+      display: 'standalone',
+      orientation: 'portrait',
+      start_url: '/',
+      icons: [
+        {
+          src: 'img/new-logo.png',
+          sizes: '192x192',
+          type: 'image/png',
+        },
+        {
+          src: 'img/new-logo.png',
+          sizes: '512x512',
+          type: 'image/png',
+        },
+        {
+          src: 'img/new-logo.png',
+          sizes: '512x512',
+          type: 'image/png',
+          purpose: 'any maskable',
+        },
+      ],
+    },
+    workbox: {
+      navigateFallback: '/',
+      globPatterns: ['**/*.{js,css,html,png,svg,ico}'],
+      runtimeCaching: [
+        {
+          urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
+          handler: 'CacheFirst',
+          options: {
+            cacheName: 'google-fonts-cache',
+            expiration: {
+              maxEntries: 10,
+              maxAgeSeconds: 60 * 60 * 24 * 365 // <== 365 days
+            },
+            cacheableResponse: {
+              statuses: [0, 200]
+            }
+          }
+        },
+        {
+          urlPattern: /^https:\/\/fonts\.gstatic\.com\/.*/i,
+          handler: 'CacheFirst',
+          options: {
+            cacheName: 'gstatic-fonts-cache',
+            expiration: {
+              maxEntries: 10,
+              maxAgeSeconds: 60 * 60 * 24 * 365 // <== 365 days
+            },
+            cacheableResponse: {
+              statuses: [0, 200]
+            },
+          }
+        }
+      ]
+    },
+    client: {
+      installPrompt: true,
+      periodicSyncForUpdates: 20, // check for updates every 20 minutes
+    },
+    devOptions: {
+      enabled: true,
+      type: 'module',
+    }
   },
 
   vuefire: {

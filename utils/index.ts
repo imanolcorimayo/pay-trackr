@@ -44,6 +44,16 @@ export const getCategoryClasses = (category: string) => {
       return `${baseClasses} bg-[#800020] text-[#800020]`; // burgundy
     case "traveling":
       return `${baseClasses} bg-[#FF8C00] text-[#FF8C00]`; // dark orange
+    case "taxes":
+      return `${baseClasses} bg-[#8B4513] text-[#8B4513]`; // brown
+    case "dining":
+      return `${baseClasses} bg-[#FF6347] text-[#FF6347]`; // tomato red
+    case "housing":
+      return `${baseClasses} bg-[#4682B4] text-[#4682B4]`; // steel blue
+    case "education":
+      return `${baseClasses} bg-[#9370DB] text-[#9370DB]`; // medium purple
+    case "subscriptions":
+      return `${baseClasses} bg-[#20B2AA] text-[#20B2AA]`; // light sea green
     case "other":
     default:
       return `${baseClasses} bg-[#808080] text-[#808080]`; // gray for other/default

@@ -481,14 +481,19 @@ async function updateCategoryPieChart() {
 
   // Color mapping for categories
   const categoryColors = {
+    housing: "rgb(70, 130, 180)", // steel blue
     utilities: "rgb(0, 114, 223)", // accent blue
     food: "rgb(29, 154, 56)", // success green
+    dining: "rgb(255, 99, 71)", // tomato red
     transport: "rgb(230, 174, 44)", // warning yellow
     entertainment: "rgb(97, 88, 255)", // secondary purple
     health: "rgb(232, 74, 138)", // danger pink
     pet: "rgb(60, 174, 163)", // teal for pets
     clothes: "rgb(128, 0, 32)", // burgundy
     traveling: "rgb(255, 140, 0)", // dark orange
+    education: "rgb(147, 112, 219)", // medium purple
+    subscriptions: "rgb(32, 178, 170)", // light sea green
+    taxes: "rgb(139, 69, 19)", // brown
     other: "rgb(128, 128, 128)" // gray for other/default
   };
 
