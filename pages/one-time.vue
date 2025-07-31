@@ -17,9 +17,20 @@
     <div class="flex flex-col gap-4">
       <!-- Header & Summary -->
       <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 p-3">
-        <!-- Month Title -->
+        <!-- Month Navigation & Title -->
         <div class="flex items-center">
+          <button @click="changeMonth(1)" class="btn btn-icon">
+            <MdiChevronLeft />
+          </button>
           <h2 class="text-xl font-semibold mx-2">{{ currentMonth }} {{ currentYear }}</h2>
+          <button
+            @click="changeMonth(-1)"
+            class="btn btn-icon"
+            :disabled="isCurrentMonth"
+            :class="{ 'opacity-50 !cursor-not-allowed': isCurrentMonth }"
+          >
+            <MdiChevronRight />
+          </button>
         </div>
 
         <!-- Summary Cards -->
@@ -139,6 +150,8 @@ import MdiCashCheck from "~icons/mdi/cash-check";
 import MdiCashRemove from "~icons/mdi/cash-remove";
 import MdiCashOff from "~icons/mdi/cash-off";
 import MdiCalendarMonth from "~icons/mdi/calendar-month";
+import MdiChevronLeft from "~icons/mdi/chevron-left";
+import MdiChevronRight from "~icons/mdi/chevron-right";
 
 definePageMeta({
   middleware: ["auth"]
@@ -157,15 +170,21 @@ const activePaymentId = ref(null);
 const editPayment = ref(null);
 const paymentDetails = ref(null);
 const payments = ref([]);
+const monthsOffset = ref(0);
+const currentSortOrder = ref({ name: "isPaid", order: "asc" });
+const currentSearchQuery = ref("");
 
 // ----- Define Computed ---------
 const currentMonth = computed(() => {
-  return $dayjs().format("MMMM");
+  return $dayjs().subtract(monthsOffset.value, "month").format("MMMM");
 });
 
 const currentYear = computed(() => {
-  return $dayjs().format("YYYY");
+  return $dayjs().subtract(monthsOffset.value, "month").format("YYYY");
 });
+
+// Determine if we're looking at the current month
+const isCurrentMonth = computed(() => monthsOffset.value === 0);
 
 // Calculate totals for the current month
 const monthTotals = computed(() => {
@@ -204,16 +223,23 @@ function isDelayed(timestamp) {
   return $dayjs(timestamp.toDate()).isBefore($dayjs(), "day");
 }
 
-// Fetch one-time payments for current month
+// Change month view
+function changeMonth(delta) {
+  monthsOffset.value += delta;
+  fetchData();
+}
+
+// Fetch one-time payments for selected month
 async function fetchData() {
   isLoading.value = true;
 
   try {
-    // Get start and end of current month
-    const startOfMonth = $dayjs().startOf("month").toDate();
-    const endOfMonth = $dayjs().endOf("month").toDate();
+    // Get start and end of selected month
+    const targetMonth = $dayjs().subtract(monthsOffset.value, "month");
+    const startOfMonth = targetMonth.startOf("month").toDate();
+    const endOfMonth = targetMonth.endOf("month").toDate();
 
-    // Set up filters for one-time payments in current month
+    // Set up filters for one-time payments in selected month
     const filters = {
       startDate: startOfMonth,
       endDate: endOfMonth,
@@ -223,8 +249,10 @@ async function fetchData() {
     await paymentStore.fetchPayments(filters);
     payments.value = [...getPayments.value];
 
-    // Sort payments by due date and payment status
-    orderPayments({ name: "date", order: "desc" });
+    // Apply current sort order
+    if (currentSortOrder.value.name) {
+      applySortOrder(currentSortOrder.value);
+    }
   } catch (error) {
     console.error("Error fetching payments:", error);
     useToast("error", "Failed to load payments");
@@ -247,7 +275,7 @@ function showEdit(paymentId) {
 
 // Toggle payment status (paid/unpaid)
 async function togglePaymentStatus(paymentId, isPaid) {
-  this.isLoading = true;
+  isLoading.value = true;
   try {
     const result = await paymentStore.togglePaymentStatus(paymentId, isPaid);
 
@@ -261,8 +289,10 @@ async function togglePaymentStatus(paymentId, isPaid) {
         payments.value[index].paidDate = isPaid ? new Date() : null;
       }
 
-      // Re-sort payments
-      orderPayments();
+      // Preserve current sort order after status change
+      if (currentSortOrder.value.name) {
+        applySortOrder(currentSortOrder.value);
+      }
     } else {
       useToast("error", paymentStore.error || "Failed to update payment status");
     }
@@ -270,15 +300,19 @@ async function togglePaymentStatus(paymentId, isPaid) {
     console.error("Error toggling payment:", error);
     useToast("error", "An unexpected error occurred");
   } finally {
-    this.isLoading = false;
+    isLoading.value = false;
   }
 }
 
 // Search payments
 function searchPayments(query) {
+  currentSearchQuery.value = query;
+  
   if (!query) {
     payments.value = [...getPayments.value];
-    orderPayments();
+    if (currentSortOrder.value.name) {
+      applySortOrder(currentSortOrder.value);
+    }
     return;
   }
 
@@ -291,24 +325,28 @@ function searchPayments(query) {
       payment.amount.toString().includes(searchTerm)
     );
   });
+  
+  // Reapply current sort order after search
+  if (currentSortOrder.value.name) {
+    applySortOrder(currentSortOrder.value);
+  }
 }
 
 // Order payments by various criteria
 function orderPayments(orderCriteria) {
-  if (!orderCriteria) {
-    // Default sort: unpaid first, then by due date
-    payments.value.sort((a, b) => {
-      // First sort by paid status
-      if (a.isPaid !== b.isPaid) {
-        return a.isPaid ? 1 : -1; // Unpaid items first
-      }
-
-      // Then sort by due date (descending)
-      return b.createdAt.toDate() - a.createdAt.toDate();
-    });
+  if (!orderCriteria || !orderCriteria.name) {
+    // Reset to default sort
+    currentSortOrder.value = { name: "isPaid", order: "asc" };
+    applySortOrder(currentSortOrder.value);
     return;
   }
 
+  currentSortOrder.value = orderCriteria;
+  applySortOrder(orderCriteria);
+}
+
+// Apply sort order with custom logic
+function applySortOrder(orderCriteria) {
   const { name, order } = orderCriteria;
   const direction = order === "asc" ? 1 : -1;
 
@@ -323,14 +361,19 @@ function orderPayments(orderCriteria) {
         comparison = a.amount - b.amount;
         break;
       case "date":
-        comparison = a.createdAt.toDate() - b.createdAt.toDate();
+        const aDate = a.dueDate ? a.dueDate.toDate() : a.createdAt.toDate();
+        const bDate = b.dueDate ? b.dueDate.toDate() : b.createdAt.toDate();
+        comparison = aDate - bDate;
         break;
       case "isPaid":
+      case "unpaid_first":
         // Sort by paid status first, then by due date
         if (a.isPaid !== b.isPaid) {
           comparison = a.isPaid ? 1 : -1; // Unpaid items first
         } else {
-          comparison = a.createdAt.toDate() - b.createdAt.toDate();
+          const aDate = a.dueDate ? a.dueDate.toDate() : a.createdAt.toDate();
+          const bDate = b.dueDate ? b.dueDate.toDate() : b.createdAt.toDate();
+          comparison = aDate - bDate;
         }
         break;
       default:
@@ -348,6 +391,10 @@ onMounted(async () => {
 
 watch(getPayments, () => {
   payments.value = [...getPayments.value];
+  // Reapply current sort order when data changes
+  if (currentSortOrder.value.name) {
+    applySortOrder(currentSortOrder.value);
+  }
 });
 
 // ----- Define Hooks --------
@@ -368,5 +415,9 @@ useHead({
   -webkit-line-clamp: 1;
   -webkit-box-orient: vertical;
   overflow: hidden;
+}
+
+.btn-icon {
+  @apply p-2 rounded-full hover:bg-gray-100 transition-colors;
 }
 </style>

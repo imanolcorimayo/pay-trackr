@@ -275,6 +275,8 @@ const editPayment = ref(null);
 const recurrentDetails = ref(null);
 const recurrents = ref([]);
 const monthsOffset = ref(0);
+const currentSortOrder = ref({ name: "unpaid_first", order: "asc" });
+const currentSearchQuery = ref("");
 
 // ----- Define Computed ---------
 // Based on the screen width, determine how many months to show
@@ -361,6 +363,10 @@ async function togglePaymentStatus(recurrentId, month) {
   isLoading.value = false;
   if (result) {
     useToast("success", `Payment marked as ${!currentStatus ? "paid" : "unpaid"}`);
+    // Preserve current sort order after status change
+    if (currentSortOrder.value.name) {
+      applySortOrder(currentSortOrder.value);
+    }
   } else {
     useToast("error", recurrentStore.error || "Failed to update payment status");
   }
@@ -374,6 +380,10 @@ async function createPaymentForMonth(recurrentId, month, isPaid = false) {
 
   if (result) {
     useToast("success", "Payment instance created");
+    // Preserve current sort order after creating payment
+    if (currentSortOrder.value.name) {
+      applySortOrder(currentSortOrder.value);
+    }
   } else {
     useToast("error", recurrentStore.error || "Failed to create payment instance");
   }
@@ -398,19 +408,68 @@ function showDetails(recurrentId) {
 
 // Search payments
 function searchPayments(query) {
+  currentSearchQuery.value = query;
   recurrentStore.searchRecurrents(query);
   recurrents.value = [...getProcessedRecurrents.value];
+  // Reapply current sort order after search
+  if (currentSortOrder.value.name) {
+    applySortOrder(currentSortOrder.value);
+  }
 }
 
 // Order recurrents
 function orderRecurrents(orderQuery) {
   if (!orderQuery || !orderQuery.name) {
-    recurrents.value = [...getProcessedRecurrents.value];
+    // Reset to default sort
+    currentSortOrder.value = { name: "unpaid_first", order: "asc" };
+    applySortOrder(currentSortOrder.value);
     return;
   }
 
-  recurrentStore.sortRecurrents(orderQuery.name, orderQuery.order);
-  recurrents.value = [...getProcessedRecurrents.value];
+  currentSortOrder.value = orderQuery;
+  applySortOrder(orderQuery);
+}
+
+// Apply sort order with custom logic
+function applySortOrder(orderQuery) {
+  const { name, order } = orderQuery;
+  const direction = order === "asc" ? 1 : -1;
+
+  recurrents.value.sort((a, b) => {
+    let comparison = 0;
+
+    switch (name) {
+      case "unpaid_first":
+        // Default sort: unpaid first, then by due date ascending
+        const aHasUnpaid = Object.values(a.months).some(month => !month.isPaid);
+        const bHasUnpaid = Object.values(b.months).some(month => !month.isPaid);
+        
+        if (aHasUnpaid !== bHasUnpaid) {
+          return aHasUnpaid ? -1 : 1; // Unpaid first
+        }
+        // If same paid status, sort by due date
+        comparison = parseInt(a.dueDateDay) - parseInt(b.dueDateDay);
+        break;
+        
+      case "title":
+        comparison = a.title.localeCompare(b.title);
+        break;
+        
+      case "amount":
+        comparison = a.amount - b.amount;
+        break;
+        
+      case "date":
+        // Sort by due date day
+        comparison = parseInt(a.dueDateDay) - parseInt(b.dueDateDay);
+        break;
+        
+      default:
+        comparison = parseInt(a.dueDateDay) - parseInt(b.dueDateDay);
+    }
+
+    return comparison * direction;
+  });
 }
 
 // Show new payment modal
@@ -443,13 +502,17 @@ async function fetchData() {
 onMounted(async () => {
   await fetchData();
 
-  // Apply default sorting by due date
-  orderRecurrents({ name: "date", order: "asc" });
+  // Apply default sorting - unpaid first
+  orderRecurrents({ name: "unpaid_first", order: "asc" });
 });
 
 // ----- Watchers ---------
 watch(getProcessedRecurrents, (newVal) => {
   recurrents.value = [...newVal];
+  // Reapply current sort order when data changes
+  if (currentSortOrder.value.name) {
+    applySortOrder(currentSortOrder.value);
+  }
 });
 
 // ----- Meta ---------

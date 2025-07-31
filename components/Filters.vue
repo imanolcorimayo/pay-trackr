@@ -75,6 +75,7 @@ import MdiFilterOutline from '~icons/mdi/filter-outline';
 import IcSharpSearch from '~icons/ic/sharp-search';
 import MingcuteArrowUpFill from '~icons/mingcute/arrow-up-fill';
 import BiAlphabet from '~icons/bi/alphabet';
+import MdiSortBoolAscendingVariant from '~icons/mdi/sort-bool-ascending-variant';
 
 const props = defineProps({
   showDates: {
@@ -104,7 +105,8 @@ function toggleTooltip() {
 }
 
 const filters = [
-  { name: 'date', label: 'Date', icon: TablerCalendarFilled, class: 'rounded-t-lg' },
+  { name: 'unpaid_first', label: 'Unpaid First', icon: MdiSortBoolAscendingVariant, class: 'rounded-t-lg' },
+  { name: 'date', label: 'Date', icon: TablerCalendarFilled, class: '' },
   { name: 'amount', label: 'Amount', icon: MaterialSymbolsPaidRounded, class: '' },
   { name: 'title', label: 'Title', icon: BiAlphabet, class: 'rounded-b-lg' }
 ];
