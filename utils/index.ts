@@ -38,22 +38,28 @@ export const getCategoryClasses = (category: string) => {
       return `${baseClasses} bg-[#6158FF] text-[#6158FF]`; // secondary purple
     case "health":
       return `${baseClasses} bg-[#E84A8A] text-[#E84A8A]`; // danger pink
+    case "fitness":
+      return `${baseClasses} bg-[#FF4500] text-[#FF4500]`; // orange red for fitness
+    case "personal_care":
+      return `${baseClasses} bg-[#DDA0DD] text-[#DDA0DD]`; // plum for personal care
     case "pet":
       return `${baseClasses} bg-[#3CAEA3] text-[#3CAEA3]`; // teal for pets
     case "clothes":
       return `${baseClasses} bg-[#800020] text-[#800020]`; // burgundy
     case "traveling":
       return `${baseClasses} bg-[#FF8C00] text-[#FF8C00]`; // dark orange
+    case "education":
+      return `${baseClasses} bg-[#9370DB] text-[#9370DB]`; // medium purple
+    case "subscriptions":
+      return `${baseClasses} bg-[#20B2AA] text-[#20B2AA]`; // light sea green
+    case "gifts":
+      return `${baseClasses} bg-[#FF1493] text-[#FF1493]`; // deep pink for gifts
     case "taxes":
       return `${baseClasses} bg-[#8B4513] text-[#8B4513]`; // brown
     case "dining":
       return `${baseClasses} bg-[#FF6347] text-[#FF6347]`; // tomato red
     case "housing":
       return `${baseClasses} bg-[#4682B4] text-[#4682B4]`; // steel blue
-    case "education":
-      return `${baseClasses} bg-[#9370DB] text-[#9370DB]`; // medium purple
-    case "subscriptions":
-      return `${baseClasses} bg-[#20B2AA] text-[#20B2AA]`; // light sea green
     case "other":
     default:
       return `${baseClasses} bg-[#808080] text-[#808080]`; // gray for other/default

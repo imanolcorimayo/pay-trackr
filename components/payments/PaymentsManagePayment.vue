@@ -91,11 +91,14 @@
                 <option value="transport">Transport</option>
                 <option value="entertainment">Entertainment</option>
                 <option value="health">Health</option>
+                <option value="fitness">Fitness & Sports</option>
+                <option value="personal_care">Personal Care</option>
                 <option value="pet">Pet</option>
                 <option value="clothes">Clothes</option>
                 <option value="traveling">Traveling</option>
                 <option value="education">Education</option>
                 <option value="subscriptions">Subscriptions</option>
+                <option value="gifts">Gifts</option>
                 <option value="taxes">Taxes & Government</option>
                 <option value="other">Other</option>
               </select>
