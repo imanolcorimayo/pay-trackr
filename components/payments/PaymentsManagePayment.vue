@@ -39,8 +39,15 @@
           </div>
 
           <div class="space-y-2" v-if="!props.isRecurrent">
-            <label for="description" class="block text-sm font-medium text-gray-400">Description (Optional)</label>
+            <button
+              type="button"
+              @click="showDescription = !showDescription"
+              class="text-sm text-primary hover:text-primary-dark flex items-center gap-1"
+            >
+              <span>{{ showDescription ? '− Hide' : '+ Add' }} Description</span>
+            </button>
             <textarea
+              v-if="showDescription"
               id="description"
               v-model="form.description"
               class="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
@@ -57,6 +64,7 @@
                 <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-500">$</span>
                 <input
                   id="amount"
+                  ref="amountInput"
                   v-model="form.amount"
                   type="number"
                   step="0.01"
@@ -95,8 +103,8 @@
           </div>
 
           <!-- One-time Payment Fields -->
-          <div class="space-y-2" v-if="!props.isRecurrent">
-            <label for="dueDate" class="block text-sm font-medium text-gray-400">Due Date*</label>
+          <div class="space-y-2" v-if="!props.isRecurrent && !props.isEdit">
+            <label for="dueDate" class="block text-sm font-medium text-gray-400">Payment Date*</label>
             <input
               id="dueDate"
               v-model="form.dueDate"
@@ -106,31 +114,74 @@
             />
           </div>
 
-          <div class="space-y-2" v-if="!props.isRecurrent">
+          <!-- Save as Template Option (only on creation) -->
+          <div v-if="!props.isRecurrent && !props.isEdit" class="space-y-2">
             <label class="flex items-center space-x-2 cursor-pointer">
               <input
                 type="checkbox"
-                v-model="form.isPaid"
+                v-model="saveAsTemplate"
                 class="form-checkbox h-5 w-5 text-primary rounded focus:ring-primary"
               />
-              <span class="text-sm font-medium text-gray-400">Mark as paid</span>
+              <span class="text-sm font-medium text-gray-400">Save as template</span>
             </label>
+          </div>
 
-            <div v-if="form.isPaid" class="mt-2">
-              <label for="paidDate" class="block text-sm font-medium text-gray-400">Date Paid</label>
+          <!-- Edit mode: Show all fields -->
+          <div v-if="!props.isRecurrent && props.isEdit" class="space-y-4">
+            <div class="space-y-2">
+              <label for="dueDate" class="block text-sm font-medium text-gray-400">Due Date*</label>
               <input
-                id="paidDate"
-                v-model="form.paidDate"
+                id="dueDate"
+                v-model="form.dueDate"
                 type="date"
+                required
                 class="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
               />
+            </div>
+
+            <div class="space-y-2">
+              <label class="flex items-center space-x-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  v-model="form.isPaid"
+                  class="form-checkbox h-5 w-5 text-primary rounded focus:ring-primary"
+                />
+                <span class="text-sm font-medium text-gray-400">Mark as paid</span>
+              </label>
+
+              <div v-if="form.isPaid" class="mt-2">
+                <label for="paidDate" class="block text-sm font-medium text-gray-400">Date Paid</label>
+                <input
+                  id="paidDate"
+                  v-model="form.paidDate"
+                  type="date"
+                  class="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                />
+              </div>
             </div>
           </div>
         </form>
       </template>
 
       <template #footer>
-        <div class="flex justify-between w-full">
+        <!-- Continue Adding Confirmation -->
+        <div v-if="continueAdding" class="flex justify-center w-full gap-3">
+          <button
+            @click="addAnother"
+            class="px-6 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark transition-colors"
+          >
+            Add Another
+          </button>
+          <button
+            @click="closeModal"
+            class="px-6 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+          >
+            Done
+          </button>
+        </div>
+
+        <!-- Normal Footer -->
+        <div v-else class="flex justify-between w-full">
           <button
             @click="closeModal"
             class="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
@@ -203,6 +254,10 @@ const confirmDialog = ref(null);
 const isLoading = ref(false);
 const isSubmitting = ref(false);
 
+// Store last used values at component level
+const lastUsedCategory = ref('other');
+const lastUsedDueDate = ref('');
+
 // Default form state
 const defaultForm = computed(() => {
   const { $dayjs } = useNuxtApp();
@@ -218,37 +273,76 @@ const defaultForm = computed(() => {
       title: "",
       description: "",
       amount: "",
-      category: "other",
-      dueDate: today,
-      isPaid: true, // It's usually paid when creating a new payment
-      paidDate: today,
+      category: lastUsedCategory.value,
+      dueDate: lastUsedDueDate.value || today,
+      isPaid: true, // Always mark as paid on creation
+      paidDate: lastUsedDueDate.value || today, // Set paidDate same as dueDate
       paymentType: "one-time"
     };
   }
 });
 
 const form = ref({ ...defaultForm.value });
+const showDescription = ref(false);
+const continueAdding = ref(false);
+const saveAsTemplate = ref(false);
+const amountInput = ref(null);
 
 // ----- Define Stores ---------
 const recurrentStore = useRecurrentStore();
 const paymentStore = usePaymentStore();
+const templateStore = useTemplateStore();
 const user = useCurrentUser();
 
 // ----- Define Methods ---------
-function showModal(paymentId = null) {
+function showModal(paymentId = null, templateData = null) {
   if (paymentId) {
     fetchPaymentDetails(paymentId);
+  } else if (templateData) {
+    // Pre-fill from template
+    const { $dayjs } = useNuxtApp();
+    const today = $dayjs().format("YYYY-MM-DD");
+
+    form.value = {
+      title: templateData.name,
+      description: templateData.description || "",
+      amount: "",
+      category: templateData.category,
+      dueDate: today,
+      isPaid: true,
+      paidDate: today,
+      paymentType: "one-time"
+    };
+
+    showDescription.value = !!templateData.description;
+    saveAsTemplate.value = false;
+
+    // Focus on amount field after modal opens
+    nextTick(() => {
+      amountInput.value?.focus();
+    });
   } else {
     // Reset form when creating new payment
     form.value = { ...defaultForm.value };
+    showDescription.value = false;
+    saveAsTemplate.value = false;
   }
 
   modal.value?.open();
 }
 
 function closeModal() {
+  continueAdding.value = false;
   modal.value?.close();
   emit("onClose");
+}
+
+function addAnother() {
+  // Reset form with preserved category and date
+  form.value = { ...defaultForm.value };
+  showDescription.value = false;
+  continueAdding.value = false;
+  saveAsTemplate.value = false;
 }
 
 // In the fetchPaymentDetails function
@@ -294,6 +388,9 @@ async function fetchPaymentDetails(paymentId) {
           paidDate: paidDate,
           paymentType: payment.paymentType || "one-time"
         };
+
+        // Show description if it has content
+        showDescription.value = !!payment.description;
       }
     }
   } catch (error) {
@@ -353,6 +450,12 @@ async function savePayment() {
     // Handle one-time payment save/update
     const { $dayjs } = useNuxtApp();
 
+    // Save last used values to component state (only on creation, not edit)
+    if (!props.isEdit && !props.isRecurrent) {
+      lastUsedCategory.value = form.value.category;
+      lastUsedDueDate.value = form.value.dueDate;
+    }
+
     let paymentData = {
       title: form.value.title,
       description: form.value.description,
@@ -399,7 +502,20 @@ async function savePayment() {
       if (result && result.success) {
         useToast("success", "Payment created successfully");
         emit("onCreated");
-        closeModal();
+
+        // Save as template if checkbox is checked
+        if (saveAsTemplate.value) {
+          const templateData = {
+            name: form.value.title,
+            category: form.value.category,
+            ...(form.value.description && { description: form.value.description })
+          };
+
+          await templateStore.createTemplate(templateData);
+        }
+
+        // Ask if user wants to continue adding payments
+        continueAdding.value = true;
       } else {
         useToast("error", paymentStore.error || "Failed to create payment");
       }

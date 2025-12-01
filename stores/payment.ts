@@ -102,21 +102,21 @@ export const usePaymentStore = defineStore('payment', {
         // Build query constraints
         const constraints: any[] = [
           where('userId', '==', user.value.uid),
-          orderBy('createdAt', 'desc')
+          orderBy('dueDate', 'desc')
         ];
-        
+
         // Add payment type filter
         if (filters.paymentType && filters.paymentType !== 'all') {
           constraints.push(where('paymentType', '==', filters.paymentType));
         }
-        
+
         // Add date range filter
         if (filters.startDate) {
-          constraints.push(where('createdAt', '>=', Timestamp.fromDate(filters.startDate)));
+          constraints.push(where('dueDate', '>=', Timestamp.fromDate(filters.startDate)));
         }
-        
+
         if (filters.endDate) {
-          constraints.push(where('createdAt', '<=', Timestamp.fromDate(filters.endDate)));
+          constraints.push(where('dueDate', '<=', Timestamp.fromDate(filters.endDate)));
         }
         
         // Add paid/unpaid filter
@@ -202,14 +202,17 @@ export const usePaymentStore = defineStore('payment', {
         };
         
         const docRef = await addDoc(collection(db, 'payment2'), newPayment);
-        
-        // Add to local state
+
+        // Add to local state with actual timestamp
         const createdPayment = {
           id: docRef.id,
-          ...newPayment
+          ...paymentData, // Use original data instead of newPayment (which has serverTimestamp)
+          userId: user.value.uid,
+          createdAt: Timestamp.now() // Use actual timestamp for local state
         } as Payment;
-        
-        this.payments.unshift(createdPayment);
+
+        // Trigger reactivity by replacing the array
+        this.payments = [createdPayment, ...this.payments];
         this.totalPayments++;
         
         return {

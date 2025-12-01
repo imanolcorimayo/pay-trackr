@@ -6,6 +6,10 @@
       :paymentId="activePaymentId"
       :isEdit="true"
       :isRecurrent="false"
+    />
+    <PaymentsManagePayment
+      ref="newPayment"
+      :isRecurrent="false"
       @onCreated="fetchData"
     />
     <PaymentsNewPayment v-if="!isLoading" :isRecurrent="false" @onCreated="fetchData" />
@@ -61,6 +65,9 @@
         </div>
       </div>
 
+      <!-- Templates -->
+      <PaymentsTemplateList @useTemplate="useTemplate" />
+
       <!-- Filters -->
       <Filters @onSearch="searchPayments" @onOrder="orderPayments" />
 
@@ -106,7 +113,7 @@
                 "
               >
                 <MdiCheck v-if="payment.isPaid" class="text-success text-xl" />
-                <MdiClockOutline v-else-if="isDelayed(payment.createdAt)" class="text-danger text-xl" />
+                <MdiClockOutline v-else-if="isDelayed(payment.dueDate)" class="text-danger text-xl" />
                 <MdiCircleOutline v-else class="text-gray-400 text-xl" />
               </div>
             </div>
@@ -168,10 +175,11 @@ const { getPayments, isLoading: storeLoading } = storeToRefs(paymentStore);
 const isLoading = ref(true);
 const activePaymentId = ref(null);
 const editPayment = ref(null);
+const newPayment = ref(null);
 const paymentDetails = ref(null);
 const payments = ref([]);
 const monthsOffset = ref(0);
-const currentSortOrder = ref({ name: "isPaid", order: "asc" });
+const currentSortOrder = ref({ name: "date", order: "desc" });
 const currentSearchQuery = ref("");
 
 // ----- Define Computed ---------
@@ -250,9 +258,7 @@ async function fetchData() {
     payments.value = [...getPayments.value];
 
     // Apply current sort order
-    if (currentSortOrder.value.name) {
-      applySortOrder(currentSortOrder.value);
-    }
+    applySortOrder(currentSortOrder.value);
   } catch (error) {
     console.error("Error fetching payments:", error);
     useToast("error", "Failed to load payments");
@@ -273,6 +279,11 @@ function showEdit(paymentId) {
   editPayment.value?.showModal(paymentId);
 }
 
+// Use template to create payment
+function useTemplate(template) {
+  newPayment.value?.showModal(null, template);
+}
+
 // Toggle payment status (paid/unpaid)
 async function togglePaymentStatus(paymentId, isPaid) {
   isLoading.value = true;
@@ -290,9 +301,7 @@ async function togglePaymentStatus(paymentId, isPaid) {
       }
 
       // Preserve current sort order after status change
-      if (currentSortOrder.value.name) {
-        applySortOrder(currentSortOrder.value);
-      }
+      applySortOrder(currentSortOrder.value);
     } else {
       useToast("error", paymentStore.error || "Failed to update payment status");
     }
@@ -307,12 +316,10 @@ async function togglePaymentStatus(paymentId, isPaid) {
 // Search payments
 function searchPayments(query) {
   currentSearchQuery.value = query;
-  
+
   if (!query) {
     payments.value = [...getPayments.value];
-    if (currentSortOrder.value.name) {
-      applySortOrder(currentSortOrder.value);
-    }
+    applySortOrder(currentSortOrder.value);
     return;
   }
 
@@ -325,18 +332,16 @@ function searchPayments(query) {
       payment.amount.toString().includes(searchTerm)
     );
   });
-  
+
   // Reapply current sort order after search
-  if (currentSortOrder.value.name) {
-    applySortOrder(currentSortOrder.value);
-  }
+  applySortOrder(currentSortOrder.value);
 }
 
 // Order payments by various criteria
 function orderPayments(orderCriteria) {
   if (!orderCriteria || !orderCriteria.name) {
-    // Reset to default sort
-    currentSortOrder.value = { name: "isPaid", order: "asc" };
+    // Reset to default sort (date descending)
+    currentSortOrder.value = { name: "date", order: "desc" };
     applySortOrder(currentSortOrder.value);
     return;
   }
@@ -391,11 +396,10 @@ onMounted(async () => {
 
 watch(getPayments, () => {
   payments.value = [...getPayments.value];
+
   // Reapply current sort order when data changes
-  if (currentSortOrder.value.name) {
-    applySortOrder(currentSortOrder.value);
-  }
-});
+  applySortOrder(currentSortOrder.value);
+}, { deep: true });
 
 // ----- Define Hooks --------
 useHead({
