@@ -12,7 +12,16 @@
       :isRecurrent="false"
       @onCreated="fetchData"
     />
-    <PaymentsNewPayment v-if="!isLoading" :isRecurrent="false" @onCreated="fetchData" />
+
+    <!-- Floating Add Button -->
+    <button
+      v-if="!isLoading"
+      @click="showNewPayment"
+      class="fixed bottom-6 right-6 z-10 flex items-center justify-center w-14 h-14 rounded-full bg-primary text-white shadow-lg hover:bg-primary-transparent transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary"
+      aria-label="Add new payment"
+    >
+      <MdiPlus class="text-2xl" />
+    </button>
 
     <!-- Loading State -->
     <Loader v-if="isLoading" />
@@ -159,6 +168,7 @@ import MdiCashOff from "~icons/mdi/cash-off";
 import MdiCalendarMonth from "~icons/mdi/calendar-month";
 import MdiChevronLeft from "~icons/mdi/chevron-left";
 import MdiChevronRight from "~icons/mdi/chevron-right";
+import MdiPlus from "~icons/mdi/plus";
 
 definePageMeta({
   middleware: ["auth"]
@@ -277,6 +287,11 @@ function showDetails(paymentId) {
 function showEdit(paymentId) {
   activePaymentId.value = paymentId;
   editPayment.value?.showModal(paymentId);
+}
+
+// Show new payment modal (from floating button)
+function showNewPayment() {
+  newPayment.value?.showModal();
 }
 
 // Use template to create payment

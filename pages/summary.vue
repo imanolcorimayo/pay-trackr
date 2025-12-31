@@ -76,11 +76,18 @@
             <span class="text-xs text-gray-500">Average Monthly Spend</span>
             <span class="text-xl font-bold text-gray-800">{{ formatPrice(stats.averageMonthlySpend) }}</span>
             <div class="text-sm mt-1">
-              <span :class="stats.averageChangePercent >= 0 ? 'text-danger' : 'text-success'">
-                {{ stats.averageChangePercent >= 0 ? "↑" : "↓" }} {{ Math.abs(stats.averageChangePercent).toFixed(1) }}%
+              <span :class="stats.monthOverMonthChange >= 0 ? 'text-danger' : 'text-success'">
+                {{ stats.monthOverMonthChange >= 0 ? "↑" : "↓" }} {{ Math.abs(stats.monthOverMonthChange).toFixed(1) }}%
               </span>
-              <span class="text-gray-500 ml-1">vs previous {{ monthsToDisplay }} months</span>
+              <span class="text-gray-500 ml-1">vs last month</span>
             </div>
+          </div>
+
+          <!-- Peak Spending Month -->
+          <div class="flex flex-col p-3 bg-gray-50 rounded-lg">
+            <span class="text-xs text-gray-500">Peak Spending Month</span>
+            <span class="text-xl font-bold text-gray-800">{{ stats.peakSpendingMonth || "N/A" }}</span>
+            <span class="text-sm text-gray-500">{{ formatPrice(stats.peakSpendingAmount) }}</span>
           </div>
 
           <!-- Recurring vs One-time -->
@@ -95,10 +102,26 @@
             </div>
           </div>
 
+          <!-- Avg One-time Transaction -->
+          <div class="flex flex-col p-3 bg-gray-50 rounded-lg">
+            <span class="text-xs text-gray-500">Avg One-time Transaction</span>
+            <span class="text-xl font-bold text-gray-800">{{ formatPrice(stats.avgOneTimeTransaction) }}</span>
+            <span class="text-sm text-gray-500">per transaction</span>
+          </div>
+
           <!-- Top Expense Category -->
           <div class="flex flex-col p-3 bg-gray-50 rounded-lg">
             <span class="text-xs text-gray-500">Top Expense Category</span>
-            <span class="capitalize text-xl font-bold text-gray-800">{{ stats.topCategory }}</span>
+            <div class="flex items-center gap-2">
+              <span class="capitalize text-xl font-bold text-gray-800">{{ stats.topCategory }}</span>
+              <span
+                v-if="stats.topCategoryTrend !== 0"
+                :class="stats.topCategoryTrend >= 0 ? 'text-danger' : 'text-success'"
+                class="text-sm"
+              >
+                {{ stats.topCategoryTrend >= 0 ? "↑" : "↓" }} {{ Math.abs(stats.topCategoryTrend).toFixed(0) }}%
+              </span>
+            </div>
             <span class="text-sm text-gray-500">{{ stats.topCategoryPercentage }}% of total spending</span>
           </div>
 
@@ -191,6 +214,7 @@ const { $dayjs } = useNuxtApp();
 const paymentStore = usePaymentStore();
 const recurrentStore = useRecurrentStore();
 const { getPayments } = storeToRefs(paymentStore);
+const { getPaymentInstances } = storeToRefs(recurrentStore);
 
 // ----- Define Refs ---------
 const isLoading = ref(true);
@@ -202,40 +226,52 @@ const categoryDataExists = ref(true);
 var monthlyTrendsChart = null;
 var categoryPieChart = null;
 const showAllPayments = ref(false);
-const topPayments = ref([]);
 const allMonthlyPayments = ref([]);
-const hasMorePayments = ref(false);
 
 // Statistics
 const stats = ref({
   averageMonthlySpend: 0,
-  averageChangePercent: 0,
+  monthOverMonthChange: 0,
   recurringPercentage: 0,
   topCategory: "none",
   topCategoryPercentage: 0,
-  paymentCompletionRate: 0
+  topCategoryTrend: 0,
+  paymentCompletionRate: 0,
+  peakSpendingMonth: "",
+  peakSpendingAmount: 0,
+  avgOneTimeTransaction: 0
 });
 
 // ----- Define Computed ---------
-const combinedPayments = computed(() => {
-  // Process all one-time payments
-  const oneTimePayments = getPayments.value.map((payment) => ({
-    ...payment,
-    isRecurring: payment.paymentType === "recurrent"
-  }));
+const topPayments = computed(() => {
+  return showAllPayments.value ? allMonthlyPayments.value : allMonthlyPayments.value.slice(0, 5);
+});
 
-  // For type recurrent, update the category based on the recurrent payments
-  oneTimePayments.forEach((payment) => {
-    if (payment.isRecurring) {
-      const recurrentPayment = recurrentStore.getRecurrentPayments.find((rec) => rec.id === payment.recurrentId);
-      if (recurrentPayment) {
-        payment.category = recurrentPayment.category;
-      }
-    }
+const hasMorePayments = computed(() => {
+  return allMonthlyPayments.value.length > 5;
+});
+
+const combinedPayments = computed(() => {
+  // Process one-time payments from payment store
+  const oneTimePayments = getPayments.value
+    .filter((payment) => payment.paymentType !== "recurrent")
+    .map((payment) => ({
+      ...payment,
+      isRecurring: false
+    }));
+
+  // Process recurring payment instances from recurrent store
+  const recurringPayments = getPaymentInstances.value.map((payment) => {
+    const recurrentPayment = recurrentStore.getRecurrentPayments.find((rec) => rec.id === payment.recurrentId);
+    return {
+      ...payment,
+      isRecurring: true,
+      category: recurrentPayment?.category || payment.category
+    };
   });
 
   // Combine and return all payments
-  return [...oneTimePayments];
+  return [...oneTimePayments, ...recurringPayments];
 });
 
 // ----- Define Methods ---------
@@ -272,9 +308,10 @@ function getMonthlyData() {
 
   // Process all payments
   combinedPayments.value.forEach((payment) => {
-    if (!payment.createdAt) return;
+    const dateField = payment.dueDate || payment.createdAt;
+    if (!dateField) return;
 
-    const paymentDate = $dayjs(payment.createdAt.toDate());
+    const paymentDate = $dayjs(dateField.toDate());
 
     // Only include payments within our date range
     if (paymentDate.isBefore(startDate)) return;
@@ -445,16 +482,13 @@ async function updateCategoryPieChart() {
 
   // Filter payments for the selected month
   const monthPayments = combinedPayments.value.filter((payment) => {
-    if (!payment.createdAt) return false;
-    const paymentDate = $dayjs(payment.createdAt.toDate());
+    const dateField = payment.dueDate || payment.createdAt;
+    if (!dateField) return false;
+    const paymentDate = $dayjs(dateField.toDate());
     return paymentDate.month() === selectedMonthDate.month() && paymentDate.year() === selectedMonthDate.year();
   });
 
   allMonthlyPayments.value = [...monthPayments].sort((a, b) => b.amount - a.amount);
-
-  // Get top 5 payments for the breakdown section
-  topPayments.value = allMonthlyPayments.value.slice(0, 5);
-  hasMorePayments.value = allMonthlyPayments.value.length > 5;
 
   // Check if we have data
   if (monthPayments.length === 0) {
@@ -579,26 +613,49 @@ async function updateCategoryPieChart() {
   }
 }
 
+// Get payments filtered by the selected date range
+function getFilteredPayments() {
+  const startDate = $dayjs()
+    .subtract(monthsToDisplay.value - 1, "month")
+    .startOf("month");
+
+  return combinedPayments.value.filter((payment) => {
+    const dateField = payment.dueDate || payment.createdAt;
+    if (!dateField) return false;
+    const paymentDate = $dayjs(dateField.toDate());
+    return !paymentDate.isBefore(startDate);
+  });
+}
+
 // Calculate statistics
 function calculateStatistics() {
   const { months, recurringData, oneTimeData, totalData } = getMonthlyData();
+  const filteredPayments = getFilteredPayments();
 
   // Calculate average monthly spend
-  stats.value.averageMonthlySpend = totalData.reduce((sum, amount) => sum + amount, 0) / totalData.length;
+  const totalSpend = totalData.reduce((sum, amount) => sum + amount, 0);
+  stats.value.averageMonthlySpend = totalSpend / totalData.length;
 
-  // Calculate percentage change
-  const currentPeriodTotal = totalData
-    .slice(-Math.min(totalData.length, monthsToDisplay.value))
-    .reduce((sum, amount) => sum + amount, 0);
-  const previousPeriodTotal = totalData
-    .slice(0, Math.min(totalData.length, monthsToDisplay.value))
-    .reduce((sum, amount) => sum + amount, 0);
-
-  if (previousPeriodTotal > 0) {
-    stats.value.averageChangePercent = ((currentPeriodTotal - previousPeriodTotal) / previousPeriodTotal) * 100;
+  // Month-over-month change (current month vs previous month)
+  const currentMonthTotal = totalData[totalData.length - 1] || 0;
+  const previousMonthTotal = totalData[totalData.length - 2] || 0;
+  if (previousMonthTotal > 0) {
+    stats.value.monthOverMonthChange = ((currentMonthTotal - previousMonthTotal) / previousMonthTotal) * 100;
   } else {
-    stats.value.averageChangePercent = 0;
+    stats.value.monthOverMonthChange = 0;
   }
+
+  // Peak spending month
+  let peakIndex = 0;
+  let peakAmount = 0;
+  totalData.forEach((amount, index) => {
+    if (amount > peakAmount) {
+      peakAmount = amount;
+      peakIndex = index;
+    }
+  });
+  stats.value.peakSpendingMonth = months[peakIndex] || "";
+  stats.value.peakSpendingAmount = peakAmount;
 
   // Calculate recurring percentage
   const totalRecurring = recurringData.reduce((sum, amount) => sum + amount, 0);
@@ -610,10 +667,18 @@ function calculateStatistics() {
     stats.value.recurringPercentage = 0;
   }
 
-  // Find top category
-  const categorySums = {};
+  // Average one-time transaction amount
+  const oneTimePayments = filteredPayments.filter((p) => !p.isRecurring);
+  if (oneTimePayments.length > 0) {
+    const oneTimeTotal = oneTimePayments.reduce((sum, p) => sum + p.amount, 0);
+    stats.value.avgOneTimeTransaction = oneTimeTotal / oneTimePayments.length;
+  } else {
+    stats.value.avgOneTimeTransaction = 0;
+  }
 
-  combinedPayments.value.forEach((payment) => {
+  // Find top category (using filtered payments)
+  const categorySums = {};
+  filteredPayments.forEach((payment) => {
     const category = payment.category || "other";
     if (!categorySums[category]) {
       categorySums[category] = 0;
@@ -623,7 +688,6 @@ function calculateStatistics() {
 
   let topCategoryName = "none";
   let topCategoryAmount = 0;
-
   Object.entries(categorySums).forEach(([category, amount]) => {
     if (amount > topCategoryAmount) {
       topCategoryName = category;
@@ -632,19 +696,47 @@ function calculateStatistics() {
   });
 
   stats.value.topCategory = topCategoryName;
-
   if (grandTotal > 0) {
     stats.value.topCategoryPercentage = Math.round((topCategoryAmount / grandTotal) * 100);
   } else {
     stats.value.topCategoryPercentage = 0;
   }
 
-  // Calculate payment completion rate
-  const totalPayments = combinedPayments.value.length;
-  const completedPayments = combinedPayments.value.filter((payment) => payment.isPaid).length;
+  // Category trend (compare first half vs second half of period)
+  if (topCategoryName !== "none" && totalData.length >= 2) {
+    const midPoint = Math.floor(totalData.length / 2);
+    let firstHalfCategoryTotal = 0;
+    let secondHalfCategoryTotal = 0;
 
-  if (totalPayments > 0) {
-    stats.value.paymentCompletionRate = Math.round((completedPayments / totalPayments) * 100);
+    filteredPayments.forEach((payment) => {
+      if ((payment.category || "other") !== topCategoryName) return;
+      const dateField = payment.dueDate || payment.createdAt;
+      if (!dateField) return;
+      const paymentDate = $dayjs(dateField.toDate());
+      const monthLabel = paymentDate.format("MMM YYYY");
+      const monthIdx = months.indexOf(monthLabel);
+      if (monthIdx < midPoint) {
+        firstHalfCategoryTotal += payment.amount;
+      } else {
+        secondHalfCategoryTotal += payment.amount;
+      }
+    });
+
+    if (firstHalfCategoryTotal > 0) {
+      stats.value.topCategoryTrend = ((secondHalfCategoryTotal - firstHalfCategoryTotal) / firstHalfCategoryTotal) * 100;
+    } else {
+      stats.value.topCategoryTrend = secondHalfCategoryTotal > 0 ? 100 : 0;
+    }
+  } else {
+    stats.value.topCategoryTrend = 0;
+  }
+
+  // Calculate payment completion rate (using filtered payments)
+  const totalPaymentsCount = filteredPayments.length;
+  const completedPayments = filteredPayments.filter((payment) => payment.isPaid).length;
+
+  if (totalPaymentsCount > 0) {
+    stats.value.paymentCompletionRate = Math.round((completedPayments / totalPaymentsCount) * 100);
   } else {
     stats.value.paymentCompletionRate = 0;
   }
@@ -681,10 +773,12 @@ async function updateCharts() {
 async function fetchData() {
   isLoading.value = true;
   try {
-    // Set up filters for payments
-    const startDate = $dayjs().subtract(12, "month").startOf("month").toDate();
-    await paymentStore.fetchPayments({ startDate });
+    // Fetch one-time payments (uses dueDate ordering)
+    await paymentStore.fetchPayments({ });
+    // Fetch recurring payment templates
     await recurrentStore.fetchRecurrentPayments();
+    // Fetch recurring payment instances (uses createdAt ordering)
+    await recurrentStore.fetchPaymentInstances(24);
 
     // Prepare months dropdown
     prepareAvailableMonths();

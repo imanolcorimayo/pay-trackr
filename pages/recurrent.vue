@@ -374,8 +374,6 @@ async function togglePaymentStatus(recurrentId, month) {
 
 // Create a payment instance for a month where one doesn't exist
 async function createPaymentForMonth(recurrentId, month, isPaid = false) {
-  console.log("SOME");
-
   const result = await recurrentStore.addNewPaymentInstance(recurrentId, month, isPaid);
 
   if (result) {
@@ -392,17 +390,12 @@ async function createPaymentForMonth(recurrentId, month, isPaid = false) {
 // Show edit payment modal
 function showEdit(recurrentId) {
   activeRecurrentId.value = recurrentId;
-
-  console.log("Show edit for", recurrentId);
-  console.log("editPayment", editPayment.value);
   editPayment.value.showModal(recurrentId);
 }
 
 // Show payment details modal
 function showDetails(recurrentId) {
   activeRecurrentId.value = recurrentId;
-  console.log("Show details for", recurrentId);
-  console.log("recurrentDetails", recurrentDetails.value);
   recurrentDetails.value.showModal(recurrentId);
 }
 

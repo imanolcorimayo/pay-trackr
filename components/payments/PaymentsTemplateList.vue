@@ -58,9 +58,8 @@
 
     <ConfirmDialogue
       ref="confirmDialog"
-      title="Delete Template"
       :message="`Are you sure you want to delete '${templateToDelete?.name}'?`"
-      confirmLabel="Delete"
+      textConfirmButton="Delete"
       @confirm="deleteTemplate"
     />
   </div>
@@ -86,7 +85,7 @@ const touchCurrentX = ref(0);
 const isDragging = ref(false);
 
 // ----- Define Computed ---------
-const sortedTemplates = computed(() => templates.value.slice(0, 5)); // Show max 5 templates
+const sortedTemplates = computed(() => templates.value);
 
 // ----- Define Methods ---------
 function handleTouchStart(event, template) {

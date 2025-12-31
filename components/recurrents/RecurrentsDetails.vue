@@ -136,9 +136,8 @@
   <!-- Confirmation dialog -->
   <ConfirmDialogue
     ref="confirmDialog"
-    title="Delete Payment"
     :message="`Are you sure you want to delete ${payment?.title || ''}? This will also delete all payment instances.`"
-    confirmLabel="Delete"
+    textConfirmButton="Delete"
     @confirm="confirmDeletePayment"
   />
 </template>

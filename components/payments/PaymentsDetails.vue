@@ -171,9 +171,8 @@
     
     <ConfirmDialogue
       ref="confirmDialog"
-      title="Delete Payment"
       :message="`Are you sure you want to delete ${payment?.title || 'this payment'}?${deletionWarning}`"
-      confirmLabel="Delete"
+      textConfirmButton="Delete"
       @confirm="deletePayment"
     />
   </template>

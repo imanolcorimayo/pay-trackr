@@ -221,9 +221,8 @@
 
     <ConfirmDialogue
       ref="confirmDialog"
-      title="Delete Payment"
       :message="`Are you sure you want to delete ${form.title}?`"
-      confirmLabel="Delete"
+      textConfirmButton="Delete"
       @confirm="deletePayment"
     />
   </div>
@@ -290,6 +289,7 @@ const showDescription = ref(false);
 const continueAdding = ref(false);
 const saveAsTemplate = ref(false);
 const amountInput = ref(null);
+const currentTemplate = ref(null); // Track if opened from template
 
 // ----- Define Stores ---------
 const recurrentStore = useRecurrentStore();
@@ -299,31 +299,14 @@ const user = useCurrentUser();
 
 // ----- Define Methods ---------
 function showModal(paymentId = null, templateData = null) {
+  // Store template for "Add Another" functionality
+  currentTemplate.value = templateData;
+
   if (paymentId) {
     fetchPaymentDetails(paymentId);
   } else if (templateData) {
     // Pre-fill from template
-    const { $dayjs } = useNuxtApp();
-    const today = $dayjs().format("YYYY-MM-DD");
-
-    form.value = {
-      title: templateData.name,
-      description: templateData.description || "",
-      amount: "",
-      category: templateData.category,
-      dueDate: today,
-      isPaid: true,
-      paidDate: today,
-      paymentType: "one-time"
-    };
-
-    showDescription.value = !!templateData.description;
-    saveAsTemplate.value = false;
-
-    // Focus on amount field after modal opens
-    nextTick(() => {
-      amountInput.value?.focus();
-    });
+    applyTemplate(templateData);
   } else {
     // Reset form when creating new payment
     form.value = { ...defaultForm.value };
@@ -334,18 +317,49 @@ function showModal(paymentId = null, templateData = null) {
   modal.value?.open();
 }
 
+function applyTemplate(templateData) {
+  const { $dayjs } = useNuxtApp();
+  const dueDate = lastUsedDueDate.value || $dayjs().format("YYYY-MM-DD");
+
+  form.value = {
+    title: templateData.name,
+    description: templateData.description || "",
+    amount: "",
+    category: templateData.category,
+    dueDate: dueDate,
+    isPaid: true,
+    paidDate: dueDate,
+    paymentType: "one-time"
+  };
+
+  showDescription.value = !!templateData.description;
+  saveAsTemplate.value = false;
+
+  // Focus on amount field after modal opens
+  nextTick(() => {
+    amountInput.value?.focus();
+  });
+}
+
 function closeModal() {
   continueAdding.value = false;
+  currentTemplate.value = null;
   modal.value?.close();
   emit("onClose");
 }
 
 function addAnother() {
-  // Reset form with preserved category and date
-  form.value = { ...defaultForm.value };
-  showDescription.value = false;
   continueAdding.value = false;
   saveAsTemplate.value = false;
+
+  if (currentTemplate.value) {
+    // Template mode: re-apply template (keeps title, description, category)
+    applyTemplate(currentTemplate.value);
+  } else {
+    // Normal mode: reset form but keep date and category
+    form.value = { ...defaultForm.value };
+    showDescription.value = false;
+  }
 }
 
 // In the fetchPaymentDetails function
