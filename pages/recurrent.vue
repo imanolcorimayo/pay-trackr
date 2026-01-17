@@ -31,47 +31,38 @@
       <!-- Header & Summary -->
       <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 p-3">
         <!-- Month Navigation & Title -->
-        <div class="flex items-center">
-          <button @click="changeMonthRange(3)" class="btn btn-icon">
-            <MdiChevronLeft />
+        <div class="flex items-center justify-between w-full md:w-auto bg-base rounded-xl p-1 border border-gray-600 shadow-sm shadow-white/5">
+          <button @click="changeMonthRange(3)" class="p-2 rounded-lg hover:bg-gray-700 transition-colors">
+            <MdiChevronLeft class="text-xl" />
           </button>
-          <h2 class="text-xl font-semibold mx-2">
+          <h2 class="text-lg font-semibold px-4">
             {{ months[0].key }} - {{ months[months.length - 1].key }} {{ currentYear }}
           </h2>
           <button
             @click="changeMonthRange(-3)"
-            class="btn btn-icon"
+            class="p-2 rounded-lg transition-colors"
             :disabled="isCurrentPeriod"
-            :class="{ 'opacity-50 !cursor-not-allowed': isCurrentPeriod }"
+            :class="isCurrentPeriod ? 'opacity-30 cursor-not-allowed' : 'hover:bg-gray-700'"
           >
-            <MdiChevronRight />
+            <MdiChevronRight class="text-xl" />
           </button>
         </div>
 
-        <!-- Summary Cards -->
-        <div class="flex flex-col w-full sm:flex-row sm:w-[unset] sm:flex-wrap gap-3">
-          <div class="summary-card bg-success/10 p-3 rounded-lg flex items-center">
-            <MdiCashCheck class="text-success text-2xl mr-2" />
-            <div>
-              <p class="text-xs font-medium">Paid This Month</p>
-              <p class="font-semibold">{{ formatPrice(currentMonthTotals.paid) }}</p>
-            </div>
+        <!-- Summary Stats -->
+        <div class="flex flex-wrap gap-4 md:gap-6">
+          <div class="flex items-center gap-3">
+            <MdiCashCheck class="text-success text-2xl" />
+            <span class="text-lg font-semibold text-white">{{ formatPrice(currentMonthTotals.paid) }}</span>
           </div>
 
-          <div class="summary-card bg-danger/10 p-3 rounded-lg flex items-center">
-            <MdiCashRemove class="text-danger text-2xl mr-2" />
-            <div>
-              <p class="text-xs font-medium">Unpaid This Month</p>
-              <p class="font-semibold">{{ formatPrice(currentMonthTotals.unpaid) }}</p>
-            </div>
+          <div class="flex items-center gap-3">
+            <MdiCashRemove class="text-danger text-2xl" />
+            <span class="text-lg font-semibold text-white">{{ formatPrice(currentMonthTotals.unpaid) }}</span>
           </div>
 
-          <div class="bg-accent bg-opacity-10 p-3 rounded-lg flex items-center">
-            <MdiCalendarMonth class="text-accent text-2xl mr-2" />
-            <div>
-              <p class="text-xs font-medium">Total This Month</p>
-              <p class="font-semibold">{{ formatPrice(currentMonthTotals.paid + currentMonthTotals.unpaid) }}</p>
-            </div>
+          <div class="flex items-center gap-3">
+            <MdiCalendarMonth class="text-gray-300 text-2xl" />
+            <span class="text-lg font-semibold text-white">{{ formatPrice(currentMonthTotals.paid + currentMonthTotals.unpaid) }}</span>
           </div>
         </div>
       </div>
@@ -83,7 +74,7 @@
       <div class="hidden md:block overflow-x-auto px-3">
         <table class="w-full table-fixed">
           <thead class="text-center">
-            <tr class="border-b h-12">
+            <tr class="border-b border-gray-600 h-12">
               <th scope="col" class="text-start font-semibold">Payment</th>
               <th scope="col" class="w-20 font-semibold">Amount</th>
               <th scope="col" class="w-16 font-semibold">Day</th>
@@ -100,7 +91,7 @@
             <tr
               v-for="payment in recurrents"
               :key="payment.id"
-              class="border-b hover:bg-slate-500 cursor-pointer transition-colors"
+              class="border-b border-gray-700 hover:bg-gray-700/50 cursor-pointer transition-colors"
               @click="showDetails(payment.id)"
             >
               <td class="text-start py-4">
@@ -127,10 +118,10 @@
                     class="inline-flex items-center justify-center h-8 w-8 rounded-full transition-colors"
                     :class="[
                       payment.months[month.key].isPaid
-                        ? 'bg-success/10'
+                        ? 'bg-success/15'
                         : isDelayed(payment.months[month.key].dueDate)
-                        ? 'bg-danger/10'
-                        : 'bg-gray-100'
+                        ? 'bg-danger/15'
+                        : 'bg-gray-700'
                     ]"
                     :disabled="togglingPayment === `${payment.id}-${month.key}`"
                   >
@@ -158,8 +149,8 @@
               <!-- Actions -->
               <td>
                 <div class="flex justify-center">
-                  <button @click.stop="showEdit(payment.id)" class="btn btn-icon">
-                    <MdiPencil class="text-gray-500" />
+                  <button @click.stop="showEdit(payment.id)" class="p-2 rounded-lg text-gray-400 hover:text-gray-200 hover:bg-gray-600/50 transition-colors">
+                    <MdiPencil />
                   </button>
                 </div>
               </td>
@@ -181,10 +172,10 @@
         <div
           v-for="payment in recurrents"
           :key="payment.id"
-          class="bg-base rounded-lg border border-gray-700 overflow-hidden"
+          class="bg-base rounded-xl border border-gray-600 shadow-sm shadow-white/5 overflow-hidden"
         >
           <!-- Payment Header -->
-          <div class="p-4 border-b border-gray-700 flex items-center gap-3" @click="showDetails(payment.id)">
+          <div class="p-4 border-b border-gray-600 flex items-center gap-3 cursor-pointer" @click="showDetails(payment.id)">
             <div
               class="w-2 h-10 rounded-full shrink-0 !bg-opacity-90"
               :class="getCategoryClasses(payment.category.toLowerCase())"
@@ -216,10 +207,10 @@
                   class="inline-flex items-center justify-center h-10 w-10 rounded-full transition-colors"
                   :class="[
                     payment.months[month.key].isPaid
-                      ? 'bg-success/10'
+                      ? 'bg-success/15'
                       : isDelayed(payment.months[month.key].dueDate)
-                      ? 'bg-danger/10'
-                      : 'bg-gray-100'
+                      ? 'bg-danger/15'
+                      : 'bg-gray-700'
                   ]"
                   :disabled="togglingPayment === `${payment.id}-${month.key}`"
                 >
@@ -238,16 +229,16 @@
               <button
                 v-else
                 @click="createPaymentForMonth(payment.id, month.key)"
-                class="inline-flex items-center justify-center h-10 w-10 rounded-full bg-gray-100"
+                class="inline-flex items-center justify-center h-10 w-10 rounded-full bg-gray-700"
               >
-                <MdiPlusCircleOutline class="text-gray-500 text-xl" />
+                <MdiPlusCircleOutline class="text-gray-400 text-xl" />
               </button>
             </div>
           </div>
 
           <!-- Actions -->
-          <div class="flex justify-end p-2 border-t border-gray-700">
-            <button @click="showEdit(payment.id)" class="p-2 text-gray-500 hover:text-primary">
+          <div class="flex justify-end p-2 border-t border-gray-600">
+            <button @click="showEdit(payment.id)" class="p-2 rounded-lg text-gray-400 hover:text-gray-200 hover:bg-gray-600/50 transition-colors">
               <MdiPencil />
             </button>
           </div>
@@ -546,11 +537,4 @@ useHead({
 </script>
 
 <style scoped>
-.btn-icon {
-  @apply p-2 rounded-full hover:bg-gray-100 transition-colors;
-}
-
-.summary-card {
-  @apply min-w-[150px];
-}
 </style>

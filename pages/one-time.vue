@@ -14,14 +14,20 @@
     />
 
     <!-- Floating Add Button -->
-    <button
-      v-if="!isLoading"
-      @click="showNewPayment"
-      class="fixed bottom-6 right-6 z-10 flex items-center justify-center w-14 h-14 rounded-full bg-primary text-white shadow-lg hover:bg-primary-transparent transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary"
-      aria-label="Add new payment"
-    >
-      <MdiPlus class="text-2xl" />
-    </button>
+    <div v-if="!isLoading" class="fixed bottom-6 right-6 z-10 group">
+      <!-- Tooltip -->
+      <div class="absolute bottom-full right-0 mb-2 px-3 py-1.5 bg-gray-800 text-white text-sm rounded-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none shadow-lg">
+        Add Payment
+        <span class="text-gray-400 ml-1 text-xs">(N)</span>
+      </div>
+      <button
+        @click="showNewPayment"
+        class="flex items-center justify-center w-14 h-14 rounded-full bg-primary text-white shadow-lg shadow-primary/30 hover:shadow-xl hover:shadow-primary/40 hover:scale-105 transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-900 focus:ring-primary"
+        aria-label="Add new payment"
+      >
+        <MdiPlus class="text-2xl" />
+      </button>
+    </div>
 
     <!-- Loading Skeleton -->
     <div v-if="isLoading" class="flex flex-col gap-4 animate-pulse">
@@ -42,66 +48,85 @@
 
     <!-- Content -->
     <div v-else class="flex flex-col gap-4">
-      <!-- Header & Summary -->
-      <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 p-3">
-        <!-- Month Navigation & Title -->
-        <div class="flex items-center">
-          <button @click="changeMonth(1)" class="btn btn-icon">
-            <MdiChevronLeft />
-          </button>
-          <h2 class="text-xl font-semibold mx-2">{{ currentMonth }} {{ currentYear }}</h2>
-          <button
-            @click="changeMonth(-1)"
-            class="btn btn-icon"
-            :disabled="isCurrentMonth"
-            :class="{ 'opacity-50 !cursor-not-allowed': isCurrentMonth }"
-          >
-            <MdiChevronRight />
-          </button>
-        </div>
-
-        <!-- Summary Cards -->
-        <div class="flex flex-col w-full sm:flex-row sm:w-[unset] sm:flex-wrap gap-3">
-          <div class="bg-success bg-opacity-10 p-3 rounded-lg flex items-center">
-            <MdiCashCheck class="text-success text-2xl mr-2" />
-            <div>
-              <p class="text-xs font-medium">Paid This Month</p>
-              <p class="font-semibold">{{ formatPrice(monthTotals.paid) }}</p>
-            </div>
-          </div>
-
-          <div class="bg-danger bg-opacity-10 p-3 rounded-lg flex items-center">
-            <MdiCashRemove class="text-danger text-2xl mr-2" />
-            <div>
-              <p class="text-xs font-medium">Unpaid This Month</p>
-              <p class="font-semibold">{{ formatPrice(monthTotals.unpaid) }}</p>
-            </div>
-          </div>
-
-          <div class="bg-accent bg-opacity-10 p-3 rounded-lg flex items-center">
-            <MdiCalendarMonth class="text-accent text-2xl mr-2" />
-            <div>
-              <p class="text-xs font-medium">Total This Month</p>
-              <p class="font-semibold">{{ formatPrice(monthTotals.paid + monthTotals.unpaid) }}</p>
-            </div>
+      <!-- Page Header -->
+      <div class="px-3 pt-2">
+        <div class="flex items-center justify-between">
+          <div>
+            <h1 class="text-2xl font-bold">One-Time Payments</h1>
+            <p class="text-sm text-gray-500">
+              {{ payments.length }} payment{{ payments.length !== 1 ? 's' : '' }} this month
+            </p>
           </div>
         </div>
       </div>
 
-      <!-- Templates -->
-      <PaymentsTemplateList @useTemplate="useTemplate" />
+      <!-- Month Navigation & Summary -->
+      <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 px-3">
+        <!-- Month Navigation -->
+        <div class="flex items-center justify-between w-full md:w-auto bg-base rounded-xl p-1 border border-gray-600 shadow-sm shadow-white/5">
+          <button
+            @click="changeMonth(1)"
+            class="p-2 rounded-lg hover:bg-gray-700 transition-colors"
+            aria-label="Previous month"
+          >
+            <MdiChevronLeft class="text-xl" />
+          </button>
+          <span class="px-4 py-1 font-medium min-w-[160px] text-center">
+            {{ currentMonth }} {{ currentYear }}
+          </span>
+          <button
+            @click="changeMonth(-1)"
+            class="p-2 rounded-lg transition-colors"
+            :class="isCurrentMonth ? 'opacity-30 cursor-not-allowed' : 'hover:bg-gray-700'"
+            :disabled="isCurrentMonth"
+            aria-label="Next month"
+          >
+            <MdiChevronRight class="text-xl" />
+          </button>
+        </div>
+
+        <!-- Summary Stats -->
+        <div class="flex flex-wrap gap-4 md:gap-6">
+          <div class="flex items-center gap-3">
+            <MdiCashCheck class="text-success text-2xl" />
+            <span class="text-lg font-semibold text-white">{{ formatPrice(monthTotals.paid) }}</span>
+          </div>
+
+          <div class="flex items-center gap-3">
+            <MdiCashRemove class="text-danger text-2xl" />
+            <span class="text-lg font-semibold text-white">{{ formatPrice(monthTotals.unpaid) }}</span>
+          </div>
+
+          <div class="flex items-center gap-3">
+            <MdiCalculator class="text-gray-300 text-2xl" />
+            <span class="text-lg font-semibold text-white">{{ formatPrice(monthTotals.paid + monthTotals.unpaid) }}</span>
+          </div>
+        </div>
+      </div>
 
       <!-- Filters -->
-      <Filters @onSearch="searchPayments" @onOrder="orderPayments" />
+      <Filters @onSearch="searchPayments" @onOrder="orderPayments" :initialSort="{ name: 'date', order: 'desc' }" />
 
       <!-- Payments List -->
       <div class="px-3">
         <div
           v-if="payments.length === 0"
-          class="flex flex-col items-center justify-center py-10 text-center text-gray-500"
+          class="flex flex-col items-center justify-center py-16 text-center"
         >
-          <MdiCashOff class="text-5xl mx-auto mb-3 opacity-30" />
-          <p>No one-time payments found for this month</p>
+          <div class="w-20 h-20 rounded-full bg-gray-800 flex items-center justify-center mb-4">
+            <MdiCashOff class="text-4xl text-gray-600" />
+          </div>
+          <h3 class="text-lg font-medium text-gray-300 mb-1">No payments yet</h3>
+          <p class="text-sm text-gray-500 mb-6 max-w-xs">
+            Track your one-time expenses like groceries, bills, or purchases for {{ currentMonth }}.
+          </p>
+          <button
+            @click="showNewPayment"
+            class="px-5 py-2.5 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors flex items-center gap-2 font-medium"
+          >
+            <MdiPlus class="text-lg" />
+            Add First Payment
+          </button>
         </div>
 
         <!-- Payment Cards -->
@@ -109,61 +134,72 @@
           <div
             v-for="payment in payments"
             :key="payment.id"
-            class="bg-base shadow-sm rounded-lg p-4 border border-gray-700 shadow hover:shadow-lg transition-shadow cursor-pointer"
+            class="rounded-xl p-4 bg-base cursor-pointer transition-all duration-200 border border-gray-600 shadow-sm shadow-white/5 hover:shadow-md hover:shadow-white/10 group"
             @click="showDetails(payment.id)"
           >
-            <div class="flex items-center mb-3">
-              <div class="flex-1">
-                <h3 class="font-medium">{{ payment.title }}</h3>
-                <div class="flex items-center mt-1 mb-1">
-                  <span
-                    class="text-xs px-2 py-0.5 rounded-full capitalize"
-                    :class="getCategoryClasses(payment.category)"
-                  >
-                    {{ payment.category }}
-                  </span>
-                </div>
-                <p class="text-xs text-gray-500 line-clamp-1">{{ payment.description }}</p>
+            <!-- Card Header -->
+            <div class="flex items-start justify-between mb-3">
+              <div class="flex-1 min-w-0">
+                <h3 class="font-semibold text-gray-100 truncate">{{ payment.title }}</h3>
+                <span
+                  class="inline-block mt-1 text-[10px] px-2 py-0.5 rounded-md uppercase tracking-wide font-medium"
+                  :class="getCategoryClasses(payment.category)"
+                >
+                  {{ payment.category.replace('_', ' ') }}
+                </span>
               </div>
               <div
-                class="ml-2 h-8 w-8 rounded-full flex items-center justify-center"
+                class="ml-3 h-10 w-10 rounded-xl flex items-center justify-center flex-shrink-0 transition-transform group-hover:scale-110"
                 :class="
                   payment.isPaid
-                    ? 'bg-success bg-opacity-10'
+                    ? 'bg-success/15'
                     : isDelayed(payment.dueDate)
-                    ? 'bg-danger bg-opacity-10'
-                    : 'bg-gray-500 bg-opacity-10'
+                    ? 'bg-danger/15'
+                    : 'bg-gray-700'
                 "
               >
                 <MdiCheck v-if="payment.isPaid" class="text-success text-xl" />
                 <MdiClockOutline v-else-if="isDelayed(payment.dueDate)" class="text-danger text-xl" />
-                <MdiCircleOutline v-else class="text-gray-400 text-xl" />
+                <MdiCircleOutline v-else class="text-gray-500 text-xl" />
               </div>
             </div>
 
-            <div class="flex justify-between items-center">
+            <!-- Description -->
+            <p v-if="payment.description" class="text-xs text-gray-400 line-clamp-1 mb-3">
+              {{ payment.description }}
+            </p>
+
+            <!-- Amount & Date -->
+            <div class="flex justify-between items-end mb-4">
               <div>
-                <p class="text-xs text-gray-500">Due on</p>
-                <p class="text-sm">{{ formatDate(payment.dueDate || payment.createdAt) }}</p>
+                <p class="text-2xl font-bold text-white">{{ formatPrice(payment.amount) }}</p>
               </div>
               <div class="text-right">
-                <p class="text-xs text-gray-500">Amount</p>
-                <p class="font-semibold">{{ formatPrice(payment.amount) }}</p>
+                <p class="text-xs text-gray-400">{{ formatDate(payment.dueDate || payment.createdAt) }}</p>
               </div>
             </div>
 
-            <div class="flex justify-between mt-4">
+            <!-- Actions -->
+            <div class="flex justify-between items-center pt-3 border-t border-gray-600/50">
               <button
                 @click.stop="togglePaymentStatus(payment.id, !payment.isPaid)"
-                class="text-sm py-1 px-3 rounded-full flex items-center gap-1"
-                :class="payment.isPaid ? 'bg-warning/10 text-warning' : 'bg-success/10 text-success'"
+                class="text-sm py-1.5 px-3 rounded-lg flex items-center gap-1.5 font-medium transition-all"
+                :class="payment.isPaid
+                  ? 'bg-warning/10 text-warning hover:bg-warning/20'
+                  : 'bg-success/10 text-success hover:bg-success/20'"
                 :disabled="togglingPayment === payment.id"
               >
-                <MdiLoading v-if="togglingPayment === payment.id" class="animate-spin" />
-                {{ payment.isPaid ? "Mark as Unpaid" : "Mark as Paid" }}
+                <MdiLoading v-if="togglingPayment === payment.id" class="animate-spin text-base" />
+                <MdiCheck v-else-if="!payment.isPaid" class="text-base" />
+                <MdiUndo v-else class="text-base" />
+                {{ payment.isPaid ? "Unpaid" : "Mark Paid" }}
               </button>
-              <button @click.stop="showEdit(payment.id)" class="text-gray-500 hover:text-gray-700">
-                <MdiPencil />
+              <button
+                @click.stop="showEdit(payment.id)"
+                class="p-2 rounded-lg text-gray-400 hover:text-gray-200 hover:bg-gray-600/50 transition-colors"
+                aria-label="Edit payment"
+              >
+                <MdiPencil class="text-lg" />
               </button>
             </div>
           </div>
@@ -186,6 +222,8 @@ import MdiChevronLeft from "~icons/mdi/chevron-left";
 import MdiChevronRight from "~icons/mdi/chevron-right";
 import MdiPlus from "~icons/mdi/plus";
 import MdiLoading from "~icons/mdi/loading";
+import MdiCalculator from "~icons/mdi/calculator";
+import MdiUndo from "~icons/mdi/undo";
 
 definePageMeta({
   middleware: ["auth"]
@@ -427,6 +465,18 @@ function applySortOrder(orderCriteria) {
 // ----- Initialize Data ---------
 onMounted(async () => {
   await fetchData();
+
+  // Keyboard shortcut: Press 'N' to add new payment
+  const handleKeydown = (e) => {
+    // Ignore if user is typing in an input/textarea or modal is open
+    if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable) return;
+    if (e.key.toLowerCase() === 'n' && !e.metaKey && !e.ctrlKey) {
+      showNewPayment();
+    }
+  };
+
+  window.addEventListener('keydown', handleKeydown);
+  onUnmounted(() => window.removeEventListener('keydown', handleKeydown));
 });
 
 watch(getPayments, () => {
@@ -454,9 +504,5 @@ useHead({
   -webkit-line-clamp: 1;
   -webkit-box-orient: vertical;
   overflow: hidden;
-}
-
-.btn-icon {
-  @apply p-2 rounded-full hover:bg-gray-100 transition-colors;
 }
 </style>

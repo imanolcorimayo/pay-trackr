@@ -12,13 +12,18 @@ export default {
   theme: {
     extend: {
       backgroundColor: {
-        primary: "#4DA892", // Darker for better contrast
-        secondary: "#6158FF", // Darker for better contrast
-        danger: "#E84A8A", // Adjusted for better contrast
+        primary: "#4DA892",
+        secondary: "#6158FF",
+        danger: "#E84A8A",
         base: "#27292D",
-        warning: "#E6AE2C", // Adjusted for better visibility
-        accent: "#0072DF", // Adjusted for better contrast
-        success: "#1D9A38", // Slightly darker for better contrast
+        warning: "#E6AE2C",
+        accent: "#0072DF",
+        success: "#1D9A38",
+        // Surface colors for 70-20-10 rule
+        surface: {
+          DEFAULT: "#32353b",      // Cards, elevated surfaces (20%)
+          hover: "#3a3d44",        // Hover state
+        },
         ['primary-transparent']: "rgba(77, 168, 146, 0.7)",
         ['secondary-transparent']: "rgba(97, 88, 255, 0.7)",
         ['danger-transparent']: "rgba(232, 74, 138, 0.7)",
@@ -35,6 +40,14 @@ export default {
         warning: "#E6AE2C",
         accent: "#0072DF",
         success: "#1D9A38",
+        // Surface colors available as text/border colors too
+        surface: {
+          DEFAULT: "#32353b",
+          hover: "#3a3d44",
+        },
+      },
+      borderColor: {
+        surface: "#3f4249",
       },
       keyframes: {
         jump: {

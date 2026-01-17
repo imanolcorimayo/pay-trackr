@@ -57,7 +57,7 @@
             <template v-else>
               <div class="flex flex-col">
                 <span class="text-sm text-gray-500">Due Date</span>
-                <span class="text-lg">{{ formatDate(payment.createdAt) }}</span>
+                <span class="text-lg">{{ formatDate(payment.dueDate || payment.createdAt) }}</span>
               </div>
               
               <div class="flex flex-col">
