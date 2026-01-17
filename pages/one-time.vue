@@ -23,11 +23,25 @@
       <MdiPlus class="text-2xl" />
     </button>
 
-    <!-- Loading State -->
-    <Loader v-if="isLoading" />
+    <!-- Loading Skeleton -->
+    <div v-if="isLoading" class="flex flex-col gap-4 animate-pulse">
+      <!-- Header Skeleton -->
+      <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 p-3">
+        <div class="h-8 w-48 bg-gray-700 rounded"></div>
+        <div class="flex gap-3">
+          <div class="h-16 w-40 bg-gray-700 rounded-lg"></div>
+          <div class="h-16 w-40 bg-gray-700 rounded-lg"></div>
+          <div class="h-16 w-40 bg-gray-700 rounded-lg"></div>
+        </div>
+      </div>
+      <!-- Cards Skeleton -->
+      <div class="px-3 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div v-for="i in 6" :key="i" class="h-44 bg-gray-700 rounded-lg"></div>
+      </div>
+    </div>
 
     <!-- Content -->
-    <div class="flex flex-col gap-4">
+    <div v-else class="flex flex-col gap-4">
       <!-- Header & Summary -->
       <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 p-3">
         <!-- Month Navigation & Title -->
@@ -141,9 +155,11 @@
             <div class="flex justify-between mt-4">
               <button
                 @click.stop="togglePaymentStatus(payment.id, !payment.isPaid)"
-                class="text-sm py-1 px-3 rounded-full"
+                class="text-sm py-1 px-3 rounded-full flex items-center gap-1"
                 :class="payment.isPaid ? 'bg-warning/10 text-warning' : 'bg-success/10 text-success'"
+                :disabled="togglingPayment === payment.id"
               >
+                <MdiLoading v-if="togglingPayment === payment.id" class="animate-spin" />
                 {{ payment.isPaid ? "Mark as Unpaid" : "Mark as Paid" }}
               </button>
               <button @click.stop="showEdit(payment.id)" class="text-gray-500 hover:text-gray-700">
@@ -169,6 +185,7 @@ import MdiCalendarMonth from "~icons/mdi/calendar-month";
 import MdiChevronLeft from "~icons/mdi/chevron-left";
 import MdiChevronRight from "~icons/mdi/chevron-right";
 import MdiPlus from "~icons/mdi/plus";
+import MdiLoading from "~icons/mdi/loading";
 
 definePageMeta({
   middleware: ["auth"]
@@ -191,6 +208,7 @@ const payments = ref([]);
 const monthsOffset = ref(0);
 const currentSortOrder = ref({ name: "date", order: "desc" });
 const currentSearchQuery = ref("");
+const togglingPayment = ref(null); // Track which payment is being toggled
 
 // ----- Define Computed ---------
 const currentMonth = computed(() => {
@@ -301,7 +319,9 @@ function useTemplate(template) {
 
 // Toggle payment status (paid/unpaid)
 async function togglePaymentStatus(paymentId, isPaid) {
-  isLoading.value = true;
+  if (togglingPayment.value) return; // Prevent multiple toggles
+
+  togglingPayment.value = paymentId;
   try {
     const result = await paymentStore.togglePaymentStatus(paymentId, isPaid);
 
@@ -324,7 +344,7 @@ async function togglePaymentStatus(paymentId, isPaid) {
     console.error("Error toggling payment:", error);
     useToast("error", "An unexpected error occurred");
   } finally {
-    isLoading.value = false;
+    togglingPayment.value = null;
   }
 }
 

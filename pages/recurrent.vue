@@ -4,9 +4,26 @@
     <RecurrentsDetails ref="recurrentDetails" :paymentId="activeRecurrentId" @openEdit="showEdit" />
     <RecurrentsNewPayment v-if="!isLoading" @onCreated="fetchData" />
 
-    <!-- Loading State -->
-    <div v-if="isLoading" class="flex justify-center items-center min-h-[400px]">
-      <Loader />
+    <!-- Loading Skeleton -->
+    <div v-if="isLoading" class="flex flex-col gap-4 animate-pulse">
+      <!-- Header Skeleton -->
+      <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 p-3">
+        <div class="h-8 w-48 bg-gray-700 rounded"></div>
+        <div class="flex gap-3">
+          <div class="h-16 w-40 bg-gray-700 rounded-lg"></div>
+          <div class="h-16 w-40 bg-gray-700 rounded-lg"></div>
+          <div class="h-16 w-40 bg-gray-700 rounded-lg"></div>
+        </div>
+      </div>
+      <!-- Table Skeleton -->
+      <div class="hidden md:block px-3">
+        <div class="h-12 w-full bg-gray-700 rounded mb-2"></div>
+        <div v-for="i in 5" :key="i" class="h-16 w-full bg-gray-700/50 rounded mb-2"></div>
+      </div>
+      <!-- Mobile Skeleton -->
+      <div class="md:hidden px-3 space-y-4">
+        <div v-for="i in 3" :key="i" class="h-40 w-full bg-gray-700 rounded-lg"></div>
+      </div>
     </div>
 
     <!-- Content -->
@@ -60,7 +77,7 @@
       </div>
 
       <!-- Filters -->
-      <Filters @onSearch="searchPayments" @onOrder="orderRecurrents" />
+      <Filters @onSearch="searchPayments" @onOrder="orderRecurrents" :initialSort="{ name: 'unpaid_first', order: 'asc' }" />
 
       <!-- Table View -->
       <div class="hidden md:block overflow-x-auto px-3">
@@ -115,8 +132,10 @@
                         ? 'bg-danger/10'
                         : 'bg-gray-100'
                     ]"
+                    :disabled="togglingPayment === `${payment.id}-${month.key}`"
                   >
-                    <MdiCheck v-if="payment.months[month.key].isPaid" class="text-success text-xl" />
+                    <MdiLoading v-if="togglingPayment === `${payment.id}-${month.key}`" class="text-primary text-xl animate-spin" />
+                    <MdiCheck v-else-if="payment.months[month.key].isPaid" class="text-success text-xl" />
                     <MdiClockOutline
                       v-else-if="isDelayed(payment.months[month.key].dueDate)"
                       class="text-danger text-xl"
@@ -202,8 +221,10 @@
                       ? 'bg-danger/10'
                       : 'bg-gray-100'
                   ]"
+                  :disabled="togglingPayment === `${payment.id}-${month.key}`"
                 >
-                  <MdiCheck v-if="payment.months[month.key].isPaid" class="text-success text-xl" />
+                  <MdiLoading v-if="togglingPayment === `${payment.id}-${month.key}`" class="text-primary text-xl animate-spin" />
+                  <MdiCheck v-else-if="payment.months[month.key].isPaid" class="text-success text-xl" />
                   <MdiClockOutline
                     v-else-if="isDelayed(payment.months[month.key].dueDate)"
                     class="text-danger text-xl"
@@ -255,6 +276,7 @@ import MdiCashCheck from "~icons/mdi/cash-check";
 import MdiCashRemove from "~icons/mdi/cash-remove";
 import MdiCashOff from "~icons/mdi/cash-off";
 import MdiCalendarMonth from "~icons/mdi/calendar-month";
+import MdiLoading from "~icons/mdi/loading";
 
 definePageMeta({
   middleware: ["auth"]
@@ -277,6 +299,7 @@ const recurrents = ref([]);
 const monthsOffset = ref(0);
 const currentSortOrder = ref({ name: "unpaid_first", order: "asc" });
 const currentSearchQuery = ref("");
+const togglingPayment = ref(null); // Track which payment/month is being toggled
 
 // ----- Define Computed ---------
 // Based on the screen width, determine how many months to show
@@ -340,12 +363,14 @@ function changeMonthRange(delta) {
 
 // Toggle payment status
 async function togglePaymentStatus(recurrentId, month) {
-  if (isLoading.value) return;
-  isLoading.value = true;
+  if (togglingPayment.value) return; // Prevent multiple toggles at once
+
+  const toggleKey = `${recurrentId}-${month}`;
+  togglingPayment.value = toggleKey;
 
   const payment = recurrents.value.find((p) => p.id === recurrentId);
   if (!payment || !payment.months[month]) {
-    isLoading.value = false;
+    togglingPayment.value = null;
     return;
   }
 
@@ -355,12 +380,12 @@ async function togglePaymentStatus(recurrentId, month) {
   if (!paymentId) {
     // Create payment
     await createPaymentForMonth(recurrentId, month, true);
-    isLoading.value = false;
+    togglingPayment.value = null;
     return;
   }
   const result = await recurrentStore.togglePaymentStatus(paymentId, !currentStatus);
 
-  isLoading.value = false;
+  togglingPayment.value = null;
   if (result) {
     useToast("success", `Payment marked as ${!currentStatus ? "paid" : "unpaid"}`);
     // Preserve current sort order after status change

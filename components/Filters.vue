@@ -82,6 +82,11 @@ const props = defineProps({
     required: false,
     default: false,
     type: Boolean
+  },
+  initialSort: {
+    required: false,
+    default: () => ({ name: '', order: '' }),
+    type: Object
   }
 });
 
@@ -92,7 +97,7 @@ const { width } = useWindowSize();
 
 // ----- Define Vars ------
 const actionRunning = ref(false);
-const selectedFilter = ref({ name: '', order: '' });
+const selectedFilter = ref({ name: props.initialSort.name || '', order: props.initialSort.order || '' });
 
 // Refs
 const tooltipFilter = ref(null);

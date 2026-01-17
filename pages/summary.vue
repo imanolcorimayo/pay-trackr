@@ -18,11 +18,40 @@
       </div>
     </div>
 
-    <!-- Loading State -->
-    <Loader v-if="isLoading" />
+    <!-- Loading Skeleton -->
+    <div v-if="isLoading" class="grid grid-cols-1 lg:grid-cols-2 gap-6 p-3 animate-pulse">
+      <!-- Chart Skeleton 1 -->
+      <div class="bg-gray-800 rounded-lg border border-gray-700 p-4">
+        <div class="h-6 w-48 bg-gray-700 rounded mb-2"></div>
+        <div class="h-4 w-64 bg-gray-700/50 rounded mb-4"></div>
+        <div class="h-[350px] bg-gray-700/30 rounded"></div>
+      </div>
+      <!-- Chart Skeleton 2 -->
+      <div class="bg-gray-800 rounded-lg border border-gray-700 p-4">
+        <div class="h-6 w-48 bg-gray-700 rounded mb-2"></div>
+        <div class="h-4 w-64 bg-gray-700/50 rounded mb-4"></div>
+        <div class="h-[350px] bg-gray-700/30 rounded"></div>
+      </div>
+      <!-- Stats Skeleton -->
+      <div class="bg-gray-800 rounded-lg border border-gray-700 p-4">
+        <div class="h-6 w-36 bg-gray-700 rounded mb-2"></div>
+        <div class="h-4 w-52 bg-gray-700/50 rounded mb-4"></div>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div v-for="i in 6" :key="i" class="h-24 bg-gray-700/50 rounded-lg"></div>
+        </div>
+      </div>
+      <!-- Breakdown Skeleton -->
+      <div class="bg-gray-800 rounded-lg border border-gray-700 p-4">
+        <div class="h-6 w-44 bg-gray-700 rounded mb-2"></div>
+        <div class="h-4 w-56 bg-gray-700/50 rounded mb-4"></div>
+        <div class="space-y-4">
+          <div v-for="i in 5" :key="i" class="h-14 bg-gray-700/50 rounded"></div>
+        </div>
+      </div>
+    </div>
 
     <!-- Content -->
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 p-3">
+    <div v-else class="grid grid-cols-1 lg:grid-cols-2 gap-6 p-3">
       <!-- Monthly Spending Trends -->
       <div class="bg-gray-800 rounded-lg shadow-sm border border-gray-100 p-4">
         <h2 class="text-lg font-semibold mb-2 flex items-center">
@@ -782,14 +811,14 @@ async function fetchData() {
 
     // Prepare months dropdown
     prepareAvailableMonths();
-
-    // Initialize charts
-    await updateCharts();
   } catch (error) {
     console.error("Error fetching data:", error);
     useToast("error", "Failed to load summary data");
   } finally {
     isLoading.value = false;
+    // Wait for DOM to render canvas elements, then initialize charts
+    await nextTick();
+    await updateCharts();
   }
 }
 

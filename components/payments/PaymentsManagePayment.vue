@@ -24,6 +24,56 @@
         </div>
 
         <form v-else @submit.prevent="savePayment" class="space-y-6">
+          <!-- Quick Templates (only for new one-time payments) -->
+          <div v-if="!props.isEdit && !props.isRecurrent && templates.length > 0" class="space-y-2">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-medium text-gray-500 uppercase tracking-wider">Quick Add</span>
+              <button
+                v-if="templates.length > 4"
+                type="button"
+                @click="templatesExpanded = !templatesExpanded"
+                class="text-xs text-primary hover:text-primary/80 transition-colors flex items-center gap-1"
+              >
+                {{ templatesExpanded ? 'Collapse' : 'Expand' }}
+                <svg
+                  class="w-3 h-3 transition-transform duration-300"
+                  :class="{ 'rotate-180': templatesExpanded }"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
+            </div>
+
+            <!-- Templates Container -->
+            <div
+              class="overflow-hidden transition-all duration-300 ease-out"
+              :style="{ maxHeight: templatesExpanded ? '500px' : '42px' }"
+            >
+              <div
+                class="flex flex-wrap gap-2"
+                :class="{ 'flex-nowrap overflow-x-auto scrollbar-hide': !templatesExpanded }"
+              >
+                <button
+                  v-for="template in templates"
+                  :key="template.id"
+                  type="button"
+                  @click="selectTemplate(template)"
+                  class="flex-shrink-0 px-3 py-1.5 text-sm font-medium rounded-full border-2 transition-all duration-200 hover:scale-105"
+                  :class="[
+                    currentTemplate?.id === template.id
+                      ? getTemplateActiveClass(template.category)
+                      : getTemplateClass(template.category)
+                  ]"
+                >
+                  {{ template.name }}
+                </button>
+              </div>
+            </div>
+          </div>
+
           <!-- Payment Title & Description -->
           <div class="space-y-2">
             <label for="title" class="block text-sm font-medium text-gray-400">Payment Title*</label>
@@ -67,6 +117,7 @@
                   ref="amountInput"
                   v-model="form.amount"
                   type="number"
+                  inputmode="decimal"
                   step="0.01"
                   min="0"
                   required
@@ -230,6 +281,7 @@
 
 <script setup>
 import { ref, computed, watch, onMounted } from "vue";
+import { storeToRefs } from "pinia";
 import { useCurrentUser } from "vuefire";
 import { serverTimestamp, Timestamp } from "firebase/firestore";
 
@@ -290,17 +342,24 @@ const continueAdding = ref(false);
 const saveAsTemplate = ref(false);
 const amountInput = ref(null);
 const currentTemplate = ref(null); // Track if opened from template
+const templatesExpanded = ref(false);
 
 // ----- Define Stores ---------
 const recurrentStore = useRecurrentStore();
 const paymentStore = usePaymentStore();
 const templateStore = useTemplateStore();
+const { getTemplatesSorted: templates } = storeToRefs(templateStore);
 const user = useCurrentUser();
 
 // ----- Define Methods ---------
-function showModal(paymentId = null, templateData = null) {
+async function showModal(paymentId = null, templateData = null) {
   // Store template for "Add Another" functionality
   currentTemplate.value = templateData;
+
+  // Fetch templates if not already loaded (for quick templates in modal)
+  if (!props.isRecurrent && !paymentId) {
+    templateStore.fetchTemplates();
+  }
 
   if (paymentId) {
     fetchPaymentDetails(paymentId);
@@ -314,6 +373,7 @@ function showModal(paymentId = null, templateData = null) {
     saveAsTemplate.value = false;
   }
 
+  templatesExpanded.value = false;
   modal.value?.open();
 }
 
@@ -339,6 +399,58 @@ function applyTemplate(templateData) {
   nextTick(() => {
     amountInput.value?.focus();
   });
+}
+
+function selectTemplate(template) {
+  currentTemplate.value = template;
+  applyTemplate(template);
+  templateStore.incrementUsage(template.id);
+}
+
+function getTemplateClass(category) {
+  const classes = {
+    housing: 'border-[#4682B4] bg-[#4682B4]/10 text-[#4682B4]',
+    utilities: 'border-[#0072DF] bg-[#0072DF]/10 text-[#0072DF]',
+    food: 'border-[#1D9A38] bg-[#1D9A38]/10 text-[#1D9A38]',
+    dining: 'border-[#FF6347] bg-[#FF6347]/10 text-[#FF6347]',
+    transport: 'border-[#E6AE2C] bg-[#E6AE2C]/10 text-[#E6AE2C]',
+    entertainment: 'border-[#6158FF] bg-[#6158FF]/10 text-[#6158FF]',
+    health: 'border-[#E84A8A] bg-[#E84A8A]/10 text-[#E84A8A]',
+    fitness: 'border-[#FF4500] bg-[#FF4500]/10 text-[#FF4500]',
+    personal_care: 'border-[#DDA0DD] bg-[#DDA0DD]/10 text-[#DDA0DD]',
+    pet: 'border-[#3CAEA3] bg-[#3CAEA3]/10 text-[#3CAEA3]',
+    clothes: 'border-[#800020] bg-[#800020]/10 text-[#800020]',
+    traveling: 'border-[#FF8C00] bg-[#FF8C00]/10 text-[#FF8C00]',
+    education: 'border-[#9370DB] bg-[#9370DB]/10 text-[#9370DB]',
+    subscriptions: 'border-[#20B2AA] bg-[#20B2AA]/10 text-[#20B2AA]',
+    gifts: 'border-[#FF1493] bg-[#FF1493]/10 text-[#FF1493]',
+    taxes: 'border-[#8B4513] bg-[#8B4513]/10 text-[#8B4513]',
+    other: 'border-[#808080] bg-[#808080]/10 text-[#808080]'
+  };
+  return classes[category?.toLowerCase()] || classes.other;
+}
+
+function getTemplateActiveClass(category) {
+  const classes = {
+    housing: 'border-[#4682B4] bg-[#4682B4] text-white shadow-lg shadow-[#4682B4]/30',
+    utilities: 'border-[#0072DF] bg-[#0072DF] text-white shadow-lg shadow-[#0072DF]/30',
+    food: 'border-[#1D9A38] bg-[#1D9A38] text-white shadow-lg shadow-[#1D9A38]/30',
+    dining: 'border-[#FF6347] bg-[#FF6347] text-white shadow-lg shadow-[#FF6347]/30',
+    transport: 'border-[#E6AE2C] bg-[#E6AE2C] text-white shadow-lg shadow-[#E6AE2C]/30',
+    entertainment: 'border-[#6158FF] bg-[#6158FF] text-white shadow-lg shadow-[#6158FF]/30',
+    health: 'border-[#E84A8A] bg-[#E84A8A] text-white shadow-lg shadow-[#E84A8A]/30',
+    fitness: 'border-[#FF4500] bg-[#FF4500] text-white shadow-lg shadow-[#FF4500]/30',
+    personal_care: 'border-[#DDA0DD] bg-[#DDA0DD] text-white shadow-lg shadow-[#DDA0DD]/30',
+    pet: 'border-[#3CAEA3] bg-[#3CAEA3] text-white shadow-lg shadow-[#3CAEA3]/30',
+    clothes: 'border-[#800020] bg-[#800020] text-white shadow-lg shadow-[#800020]/30',
+    traveling: 'border-[#FF8C00] bg-[#FF8C00] text-white shadow-lg shadow-[#FF8C00]/30',
+    education: 'border-[#9370DB] bg-[#9370DB] text-white shadow-lg shadow-[#9370DB]/30',
+    subscriptions: 'border-[#20B2AA] bg-[#20B2AA] text-white shadow-lg shadow-[#20B2AA]/30',
+    gifts: 'border-[#FF1493] bg-[#FF1493] text-white shadow-lg shadow-[#FF1493]/30',
+    taxes: 'border-[#8B4513] bg-[#8B4513] text-white shadow-lg shadow-[#8B4513]/30',
+    other: 'border-[#808080] bg-[#808080] text-white shadow-lg shadow-[#808080]/30'
+  };
+  return classes[category?.toLowerCase()] || classes.other;
 }
 
 function closeModal() {
@@ -591,5 +703,15 @@ defineExpose({
 <style scoped>
 .form-checkbox {
   @apply text-primary border-gray-300 rounded;
+}
+
+/* Hide scrollbar but keep functionality */
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }
 </style>
