@@ -142,7 +142,7 @@
           <div class="flex flex-col p-3 bg-gray-50 rounded-lg">
             <span class="text-xs text-gray-500">Categoría Principal</span>
             <div class="flex items-center gap-2">
-              <span class="capitalize text-xl font-bold text-gray-800">{{ stats.topCategory }}</span>
+              <span class="text-xl font-bold text-gray-800">{{ getCategoryDisplayLabel(stats.topCategory) }}</span>
               <span
                 v-if="stats.topCategoryTrend !== 0"
                 :class="stats.topCategoryTrend >= 0 ? 'text-danger' : 'text-success'"
@@ -192,7 +192,7 @@
             <div v-for="(payment, index) in topPayments" :key="payment.id" class="mb-3">
               <div class="flex justify-between items-center mb-1">
                 <div class="flex items-center">
-                  <div class="w-2 h-10 rounded-full mr-3" :class="`bg-${payment.category.toLowerCase()}`"></div>
+                  <div class="w-2 h-10 rounded-full mr-3" :style="{ backgroundColor: getDisplayCategoryColor(payment) }"></div>
                   <div>
                     <p class="font-medium">{{ payment.title }}</p>
                     <p class="text-xs text-gray-500">{{ payment.isRecurring ? "Recurrente" : "Único" }}</p>
@@ -242,8 +242,31 @@ const { $dayjs } = useNuxtApp();
 // ----- Define Pinia Vars ----------
 const paymentStore = usePaymentStore();
 const recurrentStore = useRecurrentStore();
+const categoryStore = useCategoryStore();
 const { getPayments } = storeToRefs(paymentStore);
 const { getPaymentInstances } = storeToRefs(recurrentStore);
+const { getCategories: categories } = storeToRefs(categoryStore);
+
+// ----- Category Helpers ---------
+function getDisplayCategoryColor(payment) {
+  if (!payment?.categoryId) return '#808080';
+  return categoryStore.getCategoryColor(payment.categoryId);
+}
+
+function getDisplayCategoryName(payment) {
+  if (!payment?.categoryId) return 'Otros';
+  return categoryStore.getCategoryName(payment.categoryId);
+}
+
+function getCategoryDisplayLabel(categoryId) {
+  if (!categoryId) return 'Otros';
+  return categoryStore.getCategoryName(categoryId);
+}
+
+function getCategoryChartColor(categoryId) {
+  if (!categoryId) return '#808080';
+  return categoryStore.getCategoryColor(categoryId);
+}
 
 // ----- Define Refs ---------
 const isLoading = ref(true);
@@ -295,7 +318,7 @@ const combinedPayments = computed(() => {
     return {
       ...payment,
       isRecurring: true,
-      category: recurrentPayment?.category || payment.category
+      categoryId: recurrentPayment?.categoryId || payment.categoryId
     };
   });
 
@@ -527,47 +550,30 @@ async function updateCategoryPieChart() {
 
   categoryDataExists.value = true;
 
-  // Group payments by category
+  // Group payments by categoryId
   const categorySums = {};
 
   monthPayments.forEach((payment) => {
-    const category = payment.category || "other";
-    if (!categorySums[category]) {
-      categorySums[category] = 0;
+    const categoryId = payment.categoryId || "other";
+    if (!categorySums[categoryId]) {
+      categorySums[categoryId] = 0;
     }
-    categorySums[category] += payment.amount;
+    categorySums[categoryId] += payment.amount;
   });
 
   // Convert to arrays for the chart
-  const categories = Object.keys(categorySums);
+  const categoryKeys = Object.keys(categorySums);
   const amounts = Object.values(categorySums);
 
-  // Color mapping for categories
-  const categoryColors = {
-    housing: "rgb(70, 130, 180)", // steel blue
-    utilities: "rgb(0, 114, 223)", // accent blue
-    food: "rgb(29, 154, 56)", // success green
-    dining: "rgb(255, 99, 71)", // tomato red
-    transport: "rgb(230, 174, 44)", // warning yellow
-    entertainment: "rgb(97, 88, 255)", // secondary purple
-    health: "rgb(232, 74, 138)", // danger pink
-    pet: "rgb(60, 174, 163)", // teal for pets
-    clothes: "rgb(128, 0, 32)", // burgundy
-    traveling: "rgb(255, 140, 0)", // dark orange
-    education: "rgb(147, 112, 219)", // medium purple
-    subscriptions: "rgb(32, 178, 170)", // light sea green
-    taxes: "rgb(139, 69, 19)", // brown
-    other: "rgb(128, 128, 128)" // gray for other/default
-  };
-
-  const backgroundColors = categories.map((category) => categoryColors[category] || "rgb(201, 203, 207)");
+  // Get colors dynamically from the store or fallback to legacy colors
+  const backgroundColors = categoryKeys.map((categoryKey) => getCategoryChartColor(categoryKey));
 
   const ctx = document.getElementById("categoryPieChart");
   if (!ctx) return;
 
   // Prepare chart data
   const chartData = {
-    labels: categories.map((c) => c.charAt(0).toUpperCase() + c.slice(1)),
+    labels: categoryKeys.map((key) => getCategoryDisplayLabel(key)),
     datasets: [
       {
         data: amounts,
@@ -708,23 +714,23 @@ function calculateStatistics() {
   // Find top category (using filtered payments)
   const categorySums = {};
   filteredPayments.forEach((payment) => {
-    const category = payment.category || "other";
-    if (!categorySums[category]) {
-      categorySums[category] = 0;
+    const categoryId = payment.categoryId || "other";
+    if (!categorySums[categoryId]) {
+      categorySums[categoryId] = 0;
     }
-    categorySums[category] += payment.amount;
+    categorySums[categoryId] += payment.amount;
   });
 
-  let topCategoryName = "none";
+  let topCategoryId = "other";
   let topCategoryAmount = 0;
-  Object.entries(categorySums).forEach(([category, amount]) => {
+  Object.entries(categorySums).forEach(([categoryId, amount]) => {
     if (amount > topCategoryAmount) {
-      topCategoryName = category;
+      topCategoryId = categoryId;
       topCategoryAmount = amount;
     }
   });
 
-  stats.value.topCategory = topCategoryName;
+  stats.value.topCategory = topCategoryId;
   if (grandTotal > 0) {
     stats.value.topCategoryPercentage = Math.round((topCategoryAmount / grandTotal) * 100);
   } else {
@@ -732,13 +738,13 @@ function calculateStatistics() {
   }
 
   // Category trend (compare first half vs second half of period)
-  if (topCategoryName !== "none" && totalData.length >= 2) {
+  if (topCategoryId !== "other" && totalData.length >= 2) {
     const midPoint = Math.floor(totalData.length / 2);
     let firstHalfCategoryTotal = 0;
     let secondHalfCategoryTotal = 0;
 
     filteredPayments.forEach((payment) => {
-      if ((payment.category || "other") !== topCategoryName) return;
+      if ((payment.categoryId || "other") !== topCategoryId) return;
       const dateField = payment.dueDate || payment.createdAt;
       if (!dateField) return;
       const paymentDate = $dayjs(dateField.toDate());
@@ -824,6 +830,9 @@ async function fetchData() {
 
 // ----- Initialize Data ---------
 onMounted(async () => {
+  // Ensure categories are loaded first
+  await categoryStore.fetchCategories();
+
   await fetchData();
 });
 

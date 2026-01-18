@@ -3,7 +3,7 @@
       <template #header>
         <div class="flex items-center">
           <div v-if="isLoading" class="w-3 h-14 rounded-full mr-3 bg-gray-200 animate-pulse"></div>
-          <div v-else-if="payment" class="w-3 h-14 rounded-full mr-3" :class="`bg-${payment.category.toLowerCase()}`"></div>
+          <div v-else-if="payment" class="w-3 h-14 rounded-full mr-3" :style="{ backgroundColor: getDisplayCategoryColor(payment) }"></div>
           <div>
             <h2 class="text-xl font-bold">
               {{ payment ? payment.title : 'Detalles del Pago' }}
@@ -29,7 +29,7 @@
 
             <div class="flex flex-col">
               <span class="text-sm text-gray-500">Categoría</span>
-              <span class="text-lg capitalize">{{ payment.category }}</span>
+              <span class="text-lg">{{ getDisplayCategoryName(payment) }}</span>
             </div>
 
             <template v-if="isRecurrent">
@@ -178,10 +178,11 @@
   </template>
   
   <script setup>
-  import { ref, computed, watch } from 'vue';
+  import { ref, computed, watch, onMounted } from 'vue';
+  import { storeToRefs } from 'pinia';
   import MdiCheck from '~icons/mdi/check';
   import MdiUndo from '~icons/mdi/undo';
-  
+
   const props = defineProps({
     paymentId: {
       type: String,
@@ -214,9 +215,25 @@
   // ----- Define Stores ---------
   const recurrentStore = useRecurrentStore();
   const paymentStore = usePaymentStore();
+  const categoryStore = useCategoryStore();
+  const { getCategories: categories } = storeToRefs(categoryStore);
+
+  // ----- Category Helpers ---------
+  function getDisplayCategoryName(payment) {
+    if (!payment?.categoryId) return 'Otros';
+    return categoryStore.getCategoryName(payment.categoryId);
+  }
+
+  function getDisplayCategoryColor(payment) {
+    if (!payment?.categoryId) return '#808080';
+    return categoryStore.getCategoryColor(payment.categoryId);
+  }
   
   // ----- Define Methods ---------
   function showModal(paymentId) {
+    // Ensure categories are loaded
+    categoryStore.fetchCategories();
+
     if (paymentId) {
       fetchPaymentDetails(paymentId);
     }

@@ -58,24 +58,13 @@
             <label for="category" class="block text-sm font-medium text-gray-400">Categoría</label>
             <select
               id="category"
-              v-model="form.category"
+              v-model="form.categoryId"
               required
               class="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
             >
-              <option value="housing">Vivienda y Alquiler</option>
-              <option value="utilities">Servicios</option>
-              <option value="food">Supermercado</option>
-              <option value="dining">Salidas</option>
-              <option value="transport">Transporte</option>
-              <option value="entertainment">Entretenimiento</option>
-              <option value="health">Salud</option>
-              <option value="pet">Mascotas</option>
-              <option value="clothes">Ropa</option>
-              <option value="traveling">Viajes</option>
-              <option value="education">Educación</option>
-              <option value="subscriptions">Suscripciones</option>
-              <option value="taxes">Impuestos y Gobierno</option>
-              <option value="other">Otros</option>
+              <option v-for="cat in categories" :key="cat.id" :value="cat.id">
+                {{ cat.name }}
+              </option>
             </select>
           </div>
         </div>
@@ -172,7 +161,8 @@
 </template>
 
 <script setup>
-import { ref, watch, onMounted } from "vue";
+import { ref, watch, onMounted, computed } from "vue";
+import { storeToRefs } from "pinia";
 import { useCurrentUser } from "vuefire";
 import { serverTimestamp, Timestamp } from "firebase/firestore";
 
@@ -189,13 +179,25 @@ const props = defineProps({
 
 const emit = defineEmits(["onClose"]);
 
+// ----- Define Store (must be before computed properties that use them) ---------
+const recurrentStore = useRecurrentStore();
+const categoryStore = useCategoryStore();
+const { getCategories: categories } = storeToRefs(categoryStore);
+const user = useCurrentUser();
+
 // ----- Define Refs ---------
 const modal = ref(null);
 const isLoading = ref(false);
 const isSubmitting = ref(false);
 
+// Get default category ID
+const defaultCategoryId = computed(() => {
+  const otrosCategory = categories.value.find(c => c.name === 'Otros');
+  return otrosCategory?.id || categories.value[0]?.id || '';
+});
+
 // Default form state
-const defaultForm = {
+const getDefaultForm = () => ({
   title: "",
   description: "",
   amount: "",
@@ -203,24 +205,24 @@ const defaultForm = {
   dueDateDay: "",
   endDate: "",
   timePeriod: "monthly",
-  category: "other",
+  categoryId: defaultCategoryId.value,
   isCreditCard: false,
   creditCardId: null
-};
+});
 
-const form = ref({ ...defaultForm });
-
-// ----- Define Store ---------
-const recurrentStore = useRecurrentStore();
-const user = useCurrentUser();
+const form = ref(getDefaultForm());
 
 // ----- Define Methods ---------
 function showModal() {
+  // Fetch categories if not loaded
+  categoryStore.fetchCategories();
+
   if (props.isEdit && props.paymentId) {
     fetchPaymentDetails(props.paymentId);
   } else {
     // Set default date to today
     const { $dayjs } = useNuxtApp();
+    form.value = getDefaultForm();
     form.value.startDate = $dayjs().format("YYYY-MM-DD");
   }
 
@@ -230,7 +232,7 @@ function showModal() {
 function closeModal() {
   // Reset form when closing
   if (!props.isEdit) {
-    form.value = { ...defaultForm };
+    form.value = getDefaultForm();
   }
   modal.value?.close();
   emit("onClose");
@@ -284,7 +286,7 @@ async function fetchPaymentDetails(paymentId) {
       dueDateDay: payment.dueDateDay || "",
       endDate: endDate,
       timePeriod: payment.timePeriod || "monthly",
-      category: payment.category || "other",
+      categoryId: payment.categoryId || defaultCategoryId.value,
       isCreditCard: payment.isCreditCard || false,
       creditCardId: payment.creditCardId || null
     };
@@ -310,7 +312,7 @@ async function savePayment() {
     dueDateDay: form.value.dueDateDay.toString(),
     endDate: form.value.endDate || null,
     timePeriod: form.value.timePeriod,
-    category: form.value.category,
+    categoryId: form.value.categoryId,
     isCreditCard: form.value.isCreditCard,
     creditCardId: form.value.creditCardId
   };

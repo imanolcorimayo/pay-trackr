@@ -142,10 +142,10 @@
               <div class="flex-1 min-w-0">
                 <h3 class="font-semibold text-gray-100 truncate">{{ payment.title }}</h3>
                 <span
-                  class="inline-block mt-1 text-[10px] px-2 py-0.5 rounded-md uppercase tracking-wide font-medium"
-                  :class="getCategoryClasses(payment.category)"
+                  class="inline-block mt-1 text-[10px] px-2 py-0.5 rounded-md tracking-wide font-medium"
+                  :style="{ backgroundColor: getDisplayCategoryColor(payment) + '20', color: getDisplayCategoryColor(payment) }"
                 >
-                  {{ payment.category.replace('_', ' ') }}
+                  {{ getDisplayCategoryName(payment) }}
                 </span>
               </div>
               <div
@@ -234,7 +234,19 @@ const { $dayjs } = useNuxtApp();
 
 // ----- Define Pinia Vars ----------
 const paymentStore = usePaymentStore();
+const categoryStore = useCategoryStore();
 const { getPayments, isLoading: storeLoading } = storeToRefs(paymentStore);
+
+// ----- Category Helpers ---------
+function getDisplayCategoryName(payment) {
+  if (!payment?.categoryId) return 'Otros';
+  return categoryStore.getCategoryName(payment.categoryId);
+}
+
+function getDisplayCategoryColor(payment) {
+  if (!payment?.categoryId) return '#808080';
+  return categoryStore.getCategoryColor(payment.categoryId);
+}
 
 // ----- Define Refs ---------
 const isLoading = ref(true);
@@ -464,6 +476,9 @@ function applySortOrder(orderCriteria) {
 
 // ----- Initialize Data ---------
 onMounted(async () => {
+  // Ensure categories are loaded first
+  await categoryStore.fetchCategories();
+
   await fetchData();
 
   // Keyboard shortcut: Press 'N' to add new payment

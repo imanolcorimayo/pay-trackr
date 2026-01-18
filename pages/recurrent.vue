@@ -97,12 +97,15 @@
               <td class="text-start py-4">
                 <div class="flex items-center">
                   <div
-                    class="w-2 h-10 rounded-full mr-3 shrink-0 !bg-opacity-90"
-                    :class="getCategoryClasses(payment.category.toLowerCase())"
+                    class="w-2 h-10 rounded-full mr-3 shrink-0"
+                    :style="{ backgroundColor: getDisplayCategoryColor(payment) }"
                   ></div>
                   <div class="flex flex-col text-start">
                     <span class="font-medium">{{ payment.title }}</span>
-                    <span class="text-xs text-gray-500">{{ payment.description }}</span>
+                    <span class="text-xs text-gray-500">
+                      <span :style="{ color: getDisplayCategoryColor(payment) }">{{ getDisplayCategoryName(payment) }}</span>
+                      <span v-if="payment.description"> · {{ payment.description }}</span>
+                    </span>
                   </div>
                 </div>
               </td>
@@ -177,13 +180,16 @@
           <!-- Payment Header -->
           <div class="p-4 border-b border-gray-600 flex items-center gap-3 cursor-pointer" @click="showDetails(payment.id)">
             <div
-              class="w-2 h-10 rounded-full shrink-0 !bg-opacity-90"
-              :class="getCategoryClasses(payment.category.toLowerCase())"
+              class="w-2 h-10 rounded-full shrink-0"
+              :style="{ backgroundColor: getDisplayCategoryColor(payment) }"
             ></div>
 
             <div class="flex-1 min-w-0">
               <h3 class="font-medium truncate">{{ payment.title }}</h3>
-              <p class="text-xs text-gray-500 line-clamp-1">{{ payment.description }}</p>
+              <p class="text-xs text-gray-500 line-clamp-1">
+                <span :style="{ color: getDisplayCategoryColor(payment) }">{{ getDisplayCategoryName(payment) }}</span>
+                <span v-if="payment.description"> · {{ payment.description }}</span>
+              </p>
             </div>
 
             <div class="text-right shrink-0">
@@ -279,7 +285,19 @@ const { width } = useWindowSize();
 
 // ----- Define Pinia Vars ----------
 const recurrentStore = useRecurrentStore();
+const categoryStore = useCategoryStore();
 const { getProcessedRecurrents, isDataLoaded, isLoading: storeLoading, getMonthlyTotals } = storeToRefs(recurrentStore);
+
+// ----- Category Helpers ---------
+function getDisplayCategoryColor(payment) {
+  if (!payment?.categoryId) return '#808080';
+  return categoryStore.getCategoryColor(payment.categoryId);
+}
+
+function getDisplayCategoryName(payment) {
+  if (!payment?.categoryId) return 'Otros';
+  return categoryStore.getCategoryName(payment.categoryId);
+}
 
 // ----- Define Refs ---------
 const isLoading = ref(true);
@@ -509,6 +527,9 @@ async function fetchData() {
 
 // ----- Initial Data Load ---------
 onMounted(async () => {
+  // Ensure categories are loaded first
+  await categoryStore.fetchCategories();
+
   await fetchData();
 
   // Apply default sorting - unpaid first

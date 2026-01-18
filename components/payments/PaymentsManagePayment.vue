@@ -5,9 +5,9 @@
         <div class="flex items-center">
           <div v-if="isLoading" class="w-3 h-14 rounded-full mr-3 bg-gray-200 animate-pulse"></div>
           <div
-            v-else-if="form.category"
+            v-else-if="form.categoryId"
             class="w-3 h-14 rounded-full mr-3"
-            :class="getCategoryClass(form.category)"
+            :style="{ backgroundColor: getCategoryColor(form.categoryId) }"
           ></div>
           <div>
             <h2 class="text-xl font-bold">
@@ -131,27 +131,13 @@
               <label for="category" class="block text-sm font-medium text-gray-400">Categoría*</label>
               <select
                 id="category"
-                v-model="form.category"
+                v-model="form.categoryId"
                 required
                 class="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
               >
-                <option value="housing">Vivienda y Alquiler</option>
-                <option value="utilities">Servicios</option>
-                <option value="food">Supermercado</option>
-                <option value="dining">Salidas</option>
-                <option value="transport">Transporte</option>
-                <option value="entertainment">Entretenimiento</option>
-                <option value="health">Salud</option>
-                <option value="fitness">Fitness y Deportes</option>
-                <option value="personal_care">Cuidado Personal</option>
-                <option value="pet">Mascotas</option>
-                <option value="clothes">Ropa</option>
-                <option value="traveling">Viajes</option>
-                <option value="education">Educación</option>
-                <option value="subscriptions">Suscripciones</option>
-                <option value="gifts">Regalos</option>
-                <option value="taxes">Impuestos y Gobierno</option>
-                <option value="other">Otros</option>
+                <option v-for="cat in categories" :key="cat.id" :value="cat.id">
+                  {{ cat.name }}
+                </option>
               </select>
             </div>
           </div>
@@ -302,6 +288,15 @@ const props = defineProps({
 
 const emit = defineEmits(["onClose", "onCreated"]);
 
+// ----- Define Stores (must be before computed properties that use them) ---------
+const recurrentStore = useRecurrentStore();
+const paymentStore = usePaymentStore();
+const templateStore = useTemplateStore();
+const categoryStore = useCategoryStore();
+const { getTemplatesSorted: templates } = storeToRefs(templateStore);
+const { getCategories: categories } = storeToRefs(categoryStore);
+const user = useCurrentUser();
+
 // ----- Define Refs ---------
 const modal = ref(null);
 const confirmDialog = ref(null);
@@ -309,8 +304,16 @@ const isLoading = ref(false);
 const isSubmitting = ref(false);
 
 // Store last used values at component level
-const lastUsedCategory = ref('other');
+const lastUsedCategoryId = ref('');
 const lastUsedDueDate = ref('');
+
+// Get default category ID (first category or empty)
+const defaultCategoryId = computed(() => {
+  if (lastUsedCategoryId.value) return lastUsedCategoryId.value;
+  // Find "Otros" category or use first available
+  const otrosCategory = categories.value.find(c => c.name === 'Otros');
+  return otrosCategory?.id || categories.value[0]?.id || '';
+});
 
 // Default form state
 const defaultForm = computed(() => {
@@ -327,7 +330,7 @@ const defaultForm = computed(() => {
       title: "",
       description: "",
       amount: "",
-      category: lastUsedCategory.value,
+      categoryId: defaultCategoryId.value,
       dueDate: lastUsedDueDate.value || today,
       isPaid: true, // Always mark as paid on creation
       paidDate: lastUsedDueDate.value || today, // Set paidDate same as dueDate
@@ -344,17 +347,13 @@ const amountInput = ref(null);
 const currentTemplate = ref(null); // Track if opened from template
 const templatesExpanded = ref(false);
 
-// ----- Define Stores ---------
-const recurrentStore = useRecurrentStore();
-const paymentStore = usePaymentStore();
-const templateStore = useTemplateStore();
-const { getTemplatesSorted: templates } = storeToRefs(templateStore);
-const user = useCurrentUser();
-
 // ----- Define Methods ---------
 async function showModal(paymentId = null, templateData = null) {
   // Store template for "Add Another" functionality
   currentTemplate.value = templateData;
+
+  // Fetch categories if not already loaded
+  categoryStore.fetchCategories();
 
   // Fetch templates if not already loaded (for quick templates in modal)
   if (!props.isRecurrent && !paymentId) {
@@ -385,7 +384,7 @@ function applyTemplate(templateData) {
     title: templateData.name,
     description: templateData.description || "",
     amount: "",
-    category: templateData.category,
+    categoryId: templateData.categoryId || defaultCategoryId.value,
     dueDate: dueDate,
     isPaid: true,
     paidDate: dueDate,
@@ -432,6 +431,12 @@ function formatAmountForInput(value) {
   const num = typeof value === 'string' ? parseFloat(value) : value;
   if (isNaN(num)) return '';
   return num.toString().replace('.', ','); // Period → Comma for display
+}
+
+// Get category color by ID from store
+function getCategoryColor(categoryId) {
+  if (!categoryId) return '#808080';
+  return categoryStore.getCategoryColor(categoryId);
 }
 
 function getTemplateClass(category) {
@@ -538,7 +543,7 @@ async function fetchPaymentDetails(paymentId) {
           title: payment.title || "",
           description: payment.description || "",
           amount: formatAmountForInput(payment.amount),
-          category: payment.category || "other",
+          categoryId: payment.categoryId || defaultCategoryId.value,
           dueDate: dueDate,
           isPaid: payment.isPaid || true,
           paidDate: paidDate,
@@ -608,7 +613,7 @@ async function savePayment() {
 
     // Save last used values to component state (only on creation, not edit)
     if (!props.isEdit && !props.isRecurrent) {
-      lastUsedCategory.value = form.value.category;
+      lastUsedCategoryId.value = form.value.categoryId;
       lastUsedDueDate.value = form.value.dueDate;
     }
 
@@ -616,7 +621,7 @@ async function savePayment() {
       title: form.value.title,
       description: form.value.description,
       amount: parseAmount(form.value.amount),
-      category: form.value.category,
+      categoryId: form.value.categoryId,
       isPaid: form.value.isPaid,
       paidDate: form.value.isPaid ? Timestamp.fromDate($dayjs(form.value.paidDate).toDate()) : null,
       dueDate: Timestamp.fromDate($dayjs(form.value.dueDate).toDate()), // Set dueDate from form
@@ -663,7 +668,7 @@ async function savePayment() {
         if (saveAsTemplate.value) {
           const templateData = {
             name: form.value.title,
-            category: form.value.category,
+            categoryId: form.value.categoryId,
             ...(form.value.description && { description: form.value.description })
           };
 

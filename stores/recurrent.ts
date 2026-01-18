@@ -25,7 +25,7 @@ interface RecurrentPayment {
   dueDateDay: string;
   endDate: string | null;
   timePeriod: string;
-  category: string;
+  categoryId: string;
   isCreditCard: boolean;
   creditCardId: string | null;
   userId: string;
@@ -37,7 +37,7 @@ interface PaymentInstance {
   title: string;
   description: string;
   amount: number;
-  category: string;
+  categoryId: string;
   isPaid: boolean;
   paidDate: any;
   recurrentId: string;
@@ -59,7 +59,7 @@ interface RecurrentWithMonths {
   description: string;
   amount: number;
   dueDateDay: string;
-  category: string;
+  categoryId: string;
   months: {
     [month: string]: MonthPaymentStatus;
   };
@@ -247,7 +247,7 @@ export const useRecurrentStore = defineStore("recurrent", {
           description: recurrent.description,
           amount: recurrent.amount,
           dueDateDay: recurrent.dueDateDay,
-          category: recurrent.category,
+          categoryId: recurrent.categoryId,
           months: {}
         };
 
@@ -361,7 +361,7 @@ export const useRecurrentStore = defineStore("recurrent", {
           title: recurrent.title,
           description: recurrent.description,
           amount: recurrent.amount,
-          category: recurrent.category,
+          categoryId: recurrent.categoryId,
           isPaid: isPaid,
           paidDate: isPaid ? serverTimestamp() : null,
           recurrentId: recurrentId,
@@ -500,8 +500,7 @@ export const useRecurrentStore = defineStore("recurrent", {
         (recurrent) =>
           recurrent.title.toLowerCase().includes(searchTerm) ||
           recurrent.description.toLowerCase().includes(searchTerm) ||
-          recurrent.amount.toString().includes(searchTerm) ||
-          recurrent.category.toLowerCase().includes(searchTerm)
+          recurrent.amount.toString().includes(searchTerm)
       );
 
       this.processedRecurrents = filteredData;

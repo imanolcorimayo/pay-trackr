@@ -26,46 +26,59 @@ export const formatPrice = (price: number) => {
   }).format(price);
 };
 
-export const getCategoryClasses = (category: string) => {
-  // Default styles for all category badges
-  const baseClasses = "bg-opacity-15";
+// Legacy category string to color mapping (for backward compatibility)
+const CATEGORY_COLORS: Record<string, string> = {
+  utilities: '#0072DF',
+  food: '#1D9A38',
+  transport: '#E6AE2C',
+  entertainment: '#6158FF',
+  health: '#E84A8A',
+  fitness: '#FF4500',
+  personal_care: '#DDA0DD',
+  pet: '#3CAEA3',
+  clothes: '#800020',
+  traveling: '#FF8C00',
+  education: '#9370DB',
+  subscriptions: '#20B2AA',
+  gifts: '#FF1493',
+  taxes: '#8B4513',
+  dining: '#FF6347',
+  housing: '#4682B4',
+  other: '#808080'
+};
 
-  // Map categories to colors
-  switch (category.toLowerCase()) {
-    case "utilities":
-      return `${baseClasses} bg-[#0072DF] text-[#0072DF]`; // accent blue
-    case "food":
-      return `${baseClasses} bg-[#1D9A38] text-[#1D9A38]`; // success green
-    case "transport":
-      return `${baseClasses} bg-[#E6AE2C] text-[#E6AE2C]`; // warning yellow
-    case "entertainment":
-      return `${baseClasses} bg-[#6158FF] text-[#6158FF]`; // secondary purple
-    case "health":
-      return `${baseClasses} bg-[#E84A8A] text-[#E84A8A]`; // danger pink
-    case "fitness":
-      return `${baseClasses} bg-[#FF4500] text-[#FF4500]`; // orange red for fitness
-    case "personal_care":
-      return `${baseClasses} bg-[#DDA0DD] text-[#DDA0DD]`; // plum for personal care
-    case "pet":
-      return `${baseClasses} bg-[#3CAEA3] text-[#3CAEA3]`; // teal for pets
-    case "clothes":
-      return `${baseClasses} bg-[#800020] text-[#800020]`; // burgundy
-    case "traveling":
-      return `${baseClasses} bg-[#FF8C00] text-[#FF8C00]`; // dark orange
-    case "education":
-      return `${baseClasses} bg-[#9370DB] text-[#9370DB]`; // medium purple
-    case "subscriptions":
-      return `${baseClasses} bg-[#20B2AA] text-[#20B2AA]`; // light sea green
-    case "gifts":
-      return `${baseClasses} bg-[#FF1493] text-[#FF1493]`; // deep pink for gifts
-    case "taxes":
-      return `${baseClasses} bg-[#8B4513] text-[#8B4513]`; // brown
-    case "dining":
-      return `${baseClasses} bg-[#FF6347] text-[#FF6347]`; // tomato red
-    case "housing":
-      return `${baseClasses} bg-[#4682B4] text-[#4682B4]`; // steel blue
-    case "other":
-    default:
-      return `${baseClasses} bg-[#808080] text-[#808080]`; // gray for other/default
-  }
+/**
+ * Get Tailwind classes for a category by string key (legacy support)
+ */
+export const getCategoryClasses = (category: string) => {
+  const baseClasses = "bg-opacity-15";
+  const color = CATEGORY_COLORS[category.toLowerCase()] || CATEGORY_COLORS.other;
+  return `${baseClasses} bg-[${color}] text-[${color}]`;
+};
+
+/**
+ * Get Tailwind classes from a hex color (for dynamic categories)
+ */
+export const getCategoryClassesFromColor = (color: string) => {
+  const baseClasses = "bg-opacity-15";
+  const validColor = color && color.startsWith('#') ? color : '#808080';
+  return `${baseClasses} bg-[${validColor}] text-[${validColor}]`;
+};
+
+/**
+ * Get inline styles for a category color (more reliable for dynamic colors)
+ */
+export const getCategoryStyles = (color: string) => {
+  const validColor = color && color.startsWith('#') ? color : '#808080';
+  return {
+    backgroundColor: `${validColor}26`, // 15% opacity in hex
+    color: validColor
+  };
+};
+
+/**
+ * Get the color for a legacy category string
+ */
+export const getCategoryColor = (category: string): string => {
+  return CATEGORY_COLORS[category.toLowerCase()] || CATEGORY_COLORS.other;
 };

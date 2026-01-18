@@ -15,6 +15,9 @@
           <NuxtLink to="/summary" class="nav-tab" :class="{ 'nav-tab-active': route.path === '/summary' }">
             Resumen Financiero
           </NuxtLink>
+          <NuxtLink to="/settings/categories" class="nav-tab" :class="{ 'nav-tab-active': route.path.startsWith('/settings') }">
+            Configuración
+          </NuxtLink>
         </nav>
       </div>
     </div>
