@@ -20,6 +20,11 @@ export default defineNuxtConfig({
     "unplugin-icons/nuxt"
   ],
 
+  dayjs: {
+    locales: ['es'],
+    defaultLocale: 'es',
+  },
+
   ssr: false,
 
   // @ts-ignore
@@ -114,7 +119,7 @@ export default defineNuxtConfig({
 
   app: {
     head: {
-      htmlAttrs: { dir: "ltr", lang: "en" },
+      htmlAttrs: { dir: "ltr", lang: "es" },
       link: [{ rel: "icon", type: "image/png", href: "/img/new-logo.png" }],
       meta: [
         {

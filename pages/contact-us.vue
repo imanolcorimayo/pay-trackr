@@ -2,18 +2,18 @@
     <div class="max-w-[80rem] px-[1.429rem] mx-auto">
         <form v-if="!sending" @submit.prevent="sendContactUsMessage()" class="mt-2 flex flex-col gap-[1rem]">
             <div class="flex flex-col gap-[0.571rem]">
-                <label>Full Name *</label>
-                <input class="form-input" disabled placeholder="Your full name" v-model="contactUs.fullName" required name="title" autocomplete="off" />
+                <label>Nombre Completo *</label>
+                <input class="form-input" disabled placeholder="Tu nombre completo" v-model="contactUs.fullName" required name="title" autocomplete="off" />
             </div>
             <div class="flex flex-col gap-[0.571rem]">
                 <label>Email *</label>
-                <input class="form-input" disabled placeholder="Your email" type="email" v-model="contactUs.email" required name="title" autocomplete="off" />
+                <input class="form-input" disabled placeholder="Tu email" type="email" v-model="contactUs.email" required name="title" autocomplete="off" />
             </div>
             <div class="flex flex-col gap-[0.571rem]">
-                <label>Message *</label>
+                <label>Mensaje *</label>
                 <textarea required v-model="contactUs.message" name="message" autocomplete="off" class="min-h-20 pt-4 form-input" />
             </div>
-            <input class="btn btn-primary" :disabled="disableButton" type="submit" value="Submit">
+            <input class="btn btn-primary" :disabled="disableButton" type="submit" value="Enviar">
         </form>
         <div v-else class="flex justify-center m-10 p-10">
             <Loader size="10" />
@@ -48,17 +48,17 @@ async function sendContactUsMessage() {
 
     // Simple validate name and full name and the message is not empty
     if(contactUs.value.fullName !== user.displayName) {
-        useToast("error", "Full Name is not matching with your account.")
+        useToast("error", "El nombre no coincide con tu cuenta.")
         disableButton.value = false;
         sending.value = false;
         return;
     } else if(contactUs.value.email !== user.email) {
-        useToast("error", "Your email is not matching with your account.")
+        useToast("error", "El email no coincide con tu cuenta.")
         disableButton.value = false;
         sending.value = false;
         return;
     } else if(contactUs.value.message.length == 0) {
-        useToast("error", "Please add some message to the form.")
+        useToast("error", "Por favor agregá un mensaje.")
         disableButton.value = false;
         sending.value = false;
         return;
@@ -70,24 +70,24 @@ async function sendContactUsMessage() {
         const newContactUs = await addDoc(collection(db, "contactUs"), contactUs.value);
     
         // Show success message and redirect to home page
-        useToast("success", "Thank you! Message sent successfully.", { onClick: "goHome", autoClose: 2000 })
+        useToast("success", "¡Gracias! Mensaje enviado correctamente.", { onClick: "goHome", autoClose: 2000 })
         setTimeout(() => {
             navigateTo("/")
         }, 2000)
     } catch (error) {
         console.error(error)
-        useToast("error", "Something went wrong. Please try again later.")
+        useToast("error", "Algo salió mal. Por favor intentá de nuevo más tarde.")
         disableButton.value = false;
         sending.value = false;
     }
 
 }
 useHead({
-    title: 'Contact Us - PayTrackr',
+    title: 'Contacto - PayTrackr',
     meta: [
         {
             name: 'description',
-            content: 'Reach out to provide feedback or any recommendations.'
+            content: 'Escribinos para darnos tu opinión o cualquier recomendación.'
         }
     ]
 })

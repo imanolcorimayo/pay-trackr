@@ -1,7 +1,7 @@
 <template>
   <Modal ref="modal">
     <template #header>
-      <h2 class="text-xl font-bold">{{ isEdit ? "Edit" : "Add" }} Recurring Payment</h2>
+      <h2 class="text-xl font-bold">{{ isEdit ? "Editar" : "Agregar" }} Pago Recurrente</h2>
     </template>
 
     <template #body>
@@ -12,24 +12,24 @@
       <form v-else @submit.prevent="savePayment" class="space-y-6">
         <!-- Payment Title & Description -->
         <div class="space-y-2">
-          <label for="title" class="block text-sm font-medium text-gray-400">Payment Title</label>
+          <label for="title" class="block text-sm font-medium text-gray-400">Título del Pago</label>
           <input
             id="title"
             v-model="form.title"
             type="text"
             required
             class="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
-            placeholder="e.g. Netflix Subscription"
+            placeholder="ej. Suscripción Netflix"
           />
         </div>
 
         <div class="space-y-2">
-          <label for="description" class="block text-sm font-medium text-gray-400">Description (Optional)</label>
+          <label for="description" class="block text-sm font-medium text-gray-400">Descripción (Opcional)</label>
           <textarea
             id="description"
             v-model="form.description"
             class="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
-            placeholder="Add some details about this payment"
+            placeholder="Agregá detalles sobre este pago"
             rows="2"
           ></textarea>
         </div>
@@ -37,44 +37,45 @@
         <!-- Amount & Category -->
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div class="space-y-2">
-            <label for="amount" class="block text-sm font-medium text-gray-400">Amount</label>
+            <label for="amount" class="block text-sm font-medium text-gray-400">Monto</label>
             <div class="relative">
               <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-500">$</span>
               <input
                 id="amount"
                 v-model="form.amount"
-                type="number"
-                step="0.01"
-                min="0"
+                type="text"
+                inputmode="decimal"
+                pattern="[0-9]*[.,]?[0-9]*"
+                @input="normalizeAmount"
                 required
                 class="w-full p-2 pl-7 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
-                placeholder="0.00"
+                placeholder="0,00"
               />
             </div>
           </div>
 
           <div class="space-y-2">
-            <label for="category" class="block text-sm font-medium text-gray-400">Category</label>
+            <label for="category" class="block text-sm font-medium text-gray-400">Categoría</label>
             <select
               id="category"
               v-model="form.category"
               required
               class="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
             >
-              <option value="housing">Housing & Rent</option>
-              <option value="utilities">Utilities</option>
-              <option value="food">Groceries</option>
-              <option value="dining">Dining Out</option>
-              <option value="transport">Transport</option>
-              <option value="entertainment">Entertainment</option>
-              <option value="health">Health</option>
-              <option value="pet">Pet</option>
-              <option value="clothes">Clothes</option>
-              <option value="traveling">Traveling</option>
-              <option value="education">Education</option>
-              <option value="subscriptions">Subscriptions</option>
-              <option value="taxes">Taxes & Government</option>
-              <option value="other">Other</option>
+              <option value="housing">Vivienda y Alquiler</option>
+              <option value="utilities">Servicios</option>
+              <option value="food">Supermercado</option>
+              <option value="dining">Salidas</option>
+              <option value="transport">Transporte</option>
+              <option value="entertainment">Entretenimiento</option>
+              <option value="health">Salud</option>
+              <option value="pet">Mascotas</option>
+              <option value="clothes">Ropa</option>
+              <option value="traveling">Viajes</option>
+              <option value="education">Educación</option>
+              <option value="subscriptions">Suscripciones</option>
+              <option value="taxes">Impuestos y Gobierno</option>
+              <option value="other">Otros</option>
             </select>
           </div>
         </div>
@@ -82,7 +83,7 @@
         <!-- Due Date & Period -->
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div class="space-y-2">
-            <label for="dueDateDay" class="block text-sm font-medium text-gray-400">Due Date Day</label>
+            <label for="dueDateDay" class="block text-sm font-medium text-gray-400">Día de Vencimiento</label>
             <input
               id="dueDateDay"
               v-model="form.dueDateDay"
@@ -91,26 +92,26 @@
               max="31"
               required
               class="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
-              placeholder="Day of month (1-31)"
+              placeholder="Día del mes (1-31)"
             />
             <p v-if="parseInt(form.dueDateDay) > 28" class="text-xs text-warning">
-              Some months have fewer days. Payment may be due on the last day of those months.
+              Algunos meses tienen menos días. El pago puede vencer el último día de esos meses.
             </p>
           </div>
 
           <div class="space-y-2">
-            <label for="timePeriod" class="block text-sm font-medium text-gray-400">Payment Period</label>
+            <label for="timePeriod" class="block text-sm font-medium text-gray-400">Período de Pago</label>
             <select
               id="timePeriod"
               v-model="form.timePeriod"
               required
               class="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
             >
-              <option value="monthly">Monthly</option>
-              <option value="biweekly">Bi-weekly</option>
-              <option value="weekly">Weekly</option>
-              <option value="yearly">Yearly</option>
-              <option value="quarterly">Quarterly</option>
+              <option value="monthly">Mensual</option>
+              <option value="biweekly">Quincenal</option>
+              <option value="weekly">Semanal</option>
+              <option value="yearly">Anual</option>
+              <option value="quarterly">Trimestral</option>
             </select>
           </div>
         </div>
@@ -118,7 +119,7 @@
         <!-- Start & End Dates -->
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div class="space-y-2">
-            <label for="startDate" class="block text-sm font-medium text-gray-400">Start Date</label>
+            <label for="startDate" class="block text-sm font-medium text-gray-400">Fecha de Inicio</label>
             <input
               id="startDate"
               v-model="form.startDate"
@@ -129,7 +130,7 @@
           </div>
 
           <div class="space-y-2">
-            <label for="endDate" class="block text-sm font-medium text-gray-400">End Date (Optional)</label>
+            <label for="endDate" class="block text-sm font-medium text-gray-400">Fecha de Fin (Opcional)</label>
             <input
               id="endDate"
               v-model="form.endDate"
@@ -149,7 +150,7 @@
           @click="closeModal"
           class="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
         >
-          Cancel
+          Cancelar
         </button>
 
         <button
@@ -161,9 +162,9 @@
             <span
               class="inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"
             ></span>
-            Saving...
+            Guardando...
           </span>
-          <span v-else>{{ isEdit ? "Update" : "Create" }} Payment</span>
+          <span v-else>{{ isEdit ? "Actualizar" : "Crear" }} Pago</span>
         </button>
       </div>
     </template>
@@ -235,6 +236,33 @@ function closeModal() {
   emit("onClose");
 }
 
+// AMOUNT CONVERSION: Display uses comma (1234,56), Database uses period (1234.56)
+
+// User input → Display format (comma)
+function normalizeAmount(event) {
+  let value = event.target.value.replace(/[^0-9.,]/g, '');
+  value = value.replace('.', ','); // Period → Comma for display
+  const parts = value.split(',');
+  if (parts.length > 2) value = parts[0] + ',' + parts.slice(1).join('');
+  form.value.amount = value;
+}
+
+// Display format → Database format (for saving)
+function parseAmount(value) {
+  if (typeof value === 'string') {
+    return parseFloat(value.replace(',', '.')) || 0; // Comma → Period for DB
+  }
+  return parseFloat(value) || 0;
+}
+
+// Database format → Display format (for editing)
+function formatAmountForInput(value) {
+  if (!value && value !== 0) return '';
+  const num = typeof value === 'string' ? parseFloat(value) : value;
+  if (isNaN(num)) return '';
+  return num.toString().replace('.', ','); // Period → Comma for display
+}
+
 async function fetchPaymentDetails(paymentId) {
   isLoading.value = true;
 
@@ -251,7 +279,7 @@ async function fetchPaymentDetails(paymentId) {
     form.value = {
       title: payment.title || "",
       description: payment.description || "",
-      amount: payment.amount || "",
+      amount: formatAmountForInput(payment.amount),
       startDate: startDate,
       dueDateDay: payment.dueDateDay || "",
       endDate: endDate,
@@ -267,7 +295,7 @@ async function fetchPaymentDetails(paymentId) {
 
 async function savePayment() {
   if (!user.value) {
-    useToast("error", "You must be logged in to save payments");
+    useToast("error", "Debés iniciar sesión para guardar pagos");
     return;
   }
 
@@ -277,7 +305,7 @@ async function savePayment() {
   const paymentData = {
     title: form.value.title,
     description: form.value.description,
-    amount: parseFloat(form.value.amount),
+    amount: parseAmount(form.value.amount),
     startDate: form.value.startDate,
     dueDateDay: form.value.dueDateDay.toString(),
     endDate: form.value.endDate || null,
@@ -295,10 +323,10 @@ async function savePayment() {
       result = await recurrentStore.updateRecurrentPayment(props.paymentId, paymentData);
 
       if (result) {
-        useToast("success", "Payment updated successfully");
+        useToast("success", "Pago actualizado correctamente");
         closeModal();
       } else {
-        useToast("error", recurrentStore.error || "Failed to update payment");
+        useToast("error", recurrentStore.error || "Error al actualizar el pago");
       }
     } else {
       // Create new payment
@@ -310,15 +338,15 @@ async function savePayment() {
       });
 
       if (result) {
-        useToast("success", "Payment created successfully");
+        useToast("success", "Pago creado correctamente");
         closeModal();
       } else {
-        useToast("error", recurrentStore.error || "Failed to create payment");
+        useToast("error", recurrentStore.error || "Error al crear el pago");
       }
     }
   } catch (error) {
     console.error("Error saving payment:", error);
-    useToast("error", "An unexpected error occurred");
+    useToast("error", "Ocurrió un error inesperado");
   } finally {
     isSubmitting.value = false;
   }

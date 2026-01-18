@@ -2,18 +2,18 @@
   <div class="summary-page">
     <!-- Page Header -->
     <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 p-3 mb-6">
-      <h1 class="text-2xl font-bold">Financial Summary</h1>
+      <h1 class="text-2xl font-bold">Resumen Financiero</h1>
       <div class="flex items-center gap-2">
-        <span class="text-sm text-gray-500">Date Range:</span>
+        <span class="text-sm text-gray-500">Rango de fechas:</span>
         <select
           v-model="monthsToDisplay"
           @change="async () => await updateCharts()"
           class="px-3 py-1.5 rounded-lg border border-gray-300 bg-gray-800 focus:ring-2 focus:ring-primary focus:border-transparent"
         >
-          <option value="3">Last 3 months</option>
-          <option value="6">Last 6 months</option>
-          <option value="12">Last 12 months</option>
-          <option value="24">Last 2 years</option>
+          <option value="3">Últimos 3 meses</option>
+          <option value="6">Últimos 6 meses</option>
+          <option value="12">Últimos 12 meses</option>
+          <option value="24">Últimos 2 años</option>
         </select>
       </div>
     </div>
@@ -56,9 +56,9 @@
       <div class="bg-gray-800 rounded-lg shadow-sm border border-gray-100 p-4">
         <h2 class="text-lg font-semibold mb-2 flex items-center">
           <MdiChartLine class="mr-2 text-primary" />
-          Monthly Spending Trends
+          Tendencias de Gastos Mensuales
         </h2>
-        <p class="text-sm text-gray-500 mb-4">Compare your monthly recurring and one-time expenses</p>
+        <p class="text-sm text-gray-500 mb-4">Compará tus gastos recurrentes y únicos por mes</p>
         <div class="relative h-[350px]">
           <canvas id="monthlyTrendsChart"></canvas>
         </div>
@@ -68,10 +68,10 @@
       <div class="bg-gray-800 rounded-lg shadow-sm border border-gray-100 p-4">
         <h2 class="text-lg font-semibold mb-2 flex items-center">
           <MdiChartPie class="mr-2 text-primary" />
-          Spending Distribution
+          Distribución de Gastos
         </h2>
         <div class="flex justify-between items-center mb-4">
-          <p class="text-sm text-gray-500">See how your money is distributed across categories</p>
+          <p class="text-sm text-gray-500">Mirá cómo se distribuye tu dinero por categoría</p>
           <select
             v-model="selectedMonth"
             @change="updateCategoryPieChart"
@@ -84,7 +84,7 @@
         </div>
         <div v-if="!categoryDataExists" class="flex flex-col items-center justify-center h-[350px] text-gray-400">
           <MdiChartDonut class="text-5xl mb-3" />
-          <p>No payment data for this month</p>
+          <p>No hay datos de pagos para este mes</p>
         </div>
         <div v-else class="relative h-[350px]">
           <canvas id="categoryPieChart"></canvas>
@@ -95,36 +95,36 @@
       <div class="bg-gray-800 rounded-lg shadow-sm border border-gray-100 p-4">
         <h2 class="text-lg font-semibold mb-2 flex items-center">
           <MdiChartMultiple class="mr-2 text-primary" />
-          Key Statistics
+          Estadísticas Clave
         </h2>
-        <p class="text-sm text-gray-500 mb-4">Your financial insights at a glance</p>
+        <p class="text-sm text-gray-500 mb-4">Tus datos financieros de un vistazo</p>
 
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
           <!-- Average Monthly Spend -->
           <div class="flex flex-col p-3 bg-gray-50 rounded-lg">
-            <span class="text-xs text-gray-500">Average Monthly Spend</span>
+            <span class="text-xs text-gray-500">Gasto Mensual Promedio</span>
             <span class="text-xl font-bold text-gray-800">{{ formatPrice(stats.averageMonthlySpend) }}</span>
             <div class="text-sm mt-1">
               <span :class="stats.monthOverMonthChange >= 0 ? 'text-danger' : 'text-success'">
                 {{ stats.monthOverMonthChange >= 0 ? "↑" : "↓" }} {{ Math.abs(stats.monthOverMonthChange).toFixed(1) }}%
               </span>
-              <span class="text-gray-500 ml-1">vs last month</span>
+              <span class="text-gray-500 ml-1">vs mes anterior</span>
             </div>
           </div>
 
           <!-- Peak Spending Month -->
           <div class="flex flex-col p-3 bg-gray-50 rounded-lg">
-            <span class="text-xs text-gray-500">Peak Spending Month</span>
+            <span class="text-xs text-gray-500">Mes con Mayor Gasto</span>
             <span class="text-xl font-bold text-gray-800">{{ stats.peakSpendingMonth || "N/A" }}</span>
             <span class="text-sm text-gray-500">{{ formatPrice(stats.peakSpendingAmount) }}</span>
           </div>
 
           <!-- Recurring vs One-time -->
           <div class="flex flex-col p-3 bg-gray-50 rounded-lg">
-            <span class="text-xs text-gray-500">Recurring vs One-time</span>
+            <span class="text-xs text-gray-500">Recurrentes vs Únicos</span>
             <div class="flex items-center gap-2">
               <span class="text-xl font-bold text-gray-800">{{ stats.recurringPercentage }}%</span>
-              <span class="text-sm text-gray-500">recurring</span>
+              <span class="text-sm text-gray-500">recurrentes</span>
             </div>
             <div class="w-full h-2 bg-gray-200 rounded-full mt-2 overflow-hidden">
               <div class="h-full bg-primary rounded-full" :style="`width: ${stats.recurringPercentage}%`"></div>
@@ -133,14 +133,14 @@
 
           <!-- Avg One-time Transaction -->
           <div class="flex flex-col p-3 bg-gray-50 rounded-lg">
-            <span class="text-xs text-gray-500">Avg One-time Transaction</span>
+            <span class="text-xs text-gray-500">Promedio Pago Único</span>
             <span class="text-xl font-bold text-gray-800">{{ formatPrice(stats.avgOneTimeTransaction) }}</span>
-            <span class="text-sm text-gray-500">per transaction</span>
+            <span class="text-sm text-gray-500">por transacción</span>
           </div>
 
           <!-- Top Expense Category -->
           <div class="flex flex-col p-3 bg-gray-50 rounded-lg">
-            <span class="text-xs text-gray-500">Top Expense Category</span>
+            <span class="text-xs text-gray-500">Categoría Principal</span>
             <div class="flex items-center gap-2">
               <span class="capitalize text-xl font-bold text-gray-800">{{ stats.topCategory }}</span>
               <span
@@ -151,12 +151,12 @@
                 {{ stats.topCategoryTrend >= 0 ? "↑" : "↓" }} {{ Math.abs(stats.topCategoryTrend).toFixed(0) }}%
               </span>
             </div>
-            <span class="text-sm text-gray-500">{{ stats.topCategoryPercentage }}% of total spending</span>
+            <span class="text-sm text-gray-500">{{ stats.topCategoryPercentage }}% del gasto total</span>
           </div>
 
           <!-- Payment Completion Rate -->
           <div class="flex flex-col p-3 bg-gray-50 rounded-lg">
-            <span class="text-xs text-gray-500">Payment Completion Rate</span>
+            <span class="text-xs text-gray-500">Tasa de Pagos Completados</span>
             <span class="text-xl font-bold text-gray-800">{{ stats.paymentCompletionRate }}%</span>
             <div class="w-full h-2 bg-gray-200 rounded-full mt-2 overflow-hidden">
               <div
@@ -179,13 +179,13 @@
       <div class="bg-gray-800 rounded-lg shadow-sm border border-gray-100 p-4">
         <h2 class="text-lg font-semibold mb-2 flex items-center">
           <MdiCreditCardOutline class="mr-2 text-primary" />
-          Payment Breakdown
+          Desglose de Pagos
         </h2>
-        <p class="text-sm text-gray-500 mb-4">See your biggest expenses for {{ selectedMonthName }}</p>
+        <p class="text-sm text-gray-500 mb-4">Mirá tus mayores gastos de {{ selectedMonthName }}</p>
 
         <div v-if="!topPayments.length" class="flex flex-col items-center justify-center h-[350px] text-gray-400">
           <MdiCreditCardOff class="text-5xl mb-3" />
-          <p>No payment data for this month</p>
+          <p>No hay datos de pagos para este mes</p>
         </div>
         <div v-else>
           <div class="overflow-hidden">
@@ -195,7 +195,7 @@
                   <div class="w-2 h-10 rounded-full mr-3" :class="`bg-${payment.category.toLowerCase()}`"></div>
                   <div>
                     <p class="font-medium">{{ payment.title }}</p>
-                    <p class="text-xs text-gray-500">{{ payment.isRecurring ? "Recurring" : "One-time" }}</p>
+                    <p class="text-xs text-gray-500">{{ payment.isRecurring ? "Recurrente" : "Único" }}</p>
                   </div>
                 </div>
                 <p class="font-semibold">{{ formatPrice(payment.amount) }}</p>
@@ -211,7 +211,7 @@
 
           <div class="mt-4 text-center" v-if="hasMorePayments">
             <button @click="showAllPayments = !showAllPayments" class="text-primary text-sm hover:underline">
-              {{ showAllPayments ? "Show less" : "Show all payments" }}
+              {{ showAllPayments ? "Ver menos" : "Ver todos los pagos" }}
             </button>
           </div>
         </div>
@@ -305,9 +305,9 @@ const combinedPayments = computed(() => {
 
 // ----- Define Methods ---------
 function formatPrice(amount) {
-  return new Intl.NumberFormat("en-US", {
+  return new Intl.NumberFormat("es-AR", {
     style: "currency",
-    currency: "USD",
+    currency: "ARS",
     minimumFractionDigits: 2
   }).format(amount || 0);
 }
@@ -387,7 +387,7 @@ async function createMonthlyTrendsChart() {
         order: 3
       },
       {
-        label: "Recurring",
+        label: "Recurrentes",
         data: recurringData,
         borderColor: "rgb(75, 192, 192)",
         backgroundColor: "rgba(75, 192, 192, 0.1)",
@@ -399,7 +399,7 @@ async function createMonthlyTrendsChart() {
         order: 1
       },
       {
-        label: "One-time",
+        label: "Únicos",
         data: oneTimeData,
         borderColor: "rgb(255, 99, 132)",
         backgroundColor: "rgba(255, 99, 132, 0.1)",
@@ -499,7 +499,7 @@ async function createMonthlyTrendsChart() {
       });
     } catch (fallbackError) {
       console.error("Failed to recreate chart after error:", fallbackError);
-      useToast("error", "Failed to render charts");
+      useToast("error", "Error al renderizar los gráficos");
     }
   }
 }
@@ -637,7 +637,7 @@ async function updateCategoryPieChart() {
       });
     } catch (fallbackError) {
       console.error("Failed to recreate chart after error:", fallbackError);
-      useToast("error", "Failed to render category chart");
+      useToast("error", "Error al renderizar el gráfico de categorías");
     }
   }
 }
@@ -813,7 +813,7 @@ async function fetchData() {
     prepareAvailableMonths();
   } catch (error) {
     console.error("Error fetching data:", error);
-    useToast("error", "Failed to load summary data");
+    useToast("error", "Error al cargar los datos del resumen");
   } finally {
     isLoading.value = false;
     // Wait for DOM to render canvas elements, then initialize charts
@@ -834,11 +834,11 @@ watch(monthsToDisplay, async () => {
 
 // ----- Set Page Meta ---------
 useHead({
-  title: "Financial Summary - PayTrackr",
+  title: "Resumen Financiero - PayTrackr",
   meta: [
     {
       name: "description",
-      content: "Get a comprehensive overview of your finances with PayTrackr's detailed summary and analytics."
+      content: "Obtené una visión completa de tus finanzas con el resumen detallado y análisis de PayTrackr."
     }
   ]
 });

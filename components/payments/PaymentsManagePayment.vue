@@ -11,7 +11,7 @@
           ></div>
           <div>
             <h2 class="text-xl font-bold">
-              {{ isEdit ? "Edit" : "Create" }} {{ isRecurrent ? "Recurring" : "One-time" }} Payment
+              {{ isEdit ? "Editar" : "Crear" }} Pago {{ isRecurrent ? "Recurrente" : "Único" }}
             </h2>
             <p class="text-sm text-gray-500" v-if="isEdit && form.title">{{ form.title }}</p>
           </div>
@@ -27,14 +27,14 @@
           <!-- Quick Templates (only for new one-time payments) -->
           <div v-if="!props.isEdit && !props.isRecurrent && templates.length > 0" class="space-y-2">
             <div class="flex items-center justify-between">
-              <span class="text-xs font-medium text-gray-500 uppercase tracking-wider">Quick Add</span>
+              <span class="text-xs font-medium text-gray-500 uppercase tracking-wider">Agregar Rápido</span>
               <button
                 v-if="templates.length > 4"
                 type="button"
                 @click="templatesExpanded = !templatesExpanded"
                 class="text-xs text-primary hover:text-primary/80 transition-colors flex items-center gap-1"
               >
-                {{ templatesExpanded ? 'Collapse' : 'Expand' }}
+                {{ templatesExpanded ? 'Colapsar' : 'Expandir' }}
                 <svg
                   class="w-3 h-3 transition-transform duration-300"
                   :class="{ 'rotate-180': templatesExpanded }"
@@ -76,7 +76,7 @@
 
           <!-- Payment Title & Description -->
           <div class="space-y-2">
-            <label for="title" class="block text-sm font-medium text-gray-400">Payment Title*</label>
+            <label for="title" class="block text-sm font-medium text-gray-400">Título del Pago*</label>
             <input
               id="title"
               v-model="form.title"
@@ -84,7 +84,7 @@
               :disabled="props.isRecurrent"
               required
               class="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
-              placeholder="e.g. Netflix Subscription"
+              placeholder="ej. Suscripción Netflix"
             />
           </div>
 
@@ -94,14 +94,14 @@
               @click="showDescription = !showDescription"
               class="text-sm text-primary hover:text-primary-dark flex items-center gap-1"
             >
-              <span>{{ showDescription ? '− Hide' : '+ Add' }} Description</span>
+              <span>{{ showDescription ? '− Ocultar' : '+ Agregar' }} Descripción</span>
             </button>
             <textarea
               v-if="showDescription"
               id="description"
               v-model="form.description"
               class="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
-              placeholder="Add some details about this payment"
+              placeholder="Agregá detalles sobre este pago"
               rows="2"
             ></textarea>
           </div>
@@ -109,56 +109,56 @@
           <!-- Amount & Category -->
           <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div class="space-y-2">
-              <label for="amount" class="block text-sm font-medium text-gray-400">Amount*</label>
+              <label for="amount" class="block text-sm font-medium text-gray-400">Monto*</label>
               <div class="relative">
                 <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-500">$</span>
                 <input
                   id="amount"
                   ref="amountInput"
                   v-model="form.amount"
-                  type="number"
+                  type="text"
                   inputmode="decimal"
-                  step="0.01"
-                  min="0"
+                  pattern="[0-9]*[.,]?[0-9]*"
+                  @input="normalizeAmount"
                   required
                   class="w-full p-2 pl-7 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
-                  placeholder="0.00"
+                  placeholder="0,00"
                 />
               </div>
             </div>
 
             <div class="space-y-2" v-if="!props.isRecurrent">
-              <label for="category" class="block text-sm font-medium text-gray-400">Category*</label>
+              <label for="category" class="block text-sm font-medium text-gray-400">Categoría*</label>
               <select
                 id="category"
                 v-model="form.category"
                 required
                 class="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
               >
-                <option value="housing">Housing & Rent</option>
-                <option value="utilities">Utilities</option>
-                <option value="food">Groceries</option>
-                <option value="dining">Dining Out</option>
-                <option value="transport">Transport</option>
-                <option value="entertainment">Entertainment</option>
-                <option value="health">Health</option>
-                <option value="fitness">Fitness & Sports</option>
-                <option value="personal_care">Personal Care</option>
-                <option value="pet">Pet</option>
-                <option value="clothes">Clothes</option>
-                <option value="traveling">Traveling</option>
-                <option value="education">Education</option>
-                <option value="subscriptions">Subscriptions</option>
-                <option value="gifts">Gifts</option>
-                <option value="taxes">Taxes & Government</option>
-                <option value="other">Other</option>
+                <option value="housing">Vivienda y Alquiler</option>
+                <option value="utilities">Servicios</option>
+                <option value="food">Supermercado</option>
+                <option value="dining">Salidas</option>
+                <option value="transport">Transporte</option>
+                <option value="entertainment">Entretenimiento</option>
+                <option value="health">Salud</option>
+                <option value="fitness">Fitness y Deportes</option>
+                <option value="personal_care">Cuidado Personal</option>
+                <option value="pet">Mascotas</option>
+                <option value="clothes">Ropa</option>
+                <option value="traveling">Viajes</option>
+                <option value="education">Educación</option>
+                <option value="subscriptions">Suscripciones</option>
+                <option value="gifts">Regalos</option>
+                <option value="taxes">Impuestos y Gobierno</option>
+                <option value="other">Otros</option>
               </select>
             </div>
           </div>
 
           <!-- One-time Payment Fields -->
           <div class="space-y-2" v-if="!props.isRecurrent && !props.isEdit">
-            <label for="dueDate" class="block text-sm font-medium text-gray-400">Payment Date*</label>
+            <label for="dueDate" class="block text-sm font-medium text-gray-400">Fecha de Pago*</label>
             <input
               id="dueDate"
               v-model="form.dueDate"
@@ -176,14 +176,14 @@
                 v-model="saveAsTemplate"
                 class="form-checkbox h-5 w-5 text-primary rounded focus:ring-primary"
               />
-              <span class="text-sm font-medium text-gray-400">Save as template</span>
+              <span class="text-sm font-medium text-gray-400">Guardar como plantilla</span>
             </label>
           </div>
 
           <!-- Edit mode: Show all fields -->
           <div v-if="!props.isRecurrent && props.isEdit" class="space-y-4">
             <div class="space-y-2">
-              <label for="dueDate" class="block text-sm font-medium text-gray-400">Due Date*</label>
+              <label for="dueDate" class="block text-sm font-medium text-gray-400">Fecha de Vencimiento*</label>
               <input
                 id="dueDate"
                 v-model="form.dueDate"
@@ -200,11 +200,11 @@
                   v-model="form.isPaid"
                   class="form-checkbox h-5 w-5 text-primary rounded focus:ring-primary"
                 />
-                <span class="text-sm font-medium text-gray-400">Mark as paid</span>
+                <span class="text-sm font-medium text-gray-400">Marcar como pagado</span>
               </label>
 
               <div v-if="form.isPaid" class="mt-2">
-                <label for="paidDate" class="block text-sm font-medium text-gray-400">Date Paid</label>
+                <label for="paidDate" class="block text-sm font-medium text-gray-400">Fecha de Pago</label>
                 <input
                   id="paidDate"
                   v-model="form.paidDate"
@@ -224,13 +224,13 @@
             @click="addAnother"
             class="px-6 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark transition-colors"
           >
-            Add Another
+            Agregar Otro
           </button>
           <button
             @click="closeModal"
             class="px-6 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
           >
-            Done
+            Listo
           </button>
         </div>
 
@@ -240,7 +240,7 @@
             @click="closeModal"
             class="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
           >
-            Cancel
+            Cancelar
           </button>
 
           <div class="flex space-x-2">
@@ -249,7 +249,7 @@
               @click="confirmDelete"
               class="px-4 py-2 bg-danger/10 text-danger rounded-lg hover:bg-danger/20 transition-colors"
             >
-              Delete
+              Eliminar
             </button>
 
             <button
@@ -261,9 +261,9 @@
                 <span
                   class="inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"
                 ></span>
-                Saving...
+                Guardando...
               </span>
-              <span v-else>{{ isEdit ? "Update" : "Create" }}</span>
+              <span v-else>{{ isEdit ? "Actualizar" : "Crear" }}</span>
             </button>
           </div>
         </div>
@@ -272,8 +272,8 @@
 
     <ConfirmDialogue
       ref="confirmDialog"
-      :message="`Are you sure you want to delete ${form.title}?`"
-      textConfirmButton="Delete"
+      :message="`¿Estás seguro que querés eliminar ${form.title}?`"
+      textConfirmButton="Eliminar"
       @confirm="deletePayment"
     />
   </div>
@@ -407,6 +407,33 @@ function selectTemplate(template) {
   templateStore.incrementUsage(template.id);
 }
 
+// AMOUNT CONVERSION: Display uses comma (1234,56), Database uses period (1234.56)
+
+// User input → Display format (comma)
+function normalizeAmount(event) {
+  let value = event.target.value.replace(/[^0-9.,]/g, '');
+  value = value.replace('.', ','); // Period → Comma for display
+  const parts = value.split(',');
+  if (parts.length > 2) value = parts[0] + ',' + parts.slice(1).join('');
+  form.value.amount = value;
+}
+
+// Display format → Database format (for saving)
+function parseAmount(value) {
+  if (typeof value === 'string') {
+    return parseFloat(value.replace(',', '.')) || 0; // Comma → Period for DB
+  }
+  return parseFloat(value) || 0;
+}
+
+// Database format → Display format (for editing)
+function formatAmountForInput(value) {
+  if (!value && value !== 0) return '';
+  const num = typeof value === 'string' ? parseFloat(value) : value;
+  if (isNaN(num)) return '';
+  return num.toString().replace('.', ','); // Period → Comma for display
+}
+
 function getTemplateClass(category) {
   const classes = {
     housing: 'border-[#4682B4] bg-[#4682B4]/10 text-[#4682B4]',
@@ -486,7 +513,7 @@ async function fetchPaymentDetails(paymentId) {
       if (payment) {
         form.value = {
           title: payment.title || "",
-          amount: payment.amount || ""
+          amount: formatAmountForInput(payment.amount)
         };
       }
     } else {
@@ -510,7 +537,7 @@ async function fetchPaymentDetails(paymentId) {
         form.value = {
           title: payment.title || "",
           description: payment.description || "",
-          amount: payment.amount || "",
+          amount: formatAmountForInput(payment.amount),
           category: payment.category || "other",
           dueDate: dueDate,
           isPaid: payment.isPaid || true,
@@ -524,7 +551,7 @@ async function fetchPaymentDetails(paymentId) {
     }
   } catch (error) {
     console.error("Error fetching payment details:", error);
-    useToast("error", "Failed to load payment details");
+    useToast("error", "Error al cargar los detalles del pago");
   } finally {
     isLoading.value = false;
   }
@@ -566,7 +593,7 @@ function getCategoryClass(category) {
 
 async function savePayment() {
   if (!user.value) {
-    useToast("error", "You must be logged in to save payments");
+    useToast("error", "Debés iniciar sesión para guardar pagos");
     return;
   }
 
@@ -588,7 +615,7 @@ async function savePayment() {
     let paymentData = {
       title: form.value.title,
       description: form.value.description,
-      amount: parseFloat(form.value.amount),
+      amount: parseAmount(form.value.amount),
       category: form.value.category,
       isPaid: form.value.isPaid,
       paidDate: form.value.isPaid ? Timestamp.fromDate($dayjs(form.value.paidDate).toDate()) : null,
@@ -600,12 +627,12 @@ async function savePayment() {
     if (props.isRecurrent) {
       paymentData = {
         title: form.value.title,
-        amount: parseFloat(form.value.amount)
+        amount: parseAmount(form.value.amount)
       };
     }
 
     if (props.isRecurrent && !props.isEdit) {
-      useToast("error", "Recurrent payments cannot be created from this form");
+      useToast("error", "Los pagos recurrentes no se pueden crear desde este formulario");
       isSubmitting.value = false;
       return;
     }
@@ -615,11 +642,11 @@ async function savePayment() {
       result = await paymentStore.updatePayment(props.paymentId, paymentData);
 
       if (result) {
-        useToast("success", "Payment updated successfully");
+        useToast("success", "Pago actualizado correctamente");
         emit("onCreated");
         closeModal();
       } else {
-        useToast("error", paymentStore.error || "Failed to update payment");
+        useToast("error", paymentStore.error || "Error al actualizar el pago");
       }
     } else {
       // Create new payment
@@ -629,7 +656,7 @@ async function savePayment() {
       });
 
       if (result && result.success) {
-        useToast("success", "Payment created successfully");
+        useToast("success", "Pago creado correctamente");
         emit("onCreated");
 
         // Save as template if checkbox is checked
@@ -646,12 +673,12 @@ async function savePayment() {
         // Ask if user wants to continue adding payments
         continueAdding.value = true;
       } else {
-        useToast("error", paymentStore.error || "Failed to create payment");
+        useToast("error", paymentStore.error || "Error al crear el pago");
       }
     }
   } catch (error) {
     console.error("Error saving payment:", error);
-    useToast("error", "An unexpected error occurred");
+    useToast("error", "Ocurrió un error inesperado");
   } finally {
     isSubmitting.value = false;
   }
@@ -669,15 +696,15 @@ async function deletePayment() {
     const result = await paymentStore.deletePayment(props.paymentId);
 
     if (result) {
-      useToast("success", "Payment deleted successfully");
+      useToast("success", "Pago eliminado correctamente");
       emit("onCreated");
       closeModal();
     } else {
-      useToast("error", paymentStore.error || "Failed to delete payment");
+      useToast("error", paymentStore.error || "Error al eliminar el pago");
     }
   } catch (error) {
     console.error("Error deleting payment:", error);
-    useToast("error", "An unexpected error occurred");
+    useToast("error", "Ocurrió un error inesperado");
   } finally {
     isSubmitting.value = false;
   }

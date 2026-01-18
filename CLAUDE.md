@@ -208,3 +208,68 @@ recurrent/{document-id}/
 3. **Implement proper TypeScript types**
 4. **Cache frequently accessed data locally**
 5. **Handle user authentication state changes**
+
+## Localization & Language
+
+### UI Language: Spanish Only
+- **Axiom**: All user-facing text must be in Spanish
+- No internationalization (i18n) framework - direct Spanish text in components
+- HTML lang attribute set to `"es"` in `nuxt.config.ts`
+- All labels, buttons, placeholders, messages, and notifications in Spanish
+
+### Number & Currency Formatting
+- **Axiom**: Use Argentine locale (`es-AR`) for all number formatting
+- **Currency**: ARS (Argentine Pesos) as default (multi-currency support planned)
+- **Decimal separator**: `,` (comma) - e.g., `$1.234,56`
+- **Thousands separator**: `.` (period) - e.g., `$1.234,56`
+- **Format function**: Always use `Intl.NumberFormat('es-AR', ...)` or `toLocaleString('es-AR', ...)`
+- **CRITICAL**: Never hardcode `en-US` locale for number/currency formatting
+
+### Amount Input Conversion
+- **Display**: Uses comma (`,`) as decimal separator (e.g., `1234,56`)
+- **Database**: Uses period (`.`) as decimal separator (e.g., `1234.56` stored as number)
+- **Conversion functions** in payment forms:
+  - `normalizeAmount()`: User input → Display (period → comma)
+  - `parseAmount()`: Display → Database (comma → period)
+  - `formatAmountForInput()`: Database → Display (period → comma)
+
+### Date Formatting
+- **Axiom**: Use Spanish locale with DayJS
+- Configure DayJS with Spanish locale (`es`) in nuxt.config
+- Use Spanish date format patterns (e.g., `D [de] MMMM [de] YYYY`)
+- Month and day names must display in Spanish
+
+### Formatting Utilities
+All formatting should use centralized utilities in `/utils/index.ts`:
+```typescript
+// Currency formatting - Argentine locale
+export const formatPrice = (price: number) => {
+  return new Intl.NumberFormat('es-AR', {
+    style: 'currency',
+    currency: 'ARS',
+    minimumFractionDigits: 2
+  }).format(price);
+};
+
+// Date formatting - Spanish locale
+// Use $dayjs with Spanish locale configured
+```
+
+### Category Labels (Spanish)
+- Vivienda y Alquiler (Housing & Rent)
+- Servicios (Utilities)
+- Supermercado (Groceries/Food)
+- Salidas (Dining Out)
+- Transporte (Transport)
+- Entretenimiento (Entertainment)
+- Salud (Health)
+- Fitness y Deportes (Fitness & Sports)
+- Cuidado Personal (Personal Care)
+- Mascotas (Pet)
+- Ropa (Clothes)
+- Viajes (Traveling)
+- Educación (Education)
+- Suscripciones (Subscriptions)
+- Regalos (Gifts)
+- Impuestos y Gobierno (Taxes & Government)
+- Otros (Other)

@@ -116,7 +116,7 @@ export const useRecurrentStore = defineStore("recurrent", {
       const db = useFirestore();
 
       if (!user || !user.value) {
-        this.$state.error = "User not authenticated";
+        this.$state.error = "Usuario no autenticado";
         return false;
       }
 
@@ -140,7 +140,7 @@ export const useRecurrentStore = defineStore("recurrent", {
         return true;
       } catch (error) {
         console.error("Error fetching recurrent payments:", error);
-        this.$state.error = "Failed to fetch recurrent payments";
+        this.$state.error = "Error al obtener los pagos recurrentes";
         return false;
       } finally {
         this.isLoading = false;
@@ -152,7 +152,7 @@ export const useRecurrentStore = defineStore("recurrent", {
       const { $dayjs } = useNuxtApp();
 
       if (!user || !user.value) {
-        this.$state.error = "User not authenticated";
+        this.$state.error = "Usuario no autenticado";
         return false;
       }
 
@@ -191,7 +191,7 @@ export const useRecurrentStore = defineStore("recurrent", {
         return true;
       } catch (error) {
         console.error("Error fetching payment instances:", error);
-        this.$state.error = "Failed to fetch payment instances";
+        this.$state.error = "Error al obtener las instancias de pago";
         return false;
       } finally {
         this.isLoading = false;
@@ -218,7 +218,7 @@ export const useRecurrentStore = defineStore("recurrent", {
         return true;
       } catch (error) {
         console.error("Error creating recurrent payment:", error);
-        this.$state.error = "Failed to create recurrent payment";
+        this.$state.error = "Error al crear el pago recurrente";
         return false;
       } finally {
         this.isLoading = false;
@@ -314,7 +314,7 @@ export const useRecurrentStore = defineStore("recurrent", {
         return true;
       } catch (error) {
         console.error("Error toggling payment status:", error);
-        this.$state.error = "Failed to update payment status";
+        this.$state.error = "Error al actualizar el estado del pago";
         return false;
       } finally {
         this.isLoading = false;
@@ -328,7 +328,7 @@ export const useRecurrentStore = defineStore("recurrent", {
       $dayjs.extend(customParseFormat);
 
       if (!user || !user.value) {
-        this.$state.error = "User not authenticated";
+        this.$state.error = "Usuario no autenticado";
         return false;
       }
 
@@ -338,7 +338,7 @@ export const useRecurrentStore = defineStore("recurrent", {
         // Find the recurrent payment
         const recurrent = this.recurrentPayments.find((r) => r.id === recurrentId);
         if (!recurrent) {
-          this.$state.error = "Recurrent payment not found";
+          this.$state.error = "Pago recurrente no encontrado";
           return false;
         }
 
@@ -383,7 +383,7 @@ export const useRecurrentStore = defineStore("recurrent", {
         return true;
       } catch (error) {
         console.error("Error creating payment instance:", error);
-        this.$state.error = "Failed to create payment instance";
+        this.$state.error = "Error al crear la instancia de pago";
         return false;
       } finally {
         this.isLoading = false;
@@ -411,7 +411,7 @@ export const useRecurrentStore = defineStore("recurrent", {
         return true;
       } catch (error) {
         console.error("Error updating recurrent payment:", error);
-        this.$state.error = "Failed to update recurrent payment";
+        this.$state.error = "Error al actualizar el pago recurrente";
         return false;
       } finally {
         this.isLoading = false;
@@ -426,7 +426,7 @@ export const useRecurrentStore = defineStore("recurrent", {
         // Step 1: Find all payment instances associated with this recurrent payment
         const user = useCurrentUser();
         if (!user || !user.value) {
-          this.$state.error = "User not authenticated";
+          this.$state.error = "Usuario no autenticado";
           return false;
         }
 
@@ -459,7 +459,7 @@ export const useRecurrentStore = defineStore("recurrent", {
         return true;
       } catch (error: any) {
         console.error("Error deleting recurrent payment:", error);
-        this.$state.error = `Failed to delete payment: ${error.message || "Unknown error"}`;
+        this.$state.error = `Error al eliminar el pago: ${error.message || "Error desconocido"}`;
         return false;
       } finally {
         this.isLoading = false;

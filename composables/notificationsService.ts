@@ -28,13 +28,13 @@ export function useNotifications() {
 
     try {
       const { title, amount, category, dueDateDay } = payment;
-      const amountFormatted = new Intl.NumberFormat('en-US', {
+      const amountFormatted = new Intl.NumberFormat('es-AR', {
         style: 'currency',
-        currency: 'USD',
+        currency: 'ARS',
       }).format(amount);
 
-      const notification = new Notification('Payment Due Reminder', {
-        body: `Your payment for ${title} (${amountFormatted}) is due on day ${dueDateDay}`,
+      const notification = new Notification('Recordatorio de Pago', {
+        body: `Tu pago de ${title} (${amountFormatted}) vence el día ${dueDateDay}`,
         icon: '/img/new-logo.png',
         badge: '/img/new-logo.png',
         tag: `payment-${payment.id}`,

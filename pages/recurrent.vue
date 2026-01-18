@@ -75,9 +75,9 @@
         <table class="w-full table-fixed">
           <thead class="text-center">
             <tr class="border-b border-gray-600 h-12">
-              <th scope="col" class="text-start font-semibold">Payment</th>
-              <th scope="col" class="w-20 font-semibold">Amount</th>
-              <th scope="col" class="w-16 font-semibold">Day</th>
+              <th scope="col" class="text-start font-semibold">Pago</th>
+              <th scope="col" class="w-20 font-semibold">Monto</th>
+              <th scope="col" class="w-16 font-semibold">Día</th>
               <th v-for="month in months" :key="`${month.key}-${month.year}`" class="font-semibold">
                 {{ month.display }}
                 <span v-if="month.year !== currentYear" class="text-xs text-gray-500"
@@ -160,8 +160,8 @@
             <tr v-if="recurrents.length === 0">
               <td colspan="100%" class="py-10 text-center text-gray-500">
                 <MdiCashOff class="text-5xl mx-auto mb-3 opacity-30" />
-                <p>No recurrent payments found</p>
-                <button @click="showNewPaymentModal" class="btn btn-primary mt-3">Add Payment</button>
+                <p>No se encontraron pagos recurrentes</p>
+                <button @click="showNewPaymentModal" class="btn btn-primary mt-3">Agregar Pago</button>
               </td>
             </tr>
           </tbody>
@@ -188,7 +188,7 @@
 
             <div class="text-right shrink-0">
               <span class="font-medium block">{{ formatPrice(payment.amount) }}</span>
-              <span class="text-xs text-gray-500">Day: {{ payment.dueDateDay }}</span>
+              <span class="text-xs text-gray-500">Día: {{ payment.dueDateDay }}</span>
             </div>
           </div>
 
@@ -247,8 +247,8 @@
         <!-- Empty State -->
         <div v-if="recurrents.length === 0" class="py-10 text-center text-gray-500">
           <MdiCashOff class="text-5xl mx-auto mb-3 opacity-30" />
-          <p>No recurrent payments found</p>
-          <button @click="showNewPaymentModal" class="btn btn-primary mt-3">Add Payment</button>
+          <p>No se encontraron pagos recurrentes</p>
+          <button @click="showNewPaymentModal" class="btn btn-primary mt-3">Agregar Pago</button>
         </div>
       </div>
     </div>
@@ -378,13 +378,13 @@ async function togglePaymentStatus(recurrentId, month) {
 
   togglingPayment.value = null;
   if (result) {
-    useToast("success", `Payment marked as ${!currentStatus ? "paid" : "unpaid"}`);
+    useToast("success", `Pago marcado como ${!currentStatus ? "pagado" : "no pagado"}`);
     // Preserve current sort order after status change
     if (currentSortOrder.value.name) {
       applySortOrder(currentSortOrder.value);
     }
   } else {
-    useToast("error", recurrentStore.error || "Failed to update payment status");
+    useToast("error", recurrentStore.error || "Error al actualizar el estado del pago");
   }
 }
 
@@ -393,13 +393,13 @@ async function createPaymentForMonth(recurrentId, month, isPaid = false) {
   const result = await recurrentStore.addNewPaymentInstance(recurrentId, month, isPaid);
 
   if (result) {
-    useToast("success", "Payment instance created");
+    useToast("success", "Instancia de pago creada");
     // Preserve current sort order after creating payment
     if (currentSortOrder.value.name) {
       applySortOrder(currentSortOrder.value);
     }
   } else {
-    useToast("error", recurrentStore.error || "Failed to create payment instance");
+    useToast("error", recurrentStore.error || "Error al crear instancia de pago");
   }
 }
 
@@ -489,9 +489,9 @@ function showNewPaymentModal() {
 
 // Format price/currency
 function formatPrice(amount) {
-  return new Intl.NumberFormat("en-US", {
+  return new Intl.NumberFormat("es-AR", {
     style: "currency",
-    currency: "USD",
+    currency: "ARS",
     minimumFractionDigits: 2
   }).format(amount);
 }
@@ -526,11 +526,11 @@ watch(getProcessedRecurrents, (newVal) => {
 
 // ----- Meta ---------
 useHead({
-  title: "Recurring Payments - PayTrackr",
+  title: "Pagos Recurrentes - PayTrackr",
   meta: [
     {
       name: "description",
-      content: "Track and manage your recurring monthly expenses"
+      content: "Seguí y gestioná tus gastos mensuales recurrentes"
     }
   ]
 });

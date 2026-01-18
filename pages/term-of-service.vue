@@ -2,65 +2,68 @@
   <div class="py-6 w-full">
     <div class="container max-w-[80rem] m-auto px-[1.429rem]">
       <div class="prose prose-gray dark:prose-invert max-w-none">
-        <h1>Terms of Service</h1>
+        <h1>Términos y Condiciones de Uso</h1>
         <p>
-          Welcome to WiseUtils (PayTrackr Section) Terms of Service. By accessing or using the Website, you agree to
-          comply with and be bound by the following terms and conditions ("Terms of Service").
-          Please read these Terms of Service carefully before accessing or using the Website.
+          Bienvenido a WiseUtils (Sección PayTrackr). Al acceder o utilizar el Sitio Web, aceptás
+          cumplir y estar sujeto a los siguientes términos y condiciones ("Términos y Condiciones").
+          Por favor leé estos Términos y Condiciones cuidadosamente antes de acceder o utilizar el Sitio Web.
         </p>
-        <h2 class="mt-4">Acceptance of Terms</h2>
+        <h2 class="mt-4">Aceptación de los Términos</h2>
         <p>
-          By accessing or using the Website, you agree to be bound by these Terms of Service.
-          If you do not agree with any part of these terms, you may not access the Website.
+          Al acceder o utilizar el Sitio Web, aceptás estar sujeto a estos Términos y Condiciones.
+          Si no estás de acuerdo con alguna parte de estos términos, no podés acceder al Sitio Web.
         </p>
-        <h2 class="mt-4">Use of the Website</h2>
+        <h2 class="mt-4">Uso del Sitio Web</h2>
         <p>
-          The Website allows users to manage their monthly payments by adding, editing, deleting payments, viewing
-          payment history,
-          and marking payments as paid or unpaid.
+          El Sitio Web permite a los usuarios gestionar sus pagos mensuales agregando, editando, eliminando pagos,
+          viendo el historial de pagos y marcando pagos como pagados o no pagados.
         </p>
-        <h2 class="mt-4">User Responsibilities</h2>
+        <h2 class="mt-4">Responsabilidades del Usuario</h2>
         <p>
-          You are responsible for maintaining the confidentiality of your account and password and for restricting
-          access to your computer. You agree to accept responsibility for all activities that occur under your account
-          or password.
-        </p>
-        <p>
-          You agree not to use the Website for any unlawful purpose or to violate any applicable laws or regulations.
-        </p>
-        <h2 class="mt-4">Data Management</h2>
-        <p>
-          The Website utilizes Firebase for data management.
-          Your data is subject to
-          <a style="color: var(--primary-bg-color);" href="https://firebase.google.com/terms/">Firebase's security rules
-            and policies</a>.
-          We do not manage any money or financial transactions through the Website.
-        </p>
-        <h2 class="mt-4">Limitation of Liability</h2>
-        <p>
-          The Website is provided on an "as is" and "as available" basis. 
-          We do not warrant that the Website will be uninterrupted, timely, secure, or error-free.
+          Sos responsable de mantener la confidencialidad de tu cuenta y contraseña, y de restringir
+          el acceso a tu dispositivo. Aceptás asumir la responsabilidad de todas las actividades que ocurran
+          bajo tu cuenta o contraseña.
         </p>
         <p>
-          In no event shall we be liable for any direct, indirect, incidental, special, consequential, or punitive damages arising out of or related to the use of the Website.
+          Aceptás no utilizar el Sitio Web para ningún propósito ilegal o que viole las leyes o regulaciones aplicables.
         </p>
-        <h2 class="mt-4">Changes to Terms of Service</h2>
+        <h2 class="mt-4">Gestión de Datos</h2>
         <p>
-          We reserve the right to modify or update these Terms of Service at any time. Any changes will be effective immediately upon posting on the Website. Your continued use of the Website after the posting of revised Terms of Service constitutes your acceptance of such changes.
+          El Sitio Web utiliza Firebase para la gestión de datos.
+          Tus datos están sujetos a las
+          <a style="color: var(--primary-bg-color);" href="https://firebase.google.com/terms/">reglas de seguridad
+            y políticas de Firebase</a>.
+          No gestionamos dinero ni transacciones financieras a través del Sitio Web.
         </p>
-        <h2 class="mt-4">Termination</h2>
+        <h2 class="mt-4">Limitación de Responsabilidad</h2>
         <p>
-          We reserve the right to terminate or suspend your account and access to the Website at any time without prior notice or liability for any reason whatsoever.
+          El Sitio Web se proporciona "tal cual" y "según disponibilidad".
+          No garantizamos que el Sitio Web funcione sin interrupciones, de manera oportuna, segura o sin errores.
         </p>
-        <h2 class="mt-4">Contact Information</h2>
         <p>
-          If you have any questions about these Terms of Service, please contact us using the 
-          <NuxtLink href="/contact-us">Contact Us</NuxtLink> 
-          page.
+          En ningún caso seremos responsables por daños directos, indirectos, incidentales, especiales,
+          consecuentes o punitivos que surjan del uso del Sitio Web o estén relacionados con él.
         </p>
-        <h2 class="mt-4">Effective Date</h2>
+        <h2 class="mt-4">Cambios en los Términos y Condiciones</h2>
         <p>
-          These Terms of Service are effective as of 2024, March 29th.
+          Nos reservamos el derecho de modificar o actualizar estos Términos y Condiciones en cualquier momento.
+          Cualquier cambio entrará en vigencia inmediatamente después de su publicación en el Sitio Web.
+          Tu uso continuado del Sitio Web después de la publicación de los Términos y Condiciones revisados
+          constituye tu aceptación de dichos cambios.
+        </p>
+        <h2 class="mt-4">Terminación</h2>
+        <p>
+          Nos reservamos el derecho de terminar o suspender tu cuenta y acceso al Sitio Web en cualquier momento
+          sin previo aviso ni responsabilidad por cualquier motivo.
+        </p>
+        <h2 class="mt-4">Información de Contacto</h2>
+        <p>
+          Si tenés alguna pregunta sobre estos Términos y Condiciones, por favor contactanos usando la página de
+          <NuxtLink href="/contact-us">Contacto</NuxtLink>.
+        </p>
+        <h2 class="mt-4">Fecha de Vigencia</h2>
+        <p>
+          Estos Términos y Condiciones están vigentes desde el 29 de marzo de 2024.
         </p>
       </div>
     </div>
@@ -73,11 +76,11 @@ definePageMeta({
 })
 
 useHead({
-    title: 'Terms Of Service - PayTrackr',
+    title: 'Términos y Condiciones - PayTrackr',
     meta: [
         {
             name: 'description',
-            content: 'Learn the PayTrackr\'s terms of service.'
+            content: 'Conocé los términos y condiciones de uso de PayTrackr.'
         }
     ]
 })

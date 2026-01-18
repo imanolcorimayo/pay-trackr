@@ -2,8 +2,8 @@
     <div class="mx-auto">
         <TheHeader />
         <div class="text-center mb-6">
-            <h1>Contact Us!</h1>
-            <span>We welcome any recommendations 🚀</span>
+            <h1>Contactanos</h1>
+            <span>Recibimos cualquier recomendación</span>
         </div>
         <slot />
     </div>

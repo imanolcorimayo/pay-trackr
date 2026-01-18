@@ -5,17 +5,17 @@
         <img class="no-flex" src="/img/new-logo.png" alt="Logo Created With my.logomakr.com" width="200">
       </div>
       <div class="flex flex-col justify-center gap-[0.571rem] text-center">
-        <h1>Welcome To Pay Tracker!</h1>
-        <span>Join the community for free and manage your finance 😎</span>
+        <h1>¡Bienvenido a PayTrackr!</h1>
+        <span>Unite a la comunidad gratis y gestioná tus finanzas</span>
       </div>
       <div class="flex flex-col items-center">
         <button class="w-full max-w-80 btn btn-primary" @click="googleSignIn">
           <div class="flex items-center justify-center gap-[0.571rem]">
             <FlatColorIconsGoogle class="text-[1.5rem]"/>
-            <span class="">Sign-In With Google</span>
+            <span class="">Iniciar Sesión con Google</span>
           </div>
         </button>
-        <span class="text-xs sticky block">By signing in you accept the <NuxtLink to="/term-of-service" target="_blank" class="font-semibold underline">terms of service</NuxtLink></span>
+        <span class="text-xs sticky block">Al iniciar sesión aceptás los <NuxtLink to="/term-of-service" target="_blank" class="font-semibold underline">términos de servicio</NuxtLink></span>
       </div>
     </div>
   </div>
@@ -52,11 +52,11 @@ function googleSignIn() {
 }
 
 useHead({
-  title: 'Welcome To PayTrackr',
+  title: 'Bienvenido a PayTrackr',
   meta: [
     {
       name: 'description',
-      content: 'Web page to keep tracking your main expenses and keep your life organized'
+      content: 'Plataforma web para seguir tus gastos principales y mantener tu vida organizada'
     }
   ],
 

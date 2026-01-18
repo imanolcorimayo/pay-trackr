@@ -17,7 +17,7 @@
     <div v-if="!isLoading" class="fixed bottom-6 right-6 z-10 group">
       <!-- Tooltip -->
       <div class="absolute bottom-full right-0 mb-2 px-3 py-1.5 bg-gray-800 text-white text-sm rounded-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none shadow-lg">
-        Add Payment
+        Agregar Pago
         <span class="text-gray-400 ml-1 text-xs">(N)</span>
       </div>
       <button
@@ -52,9 +52,9 @@
       <div class="px-3 pt-2">
         <div class="flex items-center justify-between">
           <div>
-            <h1 class="text-2xl font-bold">One-Time Payments</h1>
+            <h1 class="text-2xl font-bold">Pagos Únicos</h1>
             <p class="text-sm text-gray-500">
-              {{ payments.length }} payment{{ payments.length !== 1 ? 's' : '' }} this month
+              {{ payments.length }} pago{{ payments.length !== 1 ? 's' : '' }} este mes
             </p>
           </div>
         </div>
@@ -116,16 +116,16 @@
           <div class="w-20 h-20 rounded-full bg-gray-800 flex items-center justify-center mb-4">
             <MdiCashOff class="text-4xl text-gray-600" />
           </div>
-          <h3 class="text-lg font-medium text-gray-300 mb-1">No payments yet</h3>
+          <h3 class="text-lg font-medium text-gray-300 mb-1">Aún no hay pagos</h3>
           <p class="text-sm text-gray-500 mb-6 max-w-xs">
-            Track your one-time expenses like groceries, bills, or purchases for {{ currentMonth }}.
+            Registrá tus gastos únicos como compras, facturas o servicios de {{ currentMonth }}.
           </p>
           <button
             @click="showNewPayment"
             class="px-5 py-2.5 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors flex items-center gap-2 font-medium"
           >
             <MdiPlus class="text-lg" />
-            Add First Payment
+            Agregar Primer Pago
           </button>
         </div>
 
@@ -192,7 +192,7 @@
                 <MdiLoading v-if="togglingPayment === payment.id" class="animate-spin text-base" />
                 <MdiCheck v-else-if="!payment.isPaid" class="text-base" />
                 <MdiUndo v-else class="text-base" />
-                {{ payment.isPaid ? "Unpaid" : "Mark Paid" }}
+                {{ payment.isPaid ? "No Pagado" : "Marcar Pagado" }}
               </button>
               <button
                 @click.stop="showEdit(payment.id)"
@@ -278,9 +278,9 @@ const monthTotals = computed(() => {
 // ----- Define Methods ---------
 // Format price to currency
 function formatPrice(amount) {
-  return new Intl.NumberFormat("en-US", {
+  return new Intl.NumberFormat("es-AR", {
     style: "currency",
-    currency: "USD",
+    currency: "ARS",
     minimumFractionDigits: 2
   }).format(amount || 0);
 }
@@ -288,7 +288,7 @@ function formatPrice(amount) {
 // Format date
 function formatDate(timestamp) {
   if (!timestamp) return "";
-  return $dayjs(timestamp.toDate()).format("MMM D, YYYY");
+  return $dayjs(timestamp.toDate()).format("D [de] MMM, YYYY");
 }
 
 // Check if a date is in the past
@@ -327,7 +327,7 @@ async function fetchData() {
     applySortOrder(currentSortOrder.value);
   } catch (error) {
     console.error("Error fetching payments:", error);
-    useToast("error", "Failed to load payments");
+    useToast("error", "Error al cargar los pagos");
   } finally {
     isLoading.value = false;
   }
@@ -364,7 +364,7 @@ async function togglePaymentStatus(paymentId, isPaid) {
     const result = await paymentStore.togglePaymentStatus(paymentId, isPaid);
 
     if (result) {
-      useToast("success", `Payment marked as ${isPaid ? "paid" : "unpaid"}`);
+      useToast("success", `Pago marcado como ${isPaid ? "pagado" : "no pagado"}`);
 
       // Update local state
       const index = payments.value.findIndex((p) => p.id === paymentId);
@@ -376,11 +376,11 @@ async function togglePaymentStatus(paymentId, isPaid) {
       // Preserve current sort order after status change
       applySortOrder(currentSortOrder.value);
     } else {
-      useToast("error", paymentStore.error || "Failed to update payment status");
+      useToast("error", paymentStore.error || "Error al actualizar el estado del pago");
     }
   } catch (error) {
     console.error("Error toggling payment:", error);
-    useToast("error", "An unexpected error occurred");
+    useToast("error", "Ocurrió un error inesperado");
   } finally {
     togglingPayment.value = null;
   }
@@ -488,11 +488,11 @@ watch(getPayments, () => {
 
 // ----- Define Hooks --------
 useHead({
-  title: "One-Time Payments - PayTrackr",
+  title: "Pagos Únicos - PayTrackr",
   meta: [
     {
       name: "description",
-      content: "Track and manage your one-time payments and expenses"
+      content: "Seguí y gestioná tus pagos y gastos únicos"
     }
   ]
 });

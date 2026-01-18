@@ -92,7 +92,7 @@ export const usePaymentStore = defineStore('payment', {
       const db = useFirestore();
       
       if (!user || !user.value) {
-        this.error = 'User not authenticated';
+        this.error = 'Usuario no autenticado';
         return false;
       }
       
@@ -147,7 +147,7 @@ export const usePaymentStore = defineStore('payment', {
         return true;
       } catch (error) {
         console.error('Error fetching payments:', error);
-        this.error = 'Failed to fetch payments';
+        this.error = 'Error al obtener los pagos';
         return false;
       } finally {
         this.isLoading = false;
@@ -169,12 +169,12 @@ export const usePaymentStore = defineStore('payment', {
           } as Payment;
           return this.currentPayment;
         } else {
-          this.error = 'Payment not found';
+          this.error = 'Pago no encontrado';
           return null;
         }
       } catch (error) {
         console.error('Error fetching payment:', error);
-        this.error = 'Failed to fetch payment details';
+        this.error = 'Error al obtener los detalles del pago';
         return null;
       } finally {
         this.isLoading = false;
@@ -187,7 +187,7 @@ export const usePaymentStore = defineStore('payment', {
       const user = useCurrentUser();
       
       if (!user || !user.value) {
-        this.error = 'User not authenticated';
+        this.error = 'Usuario no autenticado';
         return false;
       }
       
@@ -221,7 +221,7 @@ export const usePaymentStore = defineStore('payment', {
         };
       } catch (error) {
         console.error('Error creating payment:', error);
-        this.error = 'Failed to create payment';
+        this.error = 'Error al crear el pago';
         return false;
       } finally {
         this.isLoading = false;
@@ -256,7 +256,7 @@ export const usePaymentStore = defineStore('payment', {
         return true;
       } catch (error) {
         console.error('Error updating payment:', error);
-        this.error = 'Failed to update payment';
+        this.error = 'Error al actualizar el pago';
         return false;
       } finally {
         this.isLoading = false;
@@ -283,7 +283,7 @@ export const usePaymentStore = defineStore('payment', {
         return true;
       } catch (error) {
         console.error('Error deleting payment:', error);
-        this.error = 'Failed to delete payment';
+        this.error = 'Error al eliminar el pago';
         return false;
       } finally {
         this.isLoading = false;
@@ -317,7 +317,7 @@ export const usePaymentStore = defineStore('payment', {
         return true;
       } catch (error) {
         console.error('Error toggling payment status:', error);
-        this.error = 'Failed to update payment status';
+        this.error = 'Error al actualizar el estado del pago';
         return false;
       } finally {
         this.isLoading = false;

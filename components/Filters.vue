@@ -15,7 +15,7 @@
             type="text" 
             @input="(value) => $emit('onSearch', value.target.value)"
             class="w-full h-10 rounded-md bg-gray-400 border border-gray-400 pl-10 text-black placeholder:text-gray-600 focus:ring-2 focus:ring-primary focus:border-transparent" 
-            placeholder="Search payments..."
+            placeholder="Buscar pagos..."
           >
         </div>
         
@@ -48,11 +48,11 @@
                 </div>
                 <div v-if="selectedFilter.name === filter.name" class="flex items-center gap-2 text-gray-300">
                   <span v-if="selectedFilter.order === 'asc'">
-                    <span class="text-sm">Low to high</span>
+                    <span class="text-sm">Menor a mayor</span>
                     <MingcuteArrowUpFill class="text-primary ml-1" />
                   </span>
                   <span v-else>
-                    <span class="text-sm">High to low</span>
+                    <span class="text-sm">Mayor a menor</span>
                     <MingcuteArrowUpFill class="rotate-180 text-primary ml-1" />
                   </span>
                 </div>
@@ -110,10 +110,10 @@ function toggleTooltip() {
 }
 
 const filters = [
-  { name: 'unpaid_first', label: 'Unpaid First', icon: MdiSortBoolAscendingVariant, class: 'rounded-t-lg' },
-  { name: 'date', label: 'Date', icon: TablerCalendarFilled, class: '' },
-  { name: 'amount', label: 'Amount', icon: MaterialSymbolsPaidRounded, class: '' },
-  { name: 'title', label: 'Title', icon: BiAlphabet, class: 'rounded-b-lg' }
+  { name: 'unpaid_first', label: 'No pagados primero', icon: MdiSortBoolAscendingVariant, class: 'rounded-t-lg' },
+  { name: 'date', label: 'Fecha', icon: TablerCalendarFilled, class: '' },
+  { name: 'amount', label: 'Monto', icon: MaterialSymbolsPaidRounded, class: '' },
+  { name: 'title', label: 'Título', icon: BiAlphabet, class: 'rounded-b-lg' }
 ];
 
 function selectFilter(filter) {

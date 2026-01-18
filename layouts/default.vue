@@ -5,15 +5,15 @@
     <!-- Main navigation tabs (only for authenticated users) -->
     <div v-if="user" class="w-full bg-base border-b border-gray-700 mb-4">
       <div class="max-w-[80rem] m-auto px-0 sm:px-[1.429rem]">
-        <nav class="flex overflow-x-auto" aria-label="Main navigation">
+        <nav class="flex overflow-x-auto" aria-label="Navegación principal">
           <NuxtLink to="/recurrent" class="nav-tab" :class="{ 'nav-tab-active': route.path === '/recurrent' }">
-            <span class="flex items-center gap-2"> Recurrent <span class="hidden sm:inline">Payments</span> </span>
+            <span class="flex items-center gap-2"> Pagos <span class="hidden sm:inline">Recurrentes</span> </span>
           </NuxtLink>
           <NuxtLink to="/one-time" class="nav-tab" :class="{ 'nav-tab-active': route.path === '/one-time' }">
-            <span class="flex items-center gap-2"> One-Time <span class="hidden sm:inline">Payments</span> </span>
+            <span class="flex items-center gap-2"> Pagos <span class="hidden sm:inline">Únicos</span> </span>
           </NuxtLink>
           <NuxtLink to="/summary" class="nav-tab" :class="{ 'nav-tab-active': route.path === '/summary' }">
-            Financial Summary
+            Resumen Financiero
           </NuxtLink>
         </nav>
       </div>
