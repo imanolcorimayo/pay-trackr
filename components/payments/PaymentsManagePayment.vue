@@ -626,7 +626,6 @@ async function savePayment() {
 }
 
 function confirmDelete() {
-  console.log("confirmDelete", confirmDialog.value);
   confirmDialog.value.open();
 }
 

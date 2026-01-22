@@ -35,11 +35,6 @@
                 <NuxtLink to="/summary"
                   class="block px-4 py-2 text-sm text-gray-700 dark:text-gray-200 dark:hover:text-white" :class="{selected: route.path =='/summary'}">Resumen</NuxtLink>
               </li>
-              <!-- TODO: Potentially needed in the future -->
-              <!-- <li @click="switchMenu">
-                <NuxtLink to="/blog"
-                  class="block px-4 py-2 text-sm text-gray-700 dark:text-gray-200 dark:hover:text-white" :class="{selected: route.path =='/blog'}">Blog</NuxtLink>
-              </li> -->
               <li @click="switchMenu">
                 <NuxtLink to="/contact-us"
                   class="block px-4 py-2 text-sm text-gray-700 dark:text-gray-200 dark:hover:text-white" :class="{selected: route.path =='/contact-us'}">Contacto</NuxtLink>
@@ -53,8 +48,6 @@
         <div class="ms-4" v-else>
           <ul class="flex w-50 sm:w-80 justify-between flex-wrap">
             <li class="border-opacity-35 border-white border-b mx-1 hidden sm:block"><NuxtLink to="/">Inicio</NuxtLink></li>
-            <!-- TODO: Potentially needed in the future -->
-            <!-- <li class="border-opacity-35 border-white border-b mx-1"><NuxtLink to="/blog">Blog</NuxtLink></li> -->
             <li class="border-opacity-35 border-white border-b mx-1"><NuxtLink to="/faq">FAQ</NuxtLink></li>
             <li class="border-opacity-35 border-white border-b mx-1"><NuxtLink to="/contact-us">Contacto</NuxtLink></li>
             <li class="border-opacity-35 border-white border-b mx-1"><NuxtLink to="/welcome">Iniciar Sesión</NuxtLink></li>

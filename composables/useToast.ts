@@ -58,8 +58,9 @@ export const useToast = async (type: ToastEvents, message: string, method: Metho
 
 const methods = {
     sendMail: () => {
-        //@ts-ignore
-        window.open("mailto:imanolcorimayo@gmail.com", "_blank").focus();
+        const config = useRuntimeConfig();
+        const email = config.public.contactEmail || 'contact@wiseutils.com';
+        window.open(`mailto:${email}`, "_blank")?.focus();
     },
     goSignUp: async () => {
         return await navigateTo("/sign-up");

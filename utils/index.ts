@@ -48,21 +48,20 @@ const CATEGORY_COLORS: Record<string, string> = {
 };
 
 /**
- * Get Tailwind classes for a category by string key (legacy support)
+ * Get inline styles for a category by string key (legacy support)
+ * @deprecated Use getCategoryStyles() with color directly instead
  */
 export const getCategoryClasses = (category: string) => {
-  const baseClasses = "bg-opacity-15";
   const color = CATEGORY_COLORS[category.toLowerCase()] || CATEGORY_COLORS.other;
-  return `${baseClasses} bg-[${color}] text-[${color}]`;
+  return getCategoryStyles(color);
 };
 
 /**
- * Get Tailwind classes from a hex color (for dynamic categories)
+ * Get inline styles from a hex color (for dynamic categories)
+ * @deprecated Use getCategoryStyles() directly instead
  */
 export const getCategoryClassesFromColor = (color: string) => {
-  const baseClasses = "bg-opacity-15";
-  const validColor = color && color.startsWith('#') ? color : '#808080';
-  return `${baseClasses} bg-[${validColor}] text-[${validColor}]`;
+  return getCategoryStyles(color);
 };
 
 /**

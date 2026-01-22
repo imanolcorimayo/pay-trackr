@@ -399,12 +399,6 @@ export const useRecurrentStore = defineStore("recurrent", {
           .date(parseInt(recurrent.dueDateDay))
           .toDate();
 
-        console.log("Payment date:", $dayjs(paymentDate).format("MM/DD/YYYY"));
-        console.log("Is paid?", isPaid);
-        console.log("Month:", month);
-        console.log("Year:", paymentYear);
-        console.log("Recurrent:", recurrent);
-
         // Create the new payment instance
         const newPayment = {
           title: recurrent.title,
@@ -504,7 +498,6 @@ export const useRecurrentStore = defineStore("recurrent", {
         this.recurrentPayments = this.recurrentPayments.filter((r) => r.id !== recurrentId);
         this.processedRecurrents = this.processedRecurrents.filter((r) => r.id !== recurrentId);
 
-        console.log(`Deleted recurrent payment and ${deletedInstances} payment instances`);
         return true;
       } catch (error: any) {
         console.error("Error deleting recurrent payment:", error);

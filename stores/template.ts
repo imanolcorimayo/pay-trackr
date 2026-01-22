@@ -44,7 +44,7 @@ export const useTemplateStore = defineStore('template', {
       const db = useFirestore();
 
       if (!user || !user.value) {
-        this.error = 'User not authenticated';
+        this.error = 'Usuario no autenticado';
         return false;
       }
 
@@ -71,7 +71,7 @@ export const useTemplateStore = defineStore('template', {
         return true;
       } catch (error) {
         console.error('Error fetching templates:', error);
-        this.error = 'Failed to fetch templates';
+        this.error = 'Error al obtener las plantillas';
         return false;
       } finally {
         this.isLoading = false;
@@ -84,7 +84,7 @@ export const useTemplateStore = defineStore('template', {
       const user = useCurrentUser();
 
       if (!user || !user.value) {
-        this.error = 'User not authenticated';
+        this.error = 'Usuario no autenticado';
         return false;
       }
 
@@ -124,7 +124,7 @@ export const useTemplateStore = defineStore('template', {
         };
       } catch (error) {
         console.error('Error creating template:', error);
-        this.error = 'Failed to create template';
+        this.error = 'Error al crear la plantilla';
         return false;
       } finally {
         this.isLoading = false;
@@ -145,7 +145,7 @@ export const useTemplateStore = defineStore('template', {
         return true;
       } catch (error) {
         console.error('Error deleting template:', error);
-        this.error = 'Failed to delete template';
+        this.error = 'Error al eliminar la plantilla';
         return false;
       } finally {
         this.isLoading = false;

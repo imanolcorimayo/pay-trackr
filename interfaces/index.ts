@@ -1,8 +1,8 @@
 // Interfaces, this will potentially go to a specific folder in the future
 export interface Payment {
-    isPaid: Boolean;
+    isPaid: boolean;
     dueDate: string;
-    amount:2499.1
+    amount: number;
     description: string;
     payment_id: string;
     title: string;
@@ -18,8 +18,8 @@ export interface General {
     payments: PaymentList;
     tracker: Tracker;
     history: TrackerList;
-    fetched: Boolean;
-    historyFetched: Boolean;
+    fetched: boolean;
+    historyFetched: boolean;
 }
 
 export interface Tracker {

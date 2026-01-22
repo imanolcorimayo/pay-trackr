@@ -27,6 +27,12 @@ export default defineNuxtConfig({
 
   ssr: false,
 
+  runtimeConfig: {
+    public: {
+      contactEmail: process.env.CONTACT_EMAIL || 'contact@wiseutils.com'
+    }
+  },
+
   // @ts-ignore
   pwa: {
     registerType: "autoUpdate",

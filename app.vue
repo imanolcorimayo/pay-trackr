@@ -19,6 +19,6 @@ const { $pwa } = useNuxtApp();
 const user = getCurrentUser();
 
 onMounted(() => {
-  console.log("$pwa?.isPWAInstalled: ", $pwa?.isPWAInstalled);
+  // PWA installation status available via $pwa?.isPWAInstalled
 });
 </script>
