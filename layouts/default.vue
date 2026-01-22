@@ -7,10 +7,10 @@
       <div class="max-w-[80rem] m-auto px-0 sm:px-[1.429rem]">
         <nav class="flex overflow-x-auto" aria-label="Navegación principal">
           <NuxtLink to="/recurrent" class="nav-tab" :class="{ 'nav-tab-active': route.path === '/recurrent' }">
-            <span class="flex items-center gap-2"> Pagos <span class="hidden sm:inline">Recurrentes</span> </span>
+            <span class="flex items-center gap-2"><span class="hidden sm:inline">Pagos</span> Recurrentes</span>
           </NuxtLink>
           <NuxtLink to="/one-time" class="nav-tab" :class="{ 'nav-tab-active': route.path === '/one-time' }">
-            <span class="flex items-center gap-2"> Pagos <span class="hidden sm:inline">Únicos</span> </span>
+            <span class="flex items-center gap-2"><span class="hidden sm:inline">Pagos</span> Únicos</span>
           </NuxtLink>
           <NuxtLink to="/summary" class="nav-tab" :class="{ 'nav-tab-active': route.path === '/summary' }">
             Resumen Financiero

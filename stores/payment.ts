@@ -38,8 +38,10 @@ interface PaymentState {
   payments: Payment[];
   totalPayments: number;
   isLoading: boolean;
+  isLoaded: boolean;
   error: string | null;
   currentPayment: Payment | null;
+  lastFilters: PaymentFilters | null;
 }
 
 export const usePaymentStore = defineStore('payment', {
@@ -47,8 +49,10 @@ export const usePaymentStore = defineStore('payment', {
     payments: [],
     totalPayments: 0,
     isLoading: false,
+    isLoaded: false,
     error: null,
-    currentPayment: null
+    currentPayment: null,
+    lastFilters: null
   }),
   
   getters: {
@@ -87,17 +91,25 @@ export const usePaymentStore = defineStore('payment', {
   
   actions: {
     // Fetch payments with pagination and filtering
-    async fetchPayments(filters: PaymentFilters = {}) {
+    async fetchPayments(filters: PaymentFilters = {}, forceRefresh = false) {
       const user = useCurrentUser();
       const db = useFirestore();
-      
+
       if (!user || !user.value) {
         this.error = 'Usuario no autenticado';
         return false;
       }
-      
+
+      // Check if we can use cached data (same filters and already loaded)
+      const filtersMatch = this.lastFilters &&
+        JSON.stringify(this.lastFilters) === JSON.stringify(filters);
+
+      if (!forceRefresh && this.isLoaded && filtersMatch) {
+        return true;
+      }
+
       this.isLoading = true;
-      
+
       try {
         // Build query constraints
         const constraints: any[] = [
@@ -118,21 +130,21 @@ export const usePaymentStore = defineStore('payment', {
         if (filters.endDate) {
           constraints.push(where('dueDate', '<=', Timestamp.fromDate(filters.endDate)));
         }
-        
+
         // Add paid/unpaid filter
         if (filters.isPaid !== undefined) {
           constraints.push(where('isPaid', '==', filters.isPaid));
         }
-        
+
         // Add category filter
         if (filters.category) {
           constraints.push(where('category', '==', filters.category));
         }
-        
+
         // Execute query
         const paymentsQuery = query(collection(db, 'payment2'), ...constraints);
         const snapshot = await getDocs(paymentsQuery);
-        
+
         // Process results
         const payments: Payment[] = [];
         snapshot.forEach(doc => {
@@ -141,9 +153,11 @@ export const usePaymentStore = defineStore('payment', {
             ...doc.data()
           } as Payment);
         });
-        
+
         this.payments = payments;
-        
+        this.isLoaded = true;
+        this.lastFilters = { ...filters };
+
         return true;
       } catch (error) {
         console.error('Error fetching payments:', error);
@@ -328,8 +342,15 @@ export const usePaymentStore = defineStore('payment', {
     clearState() {
       this.payments = [];
       this.totalPayments = 0;
+      this.isLoaded = false;
       this.error = null;
       this.currentPayment = null;
+      this.lastFilters = null;
+    },
+
+    // Force refresh data
+    async refetchPayments(filters: PaymentFilters = {}) {
+      return this.fetchPayments(filters, true);
     }
   }
 });

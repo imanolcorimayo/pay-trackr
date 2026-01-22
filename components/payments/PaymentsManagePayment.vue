@@ -62,11 +62,7 @@
                   type="button"
                   @click="selectTemplate(template)"
                   class="flex-shrink-0 px-3 py-1.5 text-sm font-medium rounded-full border-2 transition-all duration-200 hover:scale-105"
-                  :class="[
-                    currentTemplate?.id === template.id
-                      ? getTemplateActiveClass(template.category)
-                      : getTemplateClass(template.category)
-                  ]"
+                  :style="getTemplateStyle(template.categoryId, currentTemplate?.id === template.id)"
                 >
                   {{ template.name }}
                 </button>
@@ -439,50 +435,24 @@ function getCategoryColor(categoryId) {
   return categoryStore.getCategoryColor(categoryId);
 }
 
-function getTemplateClass(category) {
-  const classes = {
-    housing: 'border-[#4682B4] bg-[#4682B4]/10 text-[#4682B4]',
-    utilities: 'border-[#0072DF] bg-[#0072DF]/10 text-[#0072DF]',
-    food: 'border-[#1D9A38] bg-[#1D9A38]/10 text-[#1D9A38]',
-    dining: 'border-[#FF6347] bg-[#FF6347]/10 text-[#FF6347]',
-    transport: 'border-[#E6AE2C] bg-[#E6AE2C]/10 text-[#E6AE2C]',
-    entertainment: 'border-[#6158FF] bg-[#6158FF]/10 text-[#6158FF]',
-    health: 'border-[#E84A8A] bg-[#E84A8A]/10 text-[#E84A8A]',
-    fitness: 'border-[#FF4500] bg-[#FF4500]/10 text-[#FF4500]',
-    personal_care: 'border-[#DDA0DD] bg-[#DDA0DD]/10 text-[#DDA0DD]',
-    pet: 'border-[#3CAEA3] bg-[#3CAEA3]/10 text-[#3CAEA3]',
-    clothes: 'border-[#800020] bg-[#800020]/10 text-[#800020]',
-    traveling: 'border-[#FF8C00] bg-[#FF8C00]/10 text-[#FF8C00]',
-    education: 'border-[#9370DB] bg-[#9370DB]/10 text-[#9370DB]',
-    subscriptions: 'border-[#20B2AA] bg-[#20B2AA]/10 text-[#20B2AA]',
-    gifts: 'border-[#FF1493] bg-[#FF1493]/10 text-[#FF1493]',
-    taxes: 'border-[#8B4513] bg-[#8B4513]/10 text-[#8B4513]',
-    other: 'border-[#808080] bg-[#808080]/10 text-[#808080]'
-  };
-  return classes[category?.toLowerCase()] || classes.other;
-}
+// Get template button style based on categoryId
+function getTemplateStyle(categoryId, isActive) {
+  const color = getCategoryColor(categoryId);
 
-function getTemplateActiveClass(category) {
-  const classes = {
-    housing: 'border-[#4682B4] bg-[#4682B4] text-white shadow-lg shadow-[#4682B4]/30',
-    utilities: 'border-[#0072DF] bg-[#0072DF] text-white shadow-lg shadow-[#0072DF]/30',
-    food: 'border-[#1D9A38] bg-[#1D9A38] text-white shadow-lg shadow-[#1D9A38]/30',
-    dining: 'border-[#FF6347] bg-[#FF6347] text-white shadow-lg shadow-[#FF6347]/30',
-    transport: 'border-[#E6AE2C] bg-[#E6AE2C] text-white shadow-lg shadow-[#E6AE2C]/30',
-    entertainment: 'border-[#6158FF] bg-[#6158FF] text-white shadow-lg shadow-[#6158FF]/30',
-    health: 'border-[#E84A8A] bg-[#E84A8A] text-white shadow-lg shadow-[#E84A8A]/30',
-    fitness: 'border-[#FF4500] bg-[#FF4500] text-white shadow-lg shadow-[#FF4500]/30',
-    personal_care: 'border-[#DDA0DD] bg-[#DDA0DD] text-white shadow-lg shadow-[#DDA0DD]/30',
-    pet: 'border-[#3CAEA3] bg-[#3CAEA3] text-white shadow-lg shadow-[#3CAEA3]/30',
-    clothes: 'border-[#800020] bg-[#800020] text-white shadow-lg shadow-[#800020]/30',
-    traveling: 'border-[#FF8C00] bg-[#FF8C00] text-white shadow-lg shadow-[#FF8C00]/30',
-    education: 'border-[#9370DB] bg-[#9370DB] text-white shadow-lg shadow-[#9370DB]/30',
-    subscriptions: 'border-[#20B2AA] bg-[#20B2AA] text-white shadow-lg shadow-[#20B2AA]/30',
-    gifts: 'border-[#FF1493] bg-[#FF1493] text-white shadow-lg shadow-[#FF1493]/30',
-    taxes: 'border-[#8B4513] bg-[#8B4513] text-white shadow-lg shadow-[#8B4513]/30',
-    other: 'border-[#808080] bg-[#808080] text-white shadow-lg shadow-[#808080]/30'
+  if (isActive) {
+    return {
+      borderColor: color,
+      backgroundColor: color,
+      color: 'white',
+      boxShadow: `0 10px 15px -3px ${color}4D`
+    };
+  }
+
+  return {
+    borderColor: color,
+    backgroundColor: `${color}1A`,
+    color: color
   };
-  return classes[category?.toLowerCase()] || classes.other;
 }
 
 function closeModal() {
@@ -559,40 +529,6 @@ async function fetchPaymentDetails(paymentId) {
     useToast("error", "Error al cargar los detalles del pago");
   } finally {
     isLoading.value = false;
-  }
-}
-
-function getCategoryClass(category) {
-  switch(category.toLowerCase()) {
-    case 'housing':
-      return 'bg-[#4682B4]'; // steel blue
-    case 'utilities':
-      return 'bg-[#0072DF]'; // accent blue
-    case 'food':
-      return 'bg-[#1D9A38]'; // success green 
-    case 'dining':
-      return 'bg-[#FF6347]'; // tomato red
-    case 'transport':
-      return 'bg-[#E6AE2C]'; // warning yellow
-    case 'entertainment':
-      return 'bg-[#6158FF]'; // secondary purple
-    case 'health':
-      return 'bg-[#E84A8A]'; // danger pink
-    case 'pet':
-      return 'bg-[#3CAEA3]'; // teal for pets
-    case 'clothes':
-      return 'bg-[#800020]'; // burgundy
-    case 'traveling':
-      return 'bg-[#FF8C00]'; // dark orange
-    case 'education':
-      return 'bg-[#9370DB]'; // medium purple
-    case 'subscriptions':
-      return 'bg-[#20B2AA]'; // light sea green
-    case 'taxes':
-      return 'bg-[#8B4513]'; // brown
-    case 'other':
-    default:
-      return 'bg-[#808080]'; // gray for other/default
   }
 }
 

@@ -9,7 +9,7 @@ import { useCurrentUser } from 'vuefire';
 interface PaymentTemplate {
   id: string;
   name: string;
-  category: string;
+  categoryId: string;
   description?: string;
   userId: string;
   createdAt: any;
@@ -94,7 +94,7 @@ export const useTemplateStore = defineStore('template', {
         // Remove undefined fields
         const cleanData: any = {
           name: templateData.name,
-          category: templateData.category,
+          categoryId: templateData.categoryId,
           userId: user.value.uid,
           createdAt: serverTimestamp(),
           usageCount: 0

@@ -72,6 +72,7 @@ interface RecurrentState {
   isLoaded: boolean;
   isLoading: boolean;
   error: string | null;
+  lastFetchedMonthsBack: number;
 }
 
 export const useRecurrentStore = defineStore("recurrent", {
@@ -81,7 +82,8 @@ export const useRecurrentStore = defineStore("recurrent", {
     processedRecurrents: [],
     isLoaded: false,
     isLoading: false,
-    error: null
+    error: null,
+    lastFetchedMonthsBack: 0
   }),
 
   getters: {
@@ -111,13 +113,18 @@ export const useRecurrentStore = defineStore("recurrent", {
   },
 
   actions: {
-    async fetchRecurrentPayments() {
+    async fetchRecurrentPayments(forceRefresh = false) {
       const user = useCurrentUser();
       const db = useFirestore();
 
       if (!user || !user.value) {
         this.$state.error = "Usuario no autenticado";
         return false;
+      }
+
+      // Skip fetch if already loaded (unless force refresh)
+      if (!forceRefresh && this.recurrentPayments.length > 0) {
+        return true;
       }
 
       this.isLoading = true;
@@ -146,7 +153,7 @@ export const useRecurrentStore = defineStore("recurrent", {
         this.isLoading = false;
       }
     },
-    async fetchPaymentInstances(monthsBack = 6) {
+    async fetchPaymentInstances(monthsBack = 6, forceRefresh = false) {
       const user = useCurrentUser();
       const db = useFirestore();
       const { $dayjs } = useNuxtApp();
@@ -156,14 +163,19 @@ export const useRecurrentStore = defineStore("recurrent", {
         return false;
       }
 
+      // Skip fetch if already loaded with enough months (unless force refresh)
+      if (!forceRefresh && this.isLoaded && this.lastFetchedMonthsBack >= monthsBack) {
+        // Just reprocess data with the requested months
+        this.processData(monthsBack);
+        return true;
+      }
+
       this.isLoading = true;
 
       try {
         // Calculate date range - from X months ago to current date
         const startDate = $dayjs().subtract(monthsBack, "month").startOf("month").toDate();
         const endDate = $dayjs().endOf("month").toDate();
-
-        console.log("Date range:", $dayjs(startDate).format("YYYY-MM-DD"), "to", $dayjs(endDate).format("YYYY-MM-DD"));
 
         // Fetch all payment instances within date range
         const paymentsSnapshot = await getDocs(
@@ -172,7 +184,7 @@ export const useRecurrentStore = defineStore("recurrent", {
             where("userId", "==", user.value.uid),
             where("paymentType", "==", "recurrent"),
             where("createdAt", ">=", Timestamp.fromDate(startDate)),
-            where("createdAt", "<=", Timestamp.fromDate(endDate)), // Added upper bound
+            where("createdAt", "<=", Timestamp.fromDate(endDate)),
             orderBy("createdAt", "desc")
           )
         );
@@ -188,6 +200,7 @@ export const useRecurrentStore = defineStore("recurrent", {
         this.paymentInstances = payments;
         this.processData(monthsBack);
         this.isLoaded = true;
+        this.lastFetchedMonthsBack = monthsBack;
         return true;
       } catch (error) {
         console.error("Error fetching payment instances:", error);
@@ -251,8 +264,26 @@ export const useRecurrentStore = defineStore("recurrent", {
           months: {}
         };
 
-        // Initialize months with empty data
+        // Parse recurrent payment's startDate and endDate
+        const recurrentStartDate = recurrent.startDate ? $dayjs(recurrent.startDate) : null;
+        const recurrentEndDate = recurrent.endDate ? $dayjs(recurrent.endDate) : null;
+
+        // Initialize months with empty data - only for months within the valid date range
         monthsWithYear.forEach((month) => {
+          // Check if this month is within the recurrent payment's valid range
+          const monthStart = month.fullDate.startOf("month");
+          const monthEnd = month.fullDate.endOf("month");
+
+          // Skip months before the startDate
+          if (recurrentStartDate && monthEnd.isBefore(recurrentStartDate, "month")) {
+            return; // Don't create entry for months before subscription started
+          }
+
+          // Skip months after the endDate (if set)
+          if (recurrentEndDate && monthStart.isAfter(recurrentEndDate, "month")) {
+            return; // Don't create entry for months after subscription ended
+          }
+
           recurrentWithMonths.months[month.key] = {
             amount: recurrent.amount,
             dueDate: this.generateDueDate(recurrent.dueDateDay, month.fullDate),
@@ -272,7 +303,7 @@ export const useRecurrentStore = defineStore("recurrent", {
               (m) => m.key === paymentMonth && m.year === paymentDate.format("YYYY")
             );
 
-            if (matchingMonth) {
+            if (matchingMonth && recurrentWithMonths.months[matchingMonth.key] !== undefined) {
               recurrentWithMonths.months[matchingMonth.key] = {
                 amount: payment.amount,
                 dueDate: paymentDate.format("MM/DD/YYYY"),
@@ -321,7 +352,7 @@ export const useRecurrentStore = defineStore("recurrent", {
       }
     },
 
-    async addNewPaymentInstance(recurrentId: string, month: string, isPaid = false) {
+    async addNewPaymentInstance(recurrentId: string, month: string, isPaid = false, year?: string) {
       const user = useCurrentUser();
       const db = useFirestore();
       const { $dayjs } = useNuxtApp();
@@ -342,10 +373,28 @@ export const useRecurrentStore = defineStore("recurrent", {
           return false;
         }
 
-        // Create payment date based on the month and day
+        // Create payment date based on the month, day, and year
         const monthIndex = $dayjs(month, "MMM").month();
+
+        // Determine the correct year
+        let paymentYear: number;
+        if (year) {
+          paymentYear = parseInt(year);
+        } else {
+          // If no year provided, infer based on month
+          // If the month is in the future relative to current month, use previous year
+          const currentMonth = $dayjs().month();
+          const currentYear = $dayjs().year();
+
+          if (monthIndex > currentMonth) {
+            paymentYear = currentYear - 1;
+          } else {
+            paymentYear = currentYear;
+          }
+        }
+
         const paymentDate = $dayjs()
-          .year($dayjs().year())
+          .year(paymentYear)
           .month(monthIndex)
           .date(parseInt(recurrent.dueDateDay))
           .toDate();
@@ -353,7 +402,7 @@ export const useRecurrentStore = defineStore("recurrent", {
         console.log("Payment date:", $dayjs(paymentDate).format("MM/DD/YYYY"));
         console.log("Is paid?", isPaid);
         console.log("Month:", month);
-        console.log("Month Index:", monthIndex);
+        console.log("Year:", paymentYear);
         console.log("Recurrent:", recurrent);
 
         // Create the new payment instance
@@ -504,6 +553,25 @@ export const useRecurrentStore = defineStore("recurrent", {
       );
 
       this.processedRecurrents = filteredData;
+    },
+
+    // Force refresh data
+    async refetchAll(monthsBack = 6) {
+      this.isLoaded = false;
+      this.lastFetchedMonthsBack = 0;
+      await this.fetchRecurrentPayments(true);
+      await this.fetchPaymentInstances(monthsBack, true);
+    },
+
+    // Clear store state
+    clearState() {
+      this.recurrentPayments = [];
+      this.paymentInstances = [];
+      this.processedRecurrents = [];
+      this.isLoaded = false;
+      this.isLoading = false;
+      this.error = null;
+      this.lastFetchedMonthsBack = 0;
     }
   }
 });

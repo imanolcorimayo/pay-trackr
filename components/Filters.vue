@@ -9,20 +9,20 @@
       <div class="flex items-center gap-3 w-full sm:w-auto">
         <div class="relative w-full sm:w-64">
           <div class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
-            <IcSharpSearch class="text-gray-600 text-lg" />
+            <IcSharpSearch class="text-gray-400 text-lg" />
           </div>
-          <input 
-            type="text" 
+          <input
+            type="text"
             @input="(value) => $emit('onSearch', value.target.value)"
-            class="w-full h-10 rounded-md bg-gray-400 border border-gray-400 pl-10 text-black placeholder:text-gray-600 focus:ring-2 focus:ring-primary focus:border-transparent" 
+            class="w-full h-10 rounded-md bg-base border border-gray-600 pl-10 text-white placeholder:text-gray-500 focus:ring-2 focus:ring-primary focus:border-transparent"
             placeholder="Buscar pagos..."
           >
         </div>
         
         <!-- Filter Button -->
         <Tooltip ref="tooltipFilter">
-          <button 
-            class="h-10 w-10 flex items-center justify-center bg-base/80 hover:bg-gray-700 rounded-md border border-gray-400 text-white transition-colors"
+          <button
+            class="h-10 w-10 flex items-center justify-center bg-base hover:bg-gray-700 rounded-md border border-gray-600 text-white transition-colors"
             @click="toggleTooltip"
             aria-label="Filter options"
           >
@@ -31,7 +31,7 @@
           
           <!-- Filter Dropdown Content -->
           <template #content>
-            <div class="bg-base/80 border border-gray-400 rounded-lg shadow-lg overflow-hidden">
+            <div class="bg-base border border-gray-600 rounded-lg shadow-lg overflow-hidden">
               <div
                 v-for="filter in filters"
                 :key="filter.name"
@@ -46,16 +46,11 @@
                   <component :is="filter.icon" class="text-primary text-lg" /> 
                   <span class="text-white">{{ filter.label }}</span>
                 </div>
-                <div v-if="selectedFilter.name === filter.name" class="flex items-center gap-2 text-gray-300">
-                  <span v-if="selectedFilter.order === 'asc'">
-                    <span class="text-sm">Menor a mayor</span>
-                    <MingcuteArrowUpFill class="text-primary ml-1" />
-                  </span>
-                  <span v-else>
-                    <span class="text-sm">Mayor a menor</span>
-                    <MingcuteArrowUpFill class="rotate-180 text-primary ml-1" />
-                  </span>
-                </div>
+                <MingcuteArrowUpFill
+                  v-if="selectedFilter.name === filter.name"
+                  class="text-primary text-lg"
+                  :class="selectedFilter.order === 'desc' ? 'rotate-180' : ''"
+                />
               </div>
             </div>
           </template>
@@ -110,7 +105,7 @@ function toggleTooltip() {
 }
 
 const filters = [
-  { name: 'unpaid_first', label: 'No pagados primero', icon: MdiSortBoolAscendingVariant, class: 'rounded-t-lg' },
+  { name: 'unpaid_first', label: 'No pagados', icon: MdiSortBoolAscendingVariant, class: 'rounded-t-lg' },
   { name: 'date', label: 'Fecha', icon: TablerCalendarFilled, class: '' },
   { name: 'amount', label: 'Monto', icon: MaterialSymbolsPaidRounded, class: '' },
   { name: 'title', label: 'Título', icon: BiAlphabet, class: 'rounded-b-lg' }

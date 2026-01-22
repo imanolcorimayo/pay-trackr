@@ -76,8 +76,8 @@
           <thead class="text-center">
             <tr class="border-b border-gray-600 h-12">
               <th scope="col" class="text-start font-semibold">Pago</th>
-              <th scope="col" class="w-20 font-semibold">Monto</th>
-              <th scope="col" class="w-16 font-semibold">Día</th>
+              <th scope="col" class="w-28 font-semibold">Monto</th>
+              <th scope="col" class="w-14 font-semibold">Día</th>
               <th v-for="month in months" :key="`${month.key}-${month.year}`" class="font-semibold">
                 {{ month.display }}
                 <span v-if="month.year !== currentYear" class="text-xs text-gray-500"
@@ -109,8 +109,12 @@
                   </div>
                 </div>
               </td>
-              <td class="font-medium">{{ formatPrice(payment.amount) }}</td>
-              <td>{{ payment.dueDateDay }}</td>
+              <td class="font-medium text-sm">{{ formatPrice(payment.amount) }}</td>
+              <td>
+                <span class="inline-flex items-center justify-center w-7 h-7 rounded-full bg-gray-700 text-xs font-medium">
+                  {{ payment.dueDateDay }}
+                </span>
+              </td>
 
               <!-- Month cells -->
               <td v-for="month in months" :key="`${payment.id}-${month.key}-${month.year}`" class="py-3 relative">
@@ -142,7 +146,7 @@
                 </div>
                 <button
                   v-else
-                  @click.stop="createPaymentForMonth(payment.id, month.key)"
+                  @click.stop="createPaymentForMonth(payment.id, month.key, false, month.year)"
                   class="text-gray-400 hover:text-primary px-2 py-1 rounded transition-colors"
                 >
                   <MdiPlusCircleOutline class="text-xl" />
@@ -234,7 +238,7 @@
 
               <button
                 v-else
-                @click="createPaymentForMonth(payment.id, month.key)"
+                @click="createPaymentForMonth(payment.id, month.key, false, month.year)"
                 class="inline-flex items-center justify-center h-10 w-10 rounded-full bg-gray-700"
               >
                 <MdiPlusCircleOutline class="text-gray-400 text-xl" />
@@ -370,6 +374,12 @@ function changeMonthRange(delta) {
   fetchData();
 }
 
+// Get the year for a specific month key from the months array
+function getYearForMonth(monthKey) {
+  const monthData = months.value.find((m) => m.key === monthKey);
+  return monthData?.year || $dayjs().format("YYYY");
+}
+
 // Toggle payment status
 async function togglePaymentStatus(recurrentId, month) {
   if (togglingPayment.value) return; // Prevent multiple toggles at once
@@ -387,8 +397,9 @@ async function togglePaymentStatus(recurrentId, month) {
   const currentStatus = payment.months[month].isPaid;
 
   if (!paymentId) {
-    // Create payment
-    await createPaymentForMonth(recurrentId, month, true);
+    // Create payment - pass the year for correct date
+    const year = getYearForMonth(month);
+    await createPaymentForMonth(recurrentId, month, true, year);
     togglingPayment.value = null;
     return;
   }
@@ -407,8 +418,10 @@ async function togglePaymentStatus(recurrentId, month) {
 }
 
 // Create a payment instance for a month where one doesn't exist
-async function createPaymentForMonth(recurrentId, month, isPaid = false) {
-  const result = await recurrentStore.addNewPaymentInstance(recurrentId, month, isPaid);
+async function createPaymentForMonth(recurrentId, month, isPaid = false, year = null) {
+  // If year not provided, get it from the months array
+  const paymentYear = year || getYearForMonth(month);
+  const result = await recurrentStore.addNewPaymentInstance(recurrentId, month, isPaid, paymentYear);
 
   if (result) {
     useToast("success", "Instancia de pago creada");
@@ -461,22 +474,27 @@ function orderRecurrents(orderQuery) {
 function applySortOrder(orderQuery) {
   const { name, order } = orderQuery;
   const direction = order === "asc" ? 1 : -1;
+  const currentMonthKey = $dayjs().format("MMM");
 
   recurrents.value.sort((a, b) => {
     let comparison = 0;
 
     switch (name) {
       case "unpaid_first":
-        // Default sort: unpaid first, then by due date ascending
-        const aHasUnpaid = Object.values(a.months).some(month => !month.isPaid);
-        const bHasUnpaid = Object.values(b.months).some(month => !month.isPaid);
-        
-        if (aHasUnpaid !== bHasUnpaid) {
-          return aHasUnpaid ? -1 : 1; // Unpaid first
+        // Sort by current month's payment status only (ignore past months)
+        const aCurrentMonth = a.months[currentMonthKey];
+        const bCurrentMonth = b.months[currentMonthKey];
+
+        // Check if current month exists and is unpaid
+        const aIsUnpaid = aCurrentMonth && !aCurrentMonth.isPaid;
+        const bIsUnpaid = bCurrentMonth && !bCurrentMonth.isPaid;
+
+        if (aIsUnpaid !== bIsUnpaid) {
+          // Asc: unpaid first, Desc: paid first
+          return aIsUnpaid ? -direction : direction;
         }
-        // If same paid status, sort by due date
-        comparison = parseInt(a.dueDateDay) - parseInt(b.dueDateDay);
-        break;
+        // If same paid status, always sort by due date ascending
+        return parseInt(a.dueDateDay) - parseInt(b.dueDateDay);
         
       case "title":
         comparison = a.title.localeCompare(b.title);
