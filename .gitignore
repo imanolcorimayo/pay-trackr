@@ -28,11 +28,11 @@ service-account.json
 .firebase
 .firebase/*
 
-# Firebase service account
-/scripts/*.json
-/scripts/*.txt
-/scripts/update-privileges-to-users*.js
-/scripts/export-prod-to-develop.js
+# Firebase service account & scripts
+**/scripts/*.json
+**/scripts/*.txt
+**/scripts/update-privileges-to-users*.js
+**/scripts/export-prod-to-develop.js
 
 # VSCode
 .vscode

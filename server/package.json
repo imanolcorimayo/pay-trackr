@@ -1,0 +1,12 @@
+{
+  "name": "pay-trackr-server",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "node --watch webhooks/index.js",
+    "start": "node webhooks/index.js"
+  },
+  "dependencies": {
+  }
+}
