@@ -1,10 +1,7 @@
 import { defineStore } from 'pinia';
-import {
-  collection, query, where, getDocs, getDoc, doc,
-  addDoc, updateDoc, deleteDoc, orderBy, serverTimestamp,
-  Timestamp, increment
-} from 'firebase/firestore';
-import { useCurrentUser } from 'vuefire';
+import { Timestamp } from 'firebase/firestore';
+import { getCurrentUser } from '~/utils/firebase';
+import { TemplateSchema } from '~/utils/odm/schemas/templateSchema';
 
 interface PaymentTemplate {
   id: string;
@@ -21,6 +18,9 @@ interface TemplateState {
   isLoading: boolean;
   error: string | null;
 }
+
+// Schema instance
+const templateSchema = new TemplateSchema();
 
 export const useTemplateStore = defineStore('template', {
   state: (): TemplateState => ({
@@ -40,10 +40,9 @@ export const useTemplateStore = defineStore('template', {
   actions: {
     // Fetch all templates for current user
     async fetchTemplates() {
-      const user = useCurrentUser();
-      const db = useFirestore();
+      const user = getCurrentUser();
 
-      if (!user || !user.value) {
+      if (!user) {
         this.error = 'Usuario no autenticado';
         return false;
       }
@@ -51,24 +50,15 @@ export const useTemplateStore = defineStore('template', {
       this.isLoading = true;
 
       try {
-        const templatesQuery = query(
-          collection(db, 'paymentTemplates'),
-          where('userId', '==', user.value.uid),
-          orderBy('usageCount', 'desc')
-        );
+        const result = await templateSchema.findAllSortedByUsage();
 
-        const snapshot = await getDocs(templatesQuery);
-
-        const templates: PaymentTemplate[] = [];
-        snapshot.forEach(doc => {
-          templates.push({
-            id: doc.id,
-            ...doc.data()
-          } as PaymentTemplate);
-        });
-
-        this.templates = templates;
-        return true;
+        if (result.success && result.data) {
+          this.templates = result.data as PaymentTemplate[];
+          return true;
+        } else {
+          this.error = result.error || 'Error al obtener las plantillas';
+          return false;
+        }
       } catch (error) {
         console.error('Error fetching templates:', error);
         this.error = 'Error al obtener las plantillas';
@@ -80,10 +70,9 @@ export const useTemplateStore = defineStore('template', {
 
     // Create new template
     async createTemplate(templateData: Omit<PaymentTemplate, 'id' | 'createdAt' | 'usageCount'>) {
-      const db = useFirestore();
-      const user = useCurrentUser();
+      const user = getCurrentUser();
 
-      if (!user || !user.value) {
+      if (!user) {
         this.error = 'Usuario no autenticado';
         return false;
       }
@@ -91,12 +80,11 @@ export const useTemplateStore = defineStore('template', {
       this.isLoading = true;
 
       try {
-        // Remove undefined fields
+        // Prepare clean data
         const cleanData: any = {
           name: templateData.name,
           categoryId: templateData.categoryId,
-          userId: user.value.uid,
-          createdAt: serverTimestamp(),
+          userId: user.uid,
           usageCount: 0
         };
 
@@ -105,23 +93,20 @@ export const useTemplateStore = defineStore('template', {
           cleanData.description = templateData.description;
         }
 
-        const docRef = await addDoc(collection(db, 'paymentTemplates'), cleanData);
+        const result = await templateSchema.create(cleanData);
 
-        // Add to local state
-        const createdTemplate = {
-          id: docRef.id,
-          ...templateData,
-          userId: user.value.uid,
-          createdAt: Timestamp.now(),
-          usageCount: 0
-        } as PaymentTemplate;
+        if (result.success && result.data) {
+          // Add to local state
+          this.templates = [...this.templates, result.data as PaymentTemplate];
 
-        this.templates = [...this.templates, createdTemplate];
-
-        return {
-          success: true,
-          templateId: docRef.id
-        };
+          return {
+            success: true,
+            templateId: result.data.id
+          };
+        } else {
+          this.error = result.error || 'Error al crear la plantilla';
+          return false;
+        }
       } catch (error) {
         console.error('Error creating template:', error);
         this.error = 'Error al crear la plantilla';
@@ -133,16 +118,19 @@ export const useTemplateStore = defineStore('template', {
 
     // Delete template
     async deleteTemplate(templateId: string) {
-      const db = useFirestore();
       this.isLoading = true;
 
       try {
-        await deleteDoc(doc(db, 'paymentTemplates', templateId));
+        const result = await templateSchema.delete(templateId);
 
-        // Update local state
-        this.templates = this.templates.filter(t => t.id !== templateId);
-
-        return true;
+        if (result.success) {
+          // Update local state
+          this.templates = this.templates.filter(t => t.id !== templateId);
+          return true;
+        } else {
+          this.error = result.error || 'Error al eliminar la plantilla';
+          return false;
+        }
       } catch (error) {
         console.error('Error deleting template:', error);
         this.error = 'Error al eliminar la plantilla';
@@ -154,20 +142,20 @@ export const useTemplateStore = defineStore('template', {
 
     // Increment usage count when template is used
     async incrementUsage(templateId: string) {
-      const db = useFirestore();
-
       try {
-        await updateDoc(doc(db, 'paymentTemplates', templateId), {
-          usageCount: increment(1)
-        });
+        const result = await templateSchema.incrementUsage(templateId);
 
-        // Update local state
-        const index = this.templates.findIndex(t => t.id === templateId);
-        if (index !== -1) {
-          this.templates[index].usageCount++;
+        if (result.success) {
+          // Update local state
+          const index = this.templates.findIndex(t => t.id === templateId);
+          if (index !== -1) {
+            this.templates[index].usageCount++;
+          }
+          return true;
+        } else {
+          console.error('Error incrementing usage:', result.error);
+          return false;
         }
-
-        return true;
       } catch (error) {
         console.error('Error incrementing usage:', error);
         return false;

@@ -8,5 +8,6 @@
     "start": "node webhooks/index.js"
   },
   "dependencies": {
+    "express": "^4.21.0"
   }
 }

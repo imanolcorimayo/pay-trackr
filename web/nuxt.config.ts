@@ -14,7 +14,6 @@ export default defineNuxtConfig({
     "@samk-dev/nuxt-vcalendar",
     "dayjs-nuxt",
     "@vueuse/nuxt",
-    "nuxt-vuefire",
     "@pinia/nuxt",
     "@vite-pwa/nuxt",
     "unplugin-icons/nuxt"
@@ -29,7 +28,14 @@ export default defineNuxtConfig({
 
   runtimeConfig: {
     public: {
-      contactEmail: process.env.CONTACT_EMAIL || 'contact@wiseutils.com'
+      contactEmail: process.env.CONTACT_EMAIL || 'contact@wiseutils.com',
+      // Firebase configuration
+      firebaseApiKey: process.env.FIREBASE_API_KEY,
+      firebaseAuthDomain: "pay-tracker-7a5a6.firebaseapp.com",
+      firebaseProjectId: process.env.FIREBASE_PROJECT_ID,
+      firebaseStorageBucket: "pay-tracker-7a5a6.appspot.com",
+      firebaseMessagingSenderId: "16390920244",
+      firebaseAppId: "1:16390920244:web:adc5a4919d9dd457705261"
     }
   },
 
@@ -105,21 +111,6 @@ export default defineNuxtConfig({
     devOptions: {
       enabled: true,
       type: "module"
-    }
-  },
-
-  vuefire: {
-    // ensures the auth module is enabled
-    auth: {
-      enabled: true
-    },
-    config: {
-      apiKey: process.env.FIREBASE_API_KEY,
-      authDomain: "pay-tracker-7a5a6.firebaseapp.com",
-      projectId: process.env.FIREBASE_PROJECT_ID,
-      storageBucket: "pay-tracker-7a5a6.appspot.com",
-      messagingSenderId: "16390920244",
-      appId: "1:16390920244:web:adc5a4919d9dd457705261"
     }
   },
 

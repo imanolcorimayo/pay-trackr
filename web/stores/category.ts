@@ -1,12 +1,12 @@
 import { defineStore } from 'pinia';
-import {
-  collection, query, where, getDocs,
-  addDoc, updateDoc, doc, serverTimestamp,
-  Timestamp
-} from 'firebase/firestore';
-import { useCurrentUser } from 'vuefire';
+import { Timestamp, serverTimestamp } from 'firebase/firestore';
+import { getCurrentUser } from '~/utils/firebase';
+import { CategorySchema } from '~/utils/odm/schemas/categorySchema';
 import type { ExpenseCategory, CategoryState } from '~/interfaces/category';
 import { DEFAULT_CATEGORIES } from '~/interfaces/category';
+
+// Schema instance
+const categorySchema = new CategorySchema();
 
 export const useCategoryStore = defineStore('category', {
   state: (): CategoryState => ({
@@ -49,10 +49,9 @@ export const useCategoryStore = defineStore('category', {
   actions: {
     // Fetch categories from Firestore, auto-seed if empty
     async fetchCategories() {
-      const user = useCurrentUser();
-      const db = useFirestore();
+      const user = getCurrentUser();
 
-      if (!user || !user.value) {
+      if (!user) {
         this.error = 'Usuario no autenticado';
         return false;
       }
@@ -65,31 +64,22 @@ export const useCategoryStore = defineStore('category', {
       this.isLoading = true;
 
       try {
-        const categoriesQuery = query(
-          collection(db, 'expenseCategories'),
-          where('userId', '==', user.value.uid)
-        );
+        const result = await categorySchema.findActive();
 
-        const snapshot = await getDocs(categoriesQuery);
-        const categories: ExpenseCategory[] = [];
+        if (result.success && result.data) {
+          this.categories = result.data as ExpenseCategory[];
+          this.isLoaded = true;
 
-        snapshot.forEach(doc => {
-          categories.push({
-            id: doc.id,
-            ...doc.data()
-          } as ExpenseCategory);
-        });
+          // Auto-seed default categories if no categories exist
+          if (this.categories.length === 0) {
+            await this.seedDefaultCategories();
+          }
 
-        // Filter out deleted categories for display
-        this.categories = categories;
-        this.isLoaded = true;
-
-        // Auto-seed default categories if no categories exist
-        if (categories.length === 0) {
-          await this.seedDefaultCategories();
+          return true;
+        } else {
+          this.error = result.error || 'Error al obtener las categorías';
+          return false;
         }
-
-        return true;
       } catch (error) {
         console.error('Error fetching categories:', error);
         this.error = 'Error al obtener las categorías';
@@ -101,10 +91,9 @@ export const useCategoryStore = defineStore('category', {
 
     // Seed default categories for new users
     async seedDefaultCategories() {
-      const user = useCurrentUser();
-      const db = useFirestore();
+      const user = getCurrentUser();
 
-      if (!user || !user.value) {
+      if (!user) {
         this.error = 'Usuario no autenticado';
         return false;
       }
@@ -115,24 +104,16 @@ export const useCategoryStore = defineStore('category', {
         const createdCategories: ExpenseCategory[] = [];
 
         for (const category of DEFAULT_CATEGORIES) {
-          const newCategory = {
+          const result = await categorySchema.create({
             name: category.name,
             color: category.color,
-            userId: user.value.uid,
-            createdAt: serverTimestamp(),
-            deletedAt: null
-          };
-
-          const docRef = await addDoc(collection(db, 'expenseCategories'), newCategory);
-
-          createdCategories.push({
-            id: docRef.id,
-            name: category.name,
-            color: category.color,
-            userId: user.value.uid,
-            createdAt: Timestamp.now(),
+            userId: user.uid,
             deletedAt: null
           });
+
+          if (result.success && result.data) {
+            createdCategories.push(result.data as ExpenseCategory);
+          }
         }
 
         this.categories = createdCategories;
@@ -148,10 +129,9 @@ export const useCategoryStore = defineStore('category', {
 
     // Create a new category
     async createCategory(name: string, color: string) {
-      const user = useCurrentUser();
-      const db = useFirestore();
+      const user = getCurrentUser();
 
-      if (!user || !user.value) {
+      if (!user) {
         this.error = 'Usuario no autenticado';
         return false;
       }
@@ -159,32 +139,25 @@ export const useCategoryStore = defineStore('category', {
       this.isLoading = true;
 
       try {
-        const newCategory = {
+        const result = await categorySchema.create({
           name,
           color,
-          userId: user.value.uid,
-          createdAt: serverTimestamp(),
+          userId: user.uid,
           deletedAt: null
-        };
+        });
 
-        const docRef = await addDoc(collection(db, 'expenseCategories'), newCategory);
+        if (result.success && result.data) {
+          // Add to local state
+          this.categories = [...this.categories, result.data as ExpenseCategory];
 
-        // Add to local state
-        const createdCategory: ExpenseCategory = {
-          id: docRef.id,
-          name,
-          color,
-          userId: user.value.uid,
-          createdAt: Timestamp.now(),
-          deletedAt: null
-        };
-
-        this.categories = [...this.categories, createdCategory];
-
-        return {
-          success: true,
-          categoryId: docRef.id
-        };
+          return {
+            success: true,
+            categoryId: result.data.id
+          };
+        } else {
+          this.error = result.error || 'Error al crear la categoría';
+          return false;
+        }
       } catch (error) {
         console.error('Error creating category:', error);
         this.error = 'Error al crear la categoría';
@@ -196,24 +169,28 @@ export const useCategoryStore = defineStore('category', {
 
     // Update an existing category
     async updateCategory(id: string, updates: { name?: string; color?: string }) {
-      const db = useFirestore();
       this.isLoading = true;
 
       try {
-        await updateDoc(doc(db, 'expenseCategories', id), updates);
+        const result = await categorySchema.update(id, updates);
 
-        // Update local state
-        const index = this.categories.findIndex(cat => cat.id === id);
-        if (index !== -1) {
-          this.categories[index] = {
-            ...this.categories[index],
-            ...updates
-          };
-          // Trigger reactivity
-          this.categories = [...this.categories];
+        if (result.success) {
+          // Update local state
+          const index = this.categories.findIndex(cat => cat.id === id);
+          if (index !== -1) {
+            this.categories[index] = {
+              ...this.categories[index],
+              ...updates
+            };
+            // Trigger reactivity
+            this.categories = [...this.categories];
+          }
+
+          return true;
+        } else {
+          this.error = result.error || 'Error al actualizar la categoría';
+          return false;
         }
-
-        return true;
       } catch (error) {
         console.error('Error updating category:', error);
         this.error = 'Error al actualizar la categoría';
@@ -225,26 +202,28 @@ export const useCategoryStore = defineStore('category', {
 
     // Soft delete a category
     async deleteCategory(id: string) {
-      const db = useFirestore();
       this.isLoading = true;
 
       try {
-        await updateDoc(doc(db, 'expenseCategories', id), {
-          deletedAt: serverTimestamp()
-        });
+        const result = await categorySchema.softDelete(id);
 
-        // Update local state with soft delete
-        const index = this.categories.findIndex(cat => cat.id === id);
-        if (index !== -1) {
-          this.categories[index] = {
-            ...this.categories[index],
-            deletedAt: Timestamp.now()
-          };
-          // Trigger reactivity
-          this.categories = [...this.categories];
+        if (result.success) {
+          // Update local state with soft delete
+          const index = this.categories.findIndex(cat => cat.id === id);
+          if (index !== -1) {
+            this.categories[index] = {
+              ...this.categories[index],
+              deletedAt: Timestamp.now()
+            };
+            // Trigger reactivity
+            this.categories = [...this.categories];
+          }
+
+          return true;
+        } else {
+          this.error = result.error || 'Error al eliminar la categoría';
+          return false;
         }
-
-        return true;
       } catch (error) {
         console.error('Error deleting category:', error);
         this.error = 'Error al eliminar la categoría';

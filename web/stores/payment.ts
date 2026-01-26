@@ -1,10 +1,7 @@
 import { defineStore } from 'pinia';
-import { 
-  collection, query, where, getDocs, getDoc, doc, 
-  addDoc, updateDoc, deleteDoc, orderBy, serverTimestamp, 
-  Timestamp, limit, startAfter, endBefore 
-} from 'firebase/firestore';
-import { useCurrentUser } from 'vuefire';
+import { Timestamp, serverTimestamp } from 'firebase/firestore';
+import { getCurrentUser } from '~/utils/firebase';
+import { PaymentSchema } from '~/utils/odm/schemas/paymentSchema';
 import dayjs from 'dayjs';
 import customParseFormat from 'dayjs/plugin/customParseFormat';
 
@@ -22,7 +19,7 @@ interface Payment {
   paymentType: 'recurrent' | 'one-time';
   userId: string;
   createdAt: any;
-  dueDate: any; // Make this a required field
+  dueDate: any;
 }
 
 interface PaymentFilters {
@@ -44,6 +41,9 @@ interface PaymentState {
   lastFilters: PaymentFilters | null;
 }
 
+// Schema instance
+const paymentSchema = new PaymentSchema();
+
 export const usePaymentStore = defineStore('payment', {
   state: (): PaymentState => ({
     payments: [],
@@ -54,7 +54,7 @@ export const usePaymentStore = defineStore('payment', {
     currentPayment: null,
     lastFilters: null
   }),
-  
+
   getters: {
     getPayments: (state) => state.payments,
     getTotalPayments: (state) => state.totalPayments,
@@ -64,18 +64,18 @@ export const usePaymentStore = defineStore('payment', {
         paid: 0,
         unpaid: 0
       };
-      
+
       // Calculate only for current month
       const currentMonth = dayjs().format('MM');
       const currentYear = dayjs().format('YYYY');
-      
+
       state.payments.forEach(payment => {
-        const paymentDate = payment.createdAt 
-          ? dayjs(payment.createdAt.toDate()) 
+        const paymentDate = payment.createdAt
+          ? dayjs(payment.createdAt.toDate ? payment.createdAt.toDate() : payment.createdAt)
           : null;
-          
-        if (paymentDate && 
-            paymentDate.format('MM') === currentMonth && 
+
+        if (paymentDate &&
+            paymentDate.format('MM') === currentMonth &&
             paymentDate.format('YYYY') === currentYear) {
           if (payment.isPaid) {
             totals.paid += payment.amount;
@@ -84,18 +84,17 @@ export const usePaymentStore = defineStore('payment', {
           }
         }
       });
-      
+
       return totals;
     }
   },
-  
+
   actions: {
     // Fetch payments with pagination and filtering
     async fetchPayments(filters: PaymentFilters = {}, forceRefresh = false) {
-      const user = useCurrentUser();
-      const db = useFirestore();
+      const user = getCurrentUser();
 
-      if (!user || !user.value) {
+      if (!user) {
         this.error = 'Usuario no autenticado';
         return false;
       }
@@ -111,50 +110,65 @@ export const usePaymentStore = defineStore('payment', {
       this.isLoading = true;
 
       try {
-        // Build query constraints
-        const constraints: any[] = [
-          where('userId', '==', user.value.uid),
-          orderBy('dueDate', 'desc')
-        ];
+        // Build query options
+        const queryOptions: any = {
+          where: [],
+          orderBy: [{ field: 'dueDate', direction: 'desc' as const }]
+        };
 
         // Add payment type filter
         if (filters.paymentType && filters.paymentType !== 'all') {
-          constraints.push(where('paymentType', '==', filters.paymentType));
-        }
-
-        // Add date range filter
-        if (filters.startDate) {
-          constraints.push(where('dueDate', '>=', Timestamp.fromDate(filters.startDate)));
-        }
-
-        if (filters.endDate) {
-          constraints.push(where('dueDate', '<=', Timestamp.fromDate(filters.endDate)));
+          queryOptions.where.push({
+            field: 'paymentType',
+            operator: '==',
+            value: filters.paymentType
+          });
         }
 
         // Add paid/unpaid filter
         if (filters.isPaid !== undefined) {
-          constraints.push(where('isPaid', '==', filters.isPaid));
+          queryOptions.where.push({
+            field: 'isPaid',
+            operator: '==',
+            value: filters.isPaid
+          });
         }
 
         // Add category filter
         if (filters.category) {
-          constraints.push(where('category', '==', filters.category));
+          queryOptions.where.push({
+            field: 'category',
+            operator: '==',
+            value: filters.category
+          });
         }
 
-        // Execute query
-        const paymentsQuery = query(collection(db, 'payment2'), ...constraints);
-        const snapshot = await getDocs(paymentsQuery);
+        // Use date range if provided
+        if (filters.startDate && filters.endDate) {
+          const result = await paymentSchema.findByDateRange(
+            filters.startDate,
+            filters.endDate,
+            filters.paymentType
+          );
 
-        // Process results
-        const payments: Payment[] = [];
-        snapshot.forEach(doc => {
-          payments.push({
-            id: doc.id,
-            ...doc.data()
-          } as Payment);
-        });
+          if (result.success && result.data) {
+            this.payments = result.data as Payment[];
+          } else {
+            this.error = result.error || 'Error al obtener los pagos';
+            return false;
+          }
+        } else {
+          // Standard query
+          const result = await paymentSchema.find(queryOptions);
 
-        this.payments = payments;
+          if (result.success && result.data) {
+            this.payments = result.data as Payment[];
+          } else {
+            this.error = result.error || 'Error al obtener los pagos';
+            return false;
+          }
+        }
+
         this.isLoaded = true;
         this.lastFilters = { ...filters };
 
@@ -167,23 +181,19 @@ export const usePaymentStore = defineStore('payment', {
         this.isLoading = false;
       }
     },
-    
+
     // Get payment by ID
     async getPaymentById(paymentId: string) {
-      const db = useFirestore();
       this.isLoading = true;
-      
+
       try {
-        const paymentDoc = await getDoc(doc(db, 'payment2', paymentId));
-        
-        if (paymentDoc.exists()) {
-          this.currentPayment = {
-            id: paymentDoc.id,
-            ...paymentDoc.data()
-          } as Payment;
+        const result = await paymentSchema.findById(paymentId);
+
+        if (result.success && result.data) {
+          this.currentPayment = result.data as Payment;
           return this.currentPayment;
         } else {
-          this.error = 'Pago no encontrado';
+          this.error = result.error || 'Pago no encontrado';
           return null;
         }
       } catch (error) {
@@ -194,45 +204,40 @@ export const usePaymentStore = defineStore('payment', {
         this.isLoading = false;
       }
     },
-    
+
     // Create a new payment
     async createPayment(paymentData: Omit<Payment, 'id'>) {
-      const db = useFirestore();
-      const user = useCurrentUser();
-      
-      if (!user || !user.value) {
+      const user = getCurrentUser();
+
+      if (!user) {
         this.error = 'Usuario no autenticado';
         return false;
       }
-      
+
       this.isLoading = true;
-      
+
       try {
         // Ensure payment has required fields
         const newPayment = {
           ...paymentData,
-          userId: user.value.uid,
-          createdAt: serverTimestamp()
+          userId: user.uid
         };
-        
-        const docRef = await addDoc(collection(db, 'payment2'), newPayment);
 
-        // Add to local state with actual timestamp
-        const createdPayment = {
-          id: docRef.id,
-          ...paymentData, // Use original data instead of newPayment (which has serverTimestamp)
-          userId: user.value.uid,
-          createdAt: Timestamp.now() // Use actual timestamp for local state
-        } as Payment;
+        const result = await paymentSchema.create(newPayment);
 
-        // Trigger reactivity by replacing the array
-        this.payments = [createdPayment, ...this.payments];
-        this.totalPayments++;
-        
-        return {
-          success: true,
-          paymentId: docRef.id
-        };
+        if (result.success && result.data) {
+          // Add to local state
+          this.payments = [result.data as Payment, ...this.payments];
+          this.totalPayments++;
+
+          return {
+            success: true,
+            paymentId: result.data.id
+          };
+        } else {
+          this.error = result.error || 'Error al crear el pago';
+          return false;
+        }
       } catch (error) {
         console.error('Error creating payment:', error);
         this.error = 'Error al crear el pago';
@@ -241,33 +246,37 @@ export const usePaymentStore = defineStore('payment', {
         this.isLoading = false;
       }
     },
-    
+
     // Update an existing payment
     async updatePayment(paymentId: string, updates: Partial<Payment>) {
-      const db = useFirestore();
       this.isLoading = true;
-      
+
       try {
-        await updateDoc(doc(db, 'payment2', paymentId), updates);
-        
-        // Update local state
-        const index = this.payments.findIndex(p => p.id === paymentId);
-        if (index !== -1) {
-          this.payments[index] = {
-            ...this.payments[index],
-            ...updates
-          };
+        const result = await paymentSchema.update(paymentId, updates);
+
+        if (result.success) {
+          // Update local state
+          const index = this.payments.findIndex(p => p.id === paymentId);
+          if (index !== -1) {
+            this.payments[index] = {
+              ...this.payments[index],
+              ...updates
+            };
+          }
+
+          // Update current payment if it's the same one
+          if (this.currentPayment && this.currentPayment.id === paymentId) {
+            this.currentPayment = {
+              ...this.currentPayment,
+              ...updates
+            };
+          }
+
+          return true;
+        } else {
+          this.error = result.error || 'Error al actualizar el pago';
+          return false;
         }
-        
-        // Update current payment if it's the same one
-        if (this.currentPayment && this.currentPayment.id === paymentId) {
-          this.currentPayment = {
-            ...this.currentPayment,
-            ...updates
-          };
-        }
-        
-        return true;
       } catch (error) {
         console.error('Error updating payment:', error);
         this.error = 'Error al actualizar el pago';
@@ -276,25 +285,29 @@ export const usePaymentStore = defineStore('payment', {
         this.isLoading = false;
       }
     },
-    
+
     // Delete a payment
     async deletePayment(paymentId: string) {
-      const db = useFirestore();
       this.isLoading = true;
-      
+
       try {
-        await deleteDoc(doc(db, 'payment2', paymentId));
-        
-        // Update local state
-        this.payments = this.payments.filter(p => p.id !== paymentId);
-        this.totalPayments--;
-        
-        // Clear current payment if it's the same one
-        if (this.currentPayment && this.currentPayment.id === paymentId) {
-          this.currentPayment = null;
+        const result = await paymentSchema.delete(paymentId);
+
+        if (result.success) {
+          // Update local state
+          this.payments = this.payments.filter(p => p.id !== paymentId);
+          this.totalPayments--;
+
+          // Clear current payment if it's the same one
+          if (this.currentPayment && this.currentPayment.id === paymentId) {
+            this.currentPayment = null;
+          }
+
+          return true;
+        } else {
+          this.error = result.error || 'Error al eliminar el pago';
+          return false;
         }
-        
-        return true;
       } catch (error) {
         console.error('Error deleting payment:', error);
         this.error = 'Error al eliminar el pago';
@@ -303,32 +316,36 @@ export const usePaymentStore = defineStore('payment', {
         this.isLoading = false;
       }
     },
-    
+
     // Toggle payment status (paid/unpaid)
     async togglePaymentStatus(paymentId: string, isPaid: boolean) {
-      const db = useFirestore();
       this.isLoading = true;
-      
+
       try {
-        await updateDoc(doc(db, 'payment2', paymentId), {
+        const result = await paymentSchema.update(paymentId, {
           isPaid: isPaid,
           paidDate: isPaid ? serverTimestamp() : null
         });
-        
-        // Update local state
-        const index = this.payments.findIndex(p => p.id === paymentId);
-        if (index !== -1) {
-          this.payments[index].isPaid = isPaid;
-          this.payments[index].paidDate = isPaid ? new Date() : null;
+
+        if (result.success) {
+          // Update local state
+          const index = this.payments.findIndex(p => p.id === paymentId);
+          if (index !== -1) {
+            this.payments[index].isPaid = isPaid;
+            this.payments[index].paidDate = isPaid ? new Date() : null;
+          }
+
+          // Update current payment if it's the same one
+          if (this.currentPayment && this.currentPayment.id === paymentId) {
+            this.currentPayment.isPaid = isPaid;
+            this.currentPayment.paidDate = isPaid ? new Date() : null;
+          }
+
+          return true;
+        } else {
+          this.error = result.error || 'Error al actualizar el estado del pago';
+          return false;
         }
-        
-        // Update current payment if it's the same one
-        if (this.currentPayment && this.currentPayment.id === paymentId) {
-          this.currentPayment.isPaid = isPaid;
-          this.currentPayment.paidDate = isPaid ? new Date() : null;
-        }
-        
-        return true;
       } catch (error) {
         console.error('Error toggling payment status:', error);
         this.error = 'Error al actualizar el estado del pago';
@@ -337,7 +354,7 @@ export const usePaymentStore = defineStore('payment', {
         this.isLoading = false;
       }
     },
-    
+
     // Clear store state
     clearState() {
       this.payments = [];

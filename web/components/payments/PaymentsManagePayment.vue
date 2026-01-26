@@ -264,7 +264,7 @@
 <script setup>
 import { ref, computed, watch, onMounted } from "vue";
 import { storeToRefs } from "pinia";
-import { useCurrentUser } from "vuefire";
+import { getCurrentUser } from "~/utils/firebase";
 import { serverTimestamp, Timestamp } from "firebase/firestore";
 
 const props = defineProps({
@@ -291,7 +291,6 @@ const templateStore = useTemplateStore();
 const categoryStore = useCategoryStore();
 const { getTemplatesSorted: templates } = storeToRefs(templateStore);
 const { getCategories: categories } = storeToRefs(categoryStore);
-const user = useCurrentUser();
 
 // ----- Define Refs ---------
 const modal = ref(null);
@@ -533,7 +532,8 @@ async function fetchPaymentDetails(paymentId) {
 }
 
 async function savePayment() {
-  if (!user.value) {
+  const user = getCurrentUser();
+  if (!user) {
     useToast("error", "Debés iniciar sesión para guardar pagos");
     return;
   }
@@ -593,7 +593,7 @@ async function savePayment() {
       // Create new payment
       result = await paymentStore.createPayment({
         ...paymentData,
-        userId: user.value.uid
+        userId: user.uid
       });
 
       if (result && result.success) {

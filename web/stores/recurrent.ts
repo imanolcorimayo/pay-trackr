@@ -4,16 +4,16 @@ import {
   query,
   where,
   getDocs,
-  getDoc,
   addDoc,
   serverTimestamp,
   doc,
   updateDoc,
   deleteDoc,
-  orderBy,
   Timestamp
 } from "firebase/firestore";
-import type { User } from "firebase/auth";
+import { getFirestoreInstance, getCurrentUser } from "~/utils/firebase";
+import { RecurrentSchema } from "~/utils/odm/schemas/recurrentSchema";
+import { PaymentSchema } from "~/utils/odm/schemas/paymentSchema";
 import customParseFormat from "dayjs/plugin/customParseFormat";
 
 interface RecurrentPayment {
@@ -75,6 +75,10 @@ interface RecurrentState {
   lastFetchedMonthsBack: number;
 }
 
+// Schema instances
+const recurrentSchema = new RecurrentSchema();
+const paymentSchema = new PaymentSchema();
+
 export const useRecurrentStore = defineStore("recurrent", {
   state: (): RecurrentState => ({
     recurrentPayments: [],
@@ -114,10 +118,9 @@ export const useRecurrentStore = defineStore("recurrent", {
 
   actions: {
     async fetchRecurrentPayments(forceRefresh = false) {
-      const user = useCurrentUser();
-      const db = useFirestore();
+      const user = getCurrentUser();
 
-      if (!user || !user.value) {
+      if (!user) {
         this.$state.error = "Usuario no autenticado";
         return false;
       }
@@ -130,21 +133,17 @@ export const useRecurrentStore = defineStore("recurrent", {
       this.isLoading = true;
 
       try {
-        // Fetch all recurrent payments
-        const recurrentSnapshot = await getDocs(
-          query(collection(db, "recurrent"), where("userId", "==", user.value.uid))
-        );
-
-        const recurrents: RecurrentPayment[] = [];
-        recurrentSnapshot.forEach((doc) => {
-          recurrents.push({
-            id: doc.id,
-            ...doc.data()
-          } as RecurrentPayment);
+        const result = await recurrentSchema.find({
+          orderBy: [{ field: 'title', direction: 'asc' }]
         });
 
-        this.recurrentPayments = recurrents;
-        return true;
+        if (result.success && result.data) {
+          this.recurrentPayments = result.data as RecurrentPayment[];
+          return true;
+        } else {
+          this.$state.error = result.error || "Error al obtener los pagos recurrentes";
+          return false;
+        }
       } catch (error) {
         console.error("Error fetching recurrent payments:", error);
         this.$state.error = "Error al obtener los pagos recurrentes";
@@ -153,12 +152,12 @@ export const useRecurrentStore = defineStore("recurrent", {
         this.isLoading = false;
       }
     },
+
     async fetchPaymentInstances(monthsBack = 6, forceRefresh = false) {
-      const user = useCurrentUser();
-      const db = useFirestore();
+      const user = getCurrentUser();
       const { $dayjs } = useNuxtApp();
 
-      if (!user || !user.value) {
+      if (!user) {
         this.$state.error = "Usuario no autenticado";
         return false;
       }
@@ -178,30 +177,18 @@ export const useRecurrentStore = defineStore("recurrent", {
         const endDate = $dayjs().endOf("month").toDate();
 
         // Fetch all payment instances within date range
-        const paymentsSnapshot = await getDocs(
-          query(
-            collection(db, "payment2"),
-            where("userId", "==", user.value.uid),
-            where("paymentType", "==", "recurrent"),
-            where("createdAt", ">=", Timestamp.fromDate(startDate)),
-            where("createdAt", "<=", Timestamp.fromDate(endDate)),
-            orderBy("createdAt", "desc")
-          )
-        );
+        const result = await paymentSchema.findRecurrentInstances(startDate, endDate);
 
-        const payments: PaymentInstance[] = [];
-        paymentsSnapshot.forEach((doc) => {
-          payments.push({
-            id: doc.id,
-            ...doc.data()
-          } as PaymentInstance);
-        });
-
-        this.paymentInstances = payments;
-        this.processData(monthsBack);
-        this.isLoaded = true;
-        this.lastFetchedMonthsBack = monthsBack;
-        return true;
+        if (result.success && result.data) {
+          this.paymentInstances = result.data as PaymentInstance[];
+          this.processData(monthsBack);
+          this.isLoaded = true;
+          this.lastFetchedMonthsBack = monthsBack;
+          return true;
+        } else {
+          this.$state.error = result.error || "Error al obtener las instancias de pago";
+          return false;
+        }
       } catch (error) {
         console.error("Error fetching payment instances:", error);
         this.$state.error = "Error al obtener las instancias de pago";
@@ -210,25 +197,24 @@ export const useRecurrentStore = defineStore("recurrent", {
         this.isLoading = false;
       }
     },
+
     async createRecurrentPayment(payment: Omit<RecurrentPayment, "id">) {
-      const db = useFirestore();
       this.isLoading = true;
 
       try {
-        // Create the new recurrent payment
-        const docRef = await addDoc(collection(db, "recurrent"), payment);
+        const result = await recurrentSchema.create(payment);
 
-        // Add to local state
-        const newPayment = {
-          id: docRef.id,
-          ...payment
-        } as RecurrentPayment;
+        if (result.success && result.data) {
+          // Add to local state
+          this.recurrentPayments.push(result.data as RecurrentPayment);
 
-        this.recurrentPayments.push(newPayment);
-
-        // Reprocess data
-        this.processData();
-        return true;
+          // Reprocess data
+          this.processData();
+          return true;
+        } else {
+          this.$state.error = result.error || "Error al crear el pago recurrente";
+          return false;
+        }
       } catch (error) {
         console.error("Error creating recurrent payment:", error);
         this.$state.error = "Error al crear el pago recurrente";
@@ -237,6 +223,7 @@ export const useRecurrentStore = defineStore("recurrent", {
         this.isLoading = false;
       }
     },
+
     processData(monthsBack = 6) {
       const { $dayjs } = useNuxtApp();
       const processedData: RecurrentWithMonths[] = [];
@@ -295,7 +282,7 @@ export const useRecurrentStore = defineStore("recurrent", {
         // Fill in actual payment data where available
         this.paymentInstances.forEach((payment) => {
           if (payment.recurrentId === recurrent.id) {
-            const paymentDate = $dayjs(payment.createdAt.toDate());
+            const paymentDate = $dayjs(payment.createdAt.toDate ? payment.createdAt.toDate() : payment.createdAt);
             const paymentMonth = paymentDate.format("MMM");
 
             // Match payment to the correct month and year
@@ -325,7 +312,7 @@ export const useRecurrentStore = defineStore("recurrent", {
     },
 
     async togglePaymentStatus(paymentId: string, isPaid: boolean) {
-      const db = useFirestore();
+      const db = getFirestoreInstance();
       this.isLoading = true;
 
       try {
@@ -353,12 +340,12 @@ export const useRecurrentStore = defineStore("recurrent", {
     },
 
     async addNewPaymentInstance(recurrentId: string, month: string, isPaid = false, year?: string) {
-      const user = useCurrentUser();
-      const db = useFirestore();
+      const user = getCurrentUser();
+      const db = getFirestoreInstance();
       const { $dayjs } = useNuxtApp();
       $dayjs.extend(customParseFormat);
 
-      if (!user || !user.value) {
+      if (!user) {
         this.$state.error = "Usuario no autenticado";
         return false;
       }
@@ -382,7 +369,6 @@ export const useRecurrentStore = defineStore("recurrent", {
           paymentYear = parseInt(year);
         } else {
           // If no year provided, infer based on month
-          // If the month is in the future relative to current month, use previous year
           const currentMonth = $dayjs().month();
           const currentYear = $dayjs().year();
 
@@ -409,7 +395,7 @@ export const useRecurrentStore = defineStore("recurrent", {
           paidDate: isPaid ? serverTimestamp() : null,
           recurrentId: recurrentId,
           paymentType: "recurrent",
-          userId: user.value.uid,
+          userId: user.uid,
           createdAt: Timestamp.fromDate(paymentDate)
         };
 
@@ -434,24 +420,28 @@ export const useRecurrentStore = defineStore("recurrent", {
     },
 
     async updateRecurrentPayment(recurrentId: string, updates: Partial<RecurrentPayment>) {
-      const db = useFirestore();
       this.isLoading = true;
 
       try {
-        await updateDoc(doc(db, "recurrent", recurrentId), updates);
+        const result = await recurrentSchema.update(recurrentId, updates);
 
-        // Update local state
-        const index = this.recurrentPayments.findIndex((r) => r.id === recurrentId);
-        if (index !== -1) {
-          this.recurrentPayments[index] = {
-            ...this.recurrentPayments[index],
-            ...updates
-          };
+        if (result.success) {
+          // Update local state
+          const index = this.recurrentPayments.findIndex((r) => r.id === recurrentId);
+          if (index !== -1) {
+            this.recurrentPayments[index] = {
+              ...this.recurrentPayments[index],
+              ...updates
+            };
+          }
+
+          // Reprocess data
+          this.processData();
+          return true;
+        } else {
+          this.$state.error = result.error || "Error al actualizar el pago recurrente";
+          return false;
         }
-
-        // Reprocess data
-        this.processData();
-        return true;
       } catch (error) {
         console.error("Error updating recurrent payment:", error);
         this.$state.error = "Error al actualizar el pago recurrente";
@@ -460,15 +450,16 @@ export const useRecurrentStore = defineStore("recurrent", {
         this.isLoading = false;
       }
     },
+
     async deleteRecurrentPayment(recurrentId: string) {
-      const db = useFirestore();
+      const db = getFirestoreInstance();
       this.isLoading = true;
       let deletedInstances = 0;
 
       try {
         // Step 1: Find all payment instances associated with this recurrent payment
-        const user = useCurrentUser();
-        if (!user || !user.value) {
+        const user = getCurrentUser();
+        if (!user) {
           this.$state.error = "Usuario no autenticado";
           return false;
         }
@@ -476,7 +467,7 @@ export const useRecurrentStore = defineStore("recurrent", {
         const paymentInstancesQuery = query(
           collection(db, "payment2"),
           where("recurrentId", "==", recurrentId),
-          where("userId", "==", user.value.uid)
+          where("userId", "==", user.uid)
         );
 
         const instancesSnapshot = await getDocs(paymentInstancesQuery);
@@ -491,7 +482,12 @@ export const useRecurrentStore = defineStore("recurrent", {
         await Promise.all(deletePromises);
 
         // Step 3: Delete the recurrent payment itself
-        await deleteDoc(doc(db, "recurrent", recurrentId));
+        const result = await recurrentSchema.delete(recurrentId);
+
+        if (!result.success) {
+          this.$state.error = result.error || "Error al eliminar el pago recurrente";
+          return false;
+        }
 
         // Step 4: Update local state
         this.paymentInstances = this.paymentInstances.filter((p) => p.recurrentId !== recurrentId);

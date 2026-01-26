@@ -23,6 +23,7 @@
 
 <script setup>
 import { collection, addDoc } from 'firebase/firestore';
+import { getCurrentUser, getFirestoreInstance } from '~/utils/firebase';
 
 
 definePageMeta({
@@ -30,12 +31,12 @@ definePageMeta({
     middleware: 'auth'
 })
 
-const user = await getCurrentUser()
-const db = useFirestore();
+const user = getCurrentUser()
+const db = getFirestoreInstance();
 
 const contactUs = ref({
-    fullName: user.displayName,
-    email: user.email,
+    fullName: user?.displayName || '',
+    email: user?.email || '',
     message: '',
 })
 const disableButton = ref(false)
@@ -47,12 +48,12 @@ async function sendContactUsMessage() {
     sending.value = true;
 
     // Simple validate name and full name and the message is not empty
-    if(contactUs.value.fullName !== user.displayName) {
+    if(contactUs.value.fullName !== user?.displayName) {
         useToast("error", "El nombre no coincide con tu cuenta.")
         disableButton.value = false;
         sending.value = false;
         return;
-    } else if(contactUs.value.email !== user.email) {
+    } else if(contactUs.value.email !== user?.email) {
         useToast("error", "El email no coincide con tu cuenta.")
         disableButton.value = false;
         sending.value = false;
@@ -65,10 +66,10 @@ async function sendContactUsMessage() {
     }
 
     try {
-        // Send message to firebase                
+        // Send message to firebase
         // Post tracker object on Firestore
         const newContactUs = await addDoc(collection(db, "contactUs"), contactUs.value);
-    
+
         // Show success message and redirect to home page
         useToast("success", "¡Gracias! Mensaje enviado correctamente.", { onClick: "goHome", autoClose: 2000 })
         setTimeout(() => {
