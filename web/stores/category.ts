@@ -67,7 +67,10 @@ export const useCategoryStore = defineStore('category', {
         const result = await categorySchema.findActive();
 
         if (result.success && result.data) {
-          this.categories = result.data as ExpenseCategory[];
+          // Sort by name client-side to avoid composite index requirement
+          this.categories = (result.data as ExpenseCategory[]).sort((a, b) =>
+            (a.name || '').localeCompare(b.name || '')
+          );
           this.isLoaded = true;
 
           // Auto-seed default categories if no categories exist

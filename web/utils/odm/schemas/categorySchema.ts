@@ -39,10 +39,9 @@ export class CategorySchema extends Schema {
   };
 
   // Find all active categories (not soft-deleted)
+  // Note: Sorting by name is done client-side to avoid composite index requirement
   async findActive(): Promise<FetchResult> {
-    const result = await this.find({
-      orderBy: [{ field: 'name', direction: 'asc' }]
-    });
+    const result = await this.find({});
 
     if (result.success && result.data) {
       // Filter out soft-deleted categories

@@ -115,10 +115,29 @@ export const signOutUser = async (): Promise<void> => {
   }
 }
 
-// Get current user
+// Get current user (synchronous - may be null on initial load)
 export const getCurrentUser = (): User | null => {
   const auth = getAuthInstance()
   return auth.currentUser
+}
+
+// Get current user (async - waits for auth state to be determined)
+export const getCurrentUserAsync = (): Promise<User | null> => {
+  return new Promise((resolve) => {
+    const auth = getAuthInstance()
+
+    // If already have a user, return immediately
+    if (auth.currentUser) {
+      resolve(auth.currentUser)
+      return
+    }
+
+    // Wait for auth state to be determined
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      unsubscribe()
+      resolve(user)
+    })
+  })
 }
 
 // Listen to auth state changes

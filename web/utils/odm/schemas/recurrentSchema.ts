@@ -69,25 +69,21 @@ export class RecurrentSchema extends Schema {
   };
 
   // Find all recurrent payments for user
+  // Note: Sorting by title is done client-side to avoid composite index requirement
   async findAll(): Promise<FetchResult> {
-    return this.find({
-      orderBy: [{ field: 'title', direction: 'asc' }]
-    });
+    return this.find({});
   }
 
   // Find by category
   async findByCategory(categoryId: string): Promise<FetchResult> {
     return this.find({
-      where: [{ field: 'categoryId', operator: '==', value: categoryId }],
-      orderBy: [{ field: 'title', direction: 'asc' }]
+      where: [{ field: 'categoryId', operator: '==', value: categoryId }]
     });
   }
 
   // Find active recurrent payments (without end date or end date in future)
   async findActive(): Promise<FetchResult> {
     // Note: This will need to be filtered client-side for endDate logic
-    return this.find({
-      orderBy: [{ field: 'title', direction: 'asc' }]
-    });
+    return this.find({});
   }
 }

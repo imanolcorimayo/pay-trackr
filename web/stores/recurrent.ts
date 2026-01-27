@@ -133,12 +133,13 @@ export const useRecurrentStore = defineStore("recurrent", {
       this.isLoading = true;
 
       try {
-        const result = await recurrentSchema.find({
-          orderBy: [{ field: 'title', direction: 'asc' }]
-        });
+        const result = await recurrentSchema.find({});
 
         if (result.success && result.data) {
-          this.recurrentPayments = result.data as RecurrentPayment[];
+          // Sort by title client-side to avoid composite index requirement
+          this.recurrentPayments = (result.data as RecurrentPayment[]).sort((a, b) =>
+            (a.title || '').localeCompare(b.title || '')
+          );
           return true;
         } else {
           this.$state.error = result.error || "Error al obtener los pagos recurrentes";

@@ -34,8 +34,15 @@ export abstract class Schema {
   protected abstract collectionName: string;
   protected abstract schema: SchemaDefinition;
 
-  // Firestore instance
-  private db = getFirestoreInstance();
+  // Firestore instance (lazy initialized)
+  private _db: ReturnType<typeof getFirestoreInstance> | null = null;
+
+  private get db() {
+    if (!this._db) {
+      this._db = getFirestoreInstance();
+    }
+    return this._db;
+  }
 
   constructor() {}
 

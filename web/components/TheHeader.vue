@@ -59,10 +59,11 @@
 </template>
 
 <script setup>
+import { getAuthInstance, getCurrentUserAsync } from '~/utils/firebase';
 
 // ----- Define Useful Properties ---------
-const auth = useFirebaseAuth()
-const user = await getCurrentUser();
+const auth = getAuthInstance();
+const user = await getCurrentUserAsync();
 const route = useRoute();
 
 // ----- Define Pinia Vars ----------

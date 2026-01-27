@@ -1,5 +1,8 @@
 <template>
   <div class="categories-page mb-8">
+    <!-- Settings Navigation -->
+    <SettingsNav />
+
     <!-- Edit Modal -->
     <ModalStructure ref="editModal" @onClose="resetEditForm">
       <template #header>

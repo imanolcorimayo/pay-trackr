@@ -150,8 +150,9 @@ import SolarPieChartLinear from "~icons/solar/pie-chart-linear";
 import MingcuteNotificationFill from "~icons/mingcute/notification-fill";
 import LetsIconsDimondAlt from "~icons/lets-icons/dimond-alt";
 import IcRoundPlus from "~icons/ic/round-plus";
+import { getCurrentUserAsync } from '~/utils/firebase';
 
-const user = await getCurrentUser();
+const user = await getCurrentUserAsync();
 const route = useRoute();
 
 // Only redirect if:

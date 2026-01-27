@@ -31,7 +31,9 @@
 </template>
 
 <script setup>
-const user = await getCurrentUser();
+import { getCurrentUserAsync } from '~/utils/firebase';
+
+const user = await getCurrentUserAsync();
 const route = useRoute();
 // ----- Define Pinia Vars -----------
 // ----- Define Computed ---------
