@@ -465,10 +465,22 @@ async function findCategoryId(userId, categoryName) {
   return '';
 }
 
+// Normalize Argentine phone numbers (remove the 9 after country code)
+function normalizePhoneNumber(phone) {
+  // Argentine mobile numbers come as 5493513467739 but API expects 543513467739
+  if (phone.startsWith('549') && phone.length === 13) {
+    return '54' + phone.slice(3);
+  }
+  return phone;
+}
+
 async function sendWhatsAppMessage(to, message) {
+  // Normalize the phone number for the API
+  const normalizedTo = normalizePhoneNumber(to);
+
   if (!WP_PHONE_NUMBER_ID || !WP_ACCESS_TOKEN) {
     console.log('WhatsApp credentials not configured, skipping message send');
-    console.log(`Would send to ${to}: ${message}`);
+    console.log(`Would send to ${normalizedTo}: ${message}`);
     return;
   }
 
@@ -484,7 +496,7 @@ async function sendWhatsAppMessage(to, message) {
         body: JSON.stringify({
           messaging_product: 'whatsapp',
           recipient_type: 'individual',
-          to: to,
+          to: normalizedTo,
           type: 'text',
           text: {
             preview_url: false,

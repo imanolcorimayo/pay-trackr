@@ -3,7 +3,7 @@ dotenv.config();
 
 const PHONE_NUMBER_ID = process.env.IDENTIFIER_WP_NUMBER;
 const ACCESS_TOKEN = process.env.ACCESS_TOKEN_WP_BUSINESS;
-const RECIPIENT_PHONE = process.env.WA_TEST_RECIPIENT || '543513467739';
+const RECIPIENT_PHONE = process.env.WA_TEST_RECIPIENT || '5493513467739';
 
 // Debug: check if env vars are loaded
 console.log('PHONE_NUMBER_ID:', PHONE_NUMBER_ID || '(not set)');
