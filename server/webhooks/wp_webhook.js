@@ -6,7 +6,7 @@ import admin from 'firebase-admin';
 // Configuration
 // ============================================
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 4000;
 const VERIFY_TOKEN = process.env.WP_VERIFY_TOKEN || 'myself_testing';
 const WP_PHONE_NUMBER_ID = process.env.IDENTIFIER_WP_NUMBER;
 const WP_ACCESS_TOKEN = process.env.ACCESS_TOKEN_WP_BUSINESS;
@@ -29,9 +29,11 @@ if (!admin.apps.length) {
   }
 
   admin.initializeApp(firebaseConfig);
+  console.log('Firebase initialized successfully');
 }
 
 const db = admin.firestore();
+console.log('Firestore connection established');
 
 // ============================================
 // Collections
