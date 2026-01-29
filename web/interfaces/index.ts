@@ -6,7 +6,7 @@ export interface Payment {
     description: string;
     payment_id: string;
     title: string;
-    category: string;
+    categoryId: string;
     timePeriod: string;
     id?: string|number;
     isWhatsapp?: boolean;

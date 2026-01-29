@@ -41,7 +41,7 @@ console.log('Firestore connection established');
 const COLLECTIONS = {
   WHATSAPP_LINKS: 'whatsappLinks', // Single collection for both pending codes and linked accounts
   PAYMENTS: 'payment2',
-  CATEGORIES: 'categories'
+  CATEGORIES: 'expenseCategories'
 };
 
 // ============================================
@@ -350,7 +350,7 @@ async function handleExpenseMessage(phoneNumber, text) {
       title: parsed.title,
       description: parsed.description,
       amount: parsed.amount,
-      category: categoryResult.id,
+      categoryId: categoryResult.id,
       isPaid: true,
       paidDate: admin.firestore.FieldValue.serverTimestamp(),
       paymentType: 'one-time',

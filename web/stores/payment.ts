@@ -12,7 +12,7 @@ interface Payment {
   title: string;
   description: string;
   amount: number;
-  category: string;
+  categoryId: string;
   isPaid: boolean;
   paidDate: any;
   recurrentId: string | null;
@@ -20,6 +20,8 @@ interface Payment {
   userId: string;
   createdAt: any;
   dueDate: any;
+  isWhatsapp?: boolean;
+  status?: 'pending' | 'reviewed';
 }
 
 interface PaymentFilters {
@@ -368,6 +370,37 @@ export const usePaymentStore = defineStore('payment', {
     // Force refresh data
     async refetchPayments(filters: PaymentFilters = {}) {
       return this.fetchPayments(filters, true);
+    },
+
+    // Mark a WhatsApp payment as reviewed
+    async markAsReviewed(paymentId: string) {
+      try {
+        const result = await paymentSchema.update(paymentId, {
+          status: 'reviewed'
+        });
+
+        if (result.success) {
+          // Update local state
+          const index = this.payments.findIndex(p => p.id === paymentId);
+          if (index !== -1) {
+            this.payments[index].status = 'reviewed';
+          }
+
+          // Update current payment if it's the same one
+          if (this.currentPayment && this.currentPayment.id === paymentId) {
+            this.currentPayment.status = 'reviewed';
+          }
+
+          return true;
+        } else {
+          this.error = result.error || 'Error al marcar como revisado';
+          return false;
+        }
+      } catch (error) {
+        console.error('Error marking payment as reviewed:', error);
+        this.error = 'Error al marcar como revisado';
+        return false;
+      }
     }
   }
 });

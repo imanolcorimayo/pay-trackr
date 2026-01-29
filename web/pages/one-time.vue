@@ -6,6 +6,8 @@
       :paymentId="activePaymentId"
       :isEdit="true"
       :isRecurrent="false"
+      :isReview="isReviewMode"
+      @onClose="isReviewMode = false"
     />
     <PaymentsManagePayment
       ref="newPayment"
@@ -140,7 +142,17 @@
             <!-- Card Header -->
             <div class="flex items-start justify-between mb-3">
               <div class="flex-1 min-w-0">
-                <h3 class="font-semibold text-gray-100 truncate">{{ payment.title }}</h3>
+                <div class="flex items-center gap-2">
+                  <h3 class="font-semibold text-gray-100 truncate">{{ payment.title }}</h3>
+                  <!-- WhatsApp Indicator -->
+                  <span
+                    v-if="payment.isWhatsapp"
+                    class="flex-shrink-0 flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-md bg-green-500/20 text-green-400"
+                    title="Creado via WhatsApp"
+                  >
+                    <MdiWhatsapp class="text-xs" />
+                  </span>
+                </div>
                 <span
                   class="inline-block mt-1 text-[10px] px-2 py-0.5 rounded-md tracking-wide font-medium"
                   :style="{ backgroundColor: getDisplayCategoryColor(payment) + '20', color: getDisplayCategoryColor(payment) }"
@@ -181,19 +193,30 @@
 
             <!-- Actions -->
             <div class="flex justify-between items-center pt-3 border-t border-gray-600/50">
-              <button
-                @click.stop="togglePaymentStatus(payment.id, !payment.isPaid)"
-                class="text-sm py-1.5 px-3 rounded-lg flex items-center gap-1.5 font-medium transition-all"
-                :class="payment.isPaid
-                  ? 'bg-warning/10 text-warning hover:bg-warning/20'
-                  : 'bg-success/10 text-success hover:bg-success/20'"
-                :disabled="togglingPayment === payment.id"
-              >
-                <MdiLoading v-if="togglingPayment === payment.id" class="animate-spin text-base" />
-                <MdiCheck v-else-if="!payment.isPaid" class="text-base" />
-                <MdiUndo v-else class="text-base" />
-                {{ payment.isPaid ? "No Pagado" : "Marcar Pagado" }}
-              </button>
+              <div class="flex items-center gap-2">
+                <button
+                  @click.stop="togglePaymentStatus(payment.id, !payment.isPaid)"
+                  class="text-sm py-1.5 px-3 rounded-lg flex items-center gap-1.5 font-medium transition-all"
+                  :class="payment.isPaid
+                    ? 'bg-warning/10 text-warning hover:bg-warning/20'
+                    : 'bg-success/10 text-success hover:bg-success/20'"
+                  :disabled="togglingPayment === payment.id"
+                >
+                  <MdiLoading v-if="togglingPayment === payment.id" class="animate-spin text-base" />
+                  <MdiCheck v-else-if="!payment.isPaid" class="text-base" />
+                  <MdiUndo v-else class="text-base" />
+                  <span class="hidden sm:inline">{{ payment.isPaid ? "No Pagado" : "Marcar Pagado" }}</span>
+                </button>
+                <!-- Review Button for WhatsApp pending payments -->
+                <button
+                  v-if="payment.isWhatsapp && payment.status === 'pending'"
+                  @click.stop="showReview(payment.id)"
+                  class="text-sm py-1.5 px-3 rounded-lg flex items-center gap-1.5 font-medium transition-all bg-primary/10 text-primary hover:bg-primary/20"
+                >
+                  <MdiEye class="text-base" />
+                  <span class="hidden sm:inline">Revisar</span>
+                </button>
+              </div>
               <button
                 @click.stop="showEdit(payment.id)"
                 class="p-2 rounded-lg text-gray-400 hover:text-gray-200 hover:bg-gray-600/50 transition-colors"
@@ -224,6 +247,8 @@ import MdiPlus from "~icons/mdi/plus";
 import MdiLoading from "~icons/mdi/loading";
 import MdiCalculator from "~icons/mdi/calculator";
 import MdiUndo from "~icons/mdi/undo";
+import MdiWhatsapp from "~icons/mdi/whatsapp";
+import MdiEye from "~icons/mdi/eye";
 
 definePageMeta({
   middleware: ["auth"]
@@ -259,6 +284,7 @@ const monthsOffset = ref(0);
 const currentSortOrder = ref({ name: "date", order: "desc" });
 const currentSearchQuery = ref("");
 const togglingPayment = ref(null); // Track which payment is being toggled
+const isReviewMode = ref(false); // Track if edit modal is opened for review
 
 // ----- Define Computed ---------
 const currentMonth = computed(() => {
@@ -352,9 +378,15 @@ function showDetails(paymentId) {
 }
 
 // Show edit payment form
-function showEdit(paymentId) {
+function showEdit(paymentId, reviewMode = false) {
   activePaymentId.value = paymentId;
+  isReviewMode.value = reviewMode;
   editPayment.value?.showModal(paymentId);
+}
+
+// Show review modal for WhatsApp payments
+function showReview(paymentId) {
+  showEdit(paymentId, true);
 }
 
 // Show new payment modal (from floating button)
@@ -410,10 +442,11 @@ function searchPayments(query) {
 
   const searchTerm = query.toLowerCase();
   payments.value = getPayments.value.filter((payment) => {
+    const categoryName = getDisplayCategoryName(payment).toLowerCase();
     return (
       payment.title.toLowerCase().includes(searchTerm) ||
       (payment.description && payment.description.toLowerCase().includes(searchTerm)) ||
-      payment.category.toLowerCase().includes(searchTerm) ||
+      categoryName.includes(searchTerm) ||
       payment.amount.toString().includes(searchTerm)
     );
   });

@@ -11,9 +11,13 @@
           ></div>
           <div>
             <h2 class="text-xl font-bold">
-              {{ isEdit ? "Editar" : "Crear" }} Pago {{ isRecurrent ? "Recurrente" : "Único" }}
+              {{ props.isReview ? "Revisar" : (isEdit ? "Editar" : "Crear") }} Pago {{ isRecurrent ? "Recurrente" : "Único" }}
             </h2>
             <p class="text-sm text-gray-500" v-if="isEdit && form.title">{{ form.title }}</p>
+            <p class="text-xs text-green-400 flex items-center gap-1 mt-1" v-if="props.isReview">
+              <span class="inline-block w-2 h-2 rounded-full bg-green-400"></span>
+              Creado via WhatsApp
+            </p>
           </div>
         </div>
       </template>
@@ -227,11 +231,36 @@
 
           <div class="flex space-x-2">
             <button
-              v-if="isEdit"
+              v-if="isEdit && !props.isReview"
               @click="confirmDelete"
               class="px-4 py-2 bg-danger/10 text-danger rounded-lg hover:bg-danger/20 transition-colors"
             >
               Eliminar
+            </button>
+
+            <!-- Mark as pending for later review (only for WhatsApp payments that are reviewed) -->
+            <button
+              v-if="isEdit && form.isWhatsapp && form.status === 'reviewed'"
+              @click="markAsPending"
+              class="px-4 py-2 bg-warning/10 text-warning rounded-lg hover:bg-warning/20 transition-colors"
+              :disabled="isSubmitting"
+            >
+              Revisar después
+            </button>
+
+            <!-- Review Mode: "Todo perfecto" button -->
+            <button
+              v-if="props.isReview"
+              @click="markAsReviewed"
+              class="px-4 py-2 bg-success text-white rounded-lg hover:bg-success/90 transition-colors flex items-center gap-2"
+              :disabled="isSubmitting"
+            >
+              <span v-if="isSubmitting">
+                <span
+                  class="inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"
+                ></span>
+              </span>
+              <span v-else>✓ Todo perfecto</span>
             </button>
 
             <button
@@ -245,7 +274,7 @@
                 ></span>
                 Guardando...
               </span>
-              <span v-else>{{ isEdit ? "Actualizar" : "Crear" }}</span>
+              <span v-else>{{ props.isReview ? "Guardar cambios" : (isEdit ? "Actualizar" : "Crear") }}</span>
             </button>
           </div>
         </div>
@@ -277,6 +306,10 @@ const props = defineProps({
     default: false
   },
   isRecurrent: {
+    type: Boolean,
+    default: false
+  },
+  isReview: {
     type: Boolean,
     default: false
   }
@@ -329,7 +362,9 @@ const defaultForm = computed(() => {
       dueDate: lastUsedDueDate.value || today,
       isPaid: true, // Always mark as paid on creation
       paidDate: lastUsedDueDate.value || today, // Set paidDate same as dueDate
-      paymentType: "one-time"
+      paymentType: "one-time",
+      isWhatsapp: false,
+      status: "reviewed"
     };
   }
 });
@@ -383,7 +418,9 @@ function applyTemplate(templateData) {
     dueDate: dueDate,
     isPaid: true,
     paidDate: dueDate,
-    paymentType: "one-time"
+    paymentType: "one-time",
+    isWhatsapp: false,
+    status: "reviewed"
   };
 
   showDescription.value = !!templateData.description;
@@ -516,7 +553,9 @@ async function fetchPaymentDetails(paymentId) {
           dueDate: dueDate,
           isPaid: payment.isPaid || true,
           paidDate: paidDate,
-          paymentType: payment.paymentType || "one-time"
+          paymentType: payment.paymentType || "one-time",
+          isWhatsapp: payment.isWhatsapp || false,
+          status: payment.status || "reviewed"
         };
 
         // Show description if it has content
@@ -560,9 +599,11 @@ async function savePayment() {
       categoryId: form.value.categoryId,
       isPaid: form.value.isPaid,
       paidDate: form.value.isPaid ? Timestamp.fromDate($dayjs(form.value.paidDate).toDate()) : null,
-      dueDate: Timestamp.fromDate($dayjs(form.value.dueDate).toDate()), // Set dueDate from form
+      dueDate: Timestamp.fromDate($dayjs(form.value.dueDate).toDate()),
       recurrentId: null,
-      paymentType: "one-time"
+      paymentType: "one-time",
+      isWhatsapp: form.value.isWhatsapp || false,
+      status: form.value.status || 'reviewed'
     };
 
     if (props.isRecurrent) {
@@ -583,7 +624,7 @@ async function savePayment() {
       result = await paymentStore.updatePayment(props.paymentId, paymentData);
 
       if (result) {
-        useToast("success", "Pago actualizado correctamente");
+        useToast("success", props.isReview ? "Pago revisado correctamente" : "Pago actualizado correctamente");
         emit("onCreated");
         closeModal();
       } else {
@@ -648,6 +689,23 @@ async function deletePayment() {
   } finally {
     isSubmitting.value = false;
   }
+}
+
+// Mark WhatsApp payment as reviewed without changes - uses same logic as savePayment
+async function markAsReviewed() {
+  if (isSubmitting.value || !props.paymentId) return;
+
+  // Just call savePayment with status set to reviewed - form data is already loaded
+  form.value.status = 'reviewed';
+  await savePayment();
+}
+
+// Mark WhatsApp payment as pending for later review
+async function markAsPending() {
+  if (isSubmitting.value || !props.paymentId) return;
+
+  form.value.status = 'pending';
+  await savePayment();
 }
 
 // ----- Define Watchers ---------

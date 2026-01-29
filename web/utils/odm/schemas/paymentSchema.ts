@@ -35,7 +35,7 @@ export class PaymentSchema extends Schema {
       required: true,
       min: 0
     },
-    category: {
+    categoryId: {
       type: 'string',
       required: false,
       default: ''
