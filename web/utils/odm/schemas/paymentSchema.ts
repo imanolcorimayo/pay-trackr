@@ -69,6 +69,16 @@ export class PaymentSchema extends Schema {
     updatedAt: {
       type: 'date',
       required: false
+    },
+    isWhatsapp: {
+      type: 'boolean',
+      required: false,
+      default: false
+    },
+    status: {
+      type: 'string',
+      required: false,
+      default: 'reviewed'
     }
   };
 

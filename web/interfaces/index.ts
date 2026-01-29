@@ -9,6 +9,8 @@ export interface Payment {
     category: string;
     timePeriod: string;
     id?: string|number;
+    isWhatsapp?: boolean;
+    status?: 'pending' | 'reviewed';
 }
 export interface PaymentList extends Array<Payment>{}
 export interface TrackerList extends Array<Tracker>{}

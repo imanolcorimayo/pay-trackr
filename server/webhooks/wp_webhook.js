@@ -45,53 +45,9 @@ const COLLECTIONS = {
 };
 
 // ============================================
-// Default category mappings (keywords -> category names)
+// Common categories for help message
 // ============================================
-const CATEGORY_KEYWORDS = {
-  'super': 'Supermercado',
-  'supermercado': 'Supermercado',
-  'mercado': 'Supermercado',
-  'comida': 'Supermercado',
-  'almuerzo': 'Salidas',
-  'cena': 'Salidas',
-  'restaurant': 'Salidas',
-  'resto': 'Salidas',
-  'salida': 'Salidas',
-  'cafe': 'Salidas',
-  'bar': 'Salidas',
-  'uber': 'Transporte',
-  'taxi': 'Transporte',
-  'nafta': 'Transporte',
-  'combustible': 'Transporte',
-  'colectivo': 'Transporte',
-  'transporte': 'Transporte',
-  'alquiler': 'Vivienda y Alquiler',
-  'expensas': 'Vivienda y Alquiler',
-  'luz': 'Servicios',
-  'gas': 'Servicios',
-  'agua': 'Servicios',
-  'internet': 'Servicios',
-  'telefono': 'Servicios',
-  'celular': 'Servicios',
-  'netflix': 'Suscripciones',
-  'spotify': 'Suscripciones',
-  'suscripcion': 'Suscripciones',
-  'gym': 'Fitness y Deportes',
-  'gimnasio': 'Fitness y Deportes',
-  'medico': 'Salud',
-  'farmacia': 'Salud',
-  'remedios': 'Salud',
-  'ropa': 'Ropa',
-  'zapatillas': 'Ropa',
-  'regalo': 'Regalos',
-  'mascota': 'Mascotas',
-  'veterinario': 'Mascotas',
-  'viaje': 'Viajes',
-  'vuelo': 'Viajes',
-  'hotel': 'Viajes',
-  'curso': 'Educacion',
-  'libro': 'Educacion',
-};
+const COMMON_CATEGORIES = ['supermercado', 'salidas', 'transporte', 'servicios', 'suscripciones'];
 
 // ============================================
 // Middleware
@@ -181,6 +137,12 @@ async function processMessage(phoneNumber, text, contactName) {
     return;
   }
 
+  // Check for CATEGORIAS command
+  if (normalizedText === 'categorias') {
+    await handleCategoriesCommand(phoneNumber);
+    return;
+  }
+
   // Try to parse as expense
   await handleExpenseMessage(phoneNumber, text);
 }
@@ -249,7 +211,7 @@ async function handleLinkCommand(phoneNumber, code, contactName) {
 
     await sendWhatsAppMessage(
       phoneNumber,
-      `Cuenta vinculada exitosamente!\n\nAhora podes registrar gastos enviando mensajes como:\n- "$500 super"\n- "1500 almuerzo"\n- "$2000 uber"\n\nEscribi "ayuda" para mas informacion.`
+      `Cuenta vinculada exitosamente!\n\nAhora podes registrar gastos enviando mensajes como:\n- "$500 Super #supermercado"\n- "$1500 Cena #salidas d:Cumple de Juan"\n\nEscribi "ayuda" para mas informacion.`
     );
   } catch (error) {
     console.error('Error linking account:', error);
@@ -288,24 +250,69 @@ async function handleUnlinkCommand(phoneNumber) {
 }
 
 async function sendHelpMessage(phoneNumber) {
+  const commonCats = COMMON_CATEGORIES.map(c => `#${c}`).join(', ');
   const helpText = `*PayTrackr - Ayuda*
 
 *Registrar un gasto:*
-Envia el monto seguido de una descripcion.
+$<monto> <titulo> #<categoria> d:<descripcion>
+
 Ejemplos:
-- "$500 super"
-- "1500 almuerzo"
-- "$2000 uber"
+- "$500 Super #supermercado"
+- "$1500 Cena con amigos #salidas d:Cumple de Juan"
+- "$2000 Uber" (sin categoria = Otros)
+
+*Categorias frecuentes:*
+${commonCats}
 
 *Comandos:*
-- VINCULAR <codigo> - Vincular este numero a tu cuenta
+- VINCULAR <codigo> - Vincular este numero
 - DESVINCULAR - Desvincular este numero
-- AYUDA - Ver este mensaje
-
-*Categorias automaticas:*
-El sistema detecta automaticamente la categoria segun la descripcion (super, almuerzo, uber, netflix, etc.)`;
+- CATEGORIAS - Ver todas las categorias
+- AYUDA - Ver este mensaje`;
 
   await sendWhatsAppMessage(phoneNumber, helpText);
+}
+
+async function handleCategoriesCommand(phoneNumber) {
+  // Check if phone is linked
+  const linkDoc = await db.collection(COLLECTIONS.WHATSAPP_LINKS).doc(phoneNumber).get();
+
+  if (!linkDoc.exists || linkDoc.data()?.status !== 'linked') {
+    await sendWhatsAppMessage(
+      phoneNumber,
+      'Este numero no esta vinculado a ninguna cuenta de PayTrackr.'
+    );
+    return;
+  }
+
+  const linkData = linkDoc.data();
+  const userId = linkData.userId;
+
+  try {
+    const categoriesSnapshot = await db
+      .collection(COLLECTIONS.CATEGORIES)
+      .where('userId', '==', userId)
+      .get();
+
+    if (categoriesSnapshot.empty) {
+      await sendWhatsAppMessage(phoneNumber, 'No tenes categorias configuradas en tu cuenta.');
+      return;
+    }
+
+    const categoryNames = categoriesSnapshot.docs
+      .map(doc => doc.data().name)
+      .filter(name => name)
+      .sort()
+      .map(name => `#${name.toLowerCase()}`);
+
+    await sendWhatsAppMessage(
+      phoneNumber,
+      `*Tus categorias:*\n${categoryNames.join(', ')}`
+    );
+  } catch (error) {
+    console.error('Error fetching categories:', error);
+    await sendWhatsAppMessage(phoneNumber, 'Error al obtener las categorias.');
+  }
 }
 
 async function handleExpenseMessage(phoneNumber, text) {
@@ -329,21 +336,21 @@ async function handleExpenseMessage(phoneNumber, text) {
   if (!parsed) {
     await sendWhatsAppMessage(
       phoneNumber,
-      'No pude entender el mensaje. Usa el formato:\n"$500 descripcion" o "1500 descripcion"\n\nEjemplos:\n- "$500 super"\n- "1500 almuerzo"'
+      'No pude entender el mensaje. Usa el formato:\n$<monto> <titulo> #<categoria> d:<descripcion>\n\nEjemplos:\n- "$500 Super #supermercado"\n- "$1500 Cena #salidas d:Cumple de Juan"'
     );
     return;
   }
 
   try {
-    // Find category ID for this user
-    const categoryId = await findCategoryId(userId, parsed.category);
+    // Find category ID for this user (case-insensitive, partial match fallback)
+    const categoryResult = await findCategoryId(userId, parsed.category);
 
     // Create the payment
     const paymentData = {
-      title: parsed.description,
-      description: `Registrado via WhatsApp`,
+      title: parsed.title,
+      description: parsed.description,
       amount: parsed.amount,
-      category: categoryId,
+      category: categoryResult.id,
       isPaid: true,
       paidDate: admin.firestore.FieldValue.serverTimestamp(),
       paymentType: 'one-time',
@@ -351,10 +358,11 @@ async function handleExpenseMessage(phoneNumber, text) {
       createdAt: admin.firestore.FieldValue.serverTimestamp(),
       dueDate: admin.firestore.FieldValue.serverTimestamp(),
       recurrentId: null,
-      source: 'whatsapp'
+      isWhatsapp: true,
+      status: 'pending'
     };
 
-    const paymentRef = await db.collection(COLLECTIONS.PAYMENTS).add(paymentData);
+    await db.collection(COLLECTIONS.PAYMENTS).add(paymentData);
 
     // Format amount for display
     const formattedAmount = new Intl.NumberFormat('es-AR', {
@@ -364,7 +372,7 @@ async function handleExpenseMessage(phoneNumber, text) {
 
     await sendWhatsAppMessage(
       phoneNumber,
-      `Gasto registrado!\n\n*${parsed.description}*\nMonto: ${formattedAmount}\nCategoria: ${parsed.category}`
+      `Gasto registrado!\n\n*${parsed.title}*\nMonto: ${formattedAmount}\nCategoria: ${categoryResult.name}${parsed.description ? `\nDescripcion: ${parsed.description}` : ''}`
     );
   } catch (error) {
     console.error('Error creating payment:', error);
@@ -380,16 +388,17 @@ async function handleExpenseMessage(phoneNumber, text) {
 // ============================================
 
 function parseExpenseMessage(text) {
-  // Try to extract amount and description
-  // Formats supported:
-  // - "$500 descripcion"
-  // - "500 descripcion"
-  // - "$1.500 descripcion"
-  // - "$1500,50 descripcion"
+  // Format: $<amount> <title> #<category> d:<description>
+  // Category and description are optional, order is flexible
+  // Examples:
+  // - "$500 Super #supermercado d:Compras del finde"
+  // - "$1500 Cena #salidas"
+  // - "$2000 Uber d:Viaje al centro #transporte"
+  // - "$300 Cafe"
 
   const cleanText = text.trim();
 
-  // Regex to match amount (with optional $ and thousands/decimal separators)
+  // Extract amount and the rest
   const amountRegex = /^\$?\s*([\d.,]+)\s+(.+)$/i;
   const match = cleanText.match(amountRegex);
 
@@ -398,58 +407,98 @@ function parseExpenseMessage(text) {
   }
 
   let amountStr = match[1];
-  const description = match[2].trim();
+  let rest = match[2].trim();
 
   // Normalize amount: remove thousand separators (.) and convert decimal (,) to (.)
   // Argentine format: 1.234,56 -> 1234.56
   amountStr = amountStr.replace(/\./g, '').replace(',', '.');
-
   const amount = parseFloat(amountStr);
 
   if (isNaN(amount) || amount <= 0) {
     return null;
   }
 
-  // Detect category from description
-  const category = detectCategory(description);
+  // Extract category (hashtag)
+  let category = null;
+  const categoryMatch = rest.match(/#(\S+)/);
+  if (categoryMatch) {
+    category = categoryMatch[1].toLowerCase();
+    rest = rest.replace(/#\S+/, '').trim();
+  }
+
+  // Extract description (d:)
+  let description = '';
+  const descMatch = rest.match(/d:(.+?)(?=#|$)/i);
+  if (descMatch) {
+    description = descMatch[1].trim();
+    rest = rest.replace(/d:.+?(?=#|$)/i, '').trim();
+  }
+
+  // What remains is the title
+  const title = capitalizeFirst(rest.trim());
+
+  if (!title) {
+    return null;
+  }
 
   return {
     amount,
-    description: capitalizeFirst(description),
-    category
+    title,
+    category,
+    description
   };
-}
-
-function detectCategory(description) {
-  const normalizedDesc = description.toLowerCase();
-
-  for (const [keyword, category] of Object.entries(CATEGORY_KEYWORDS)) {
-    if (normalizedDesc.includes(keyword)) {
-      return category;
-    }
-  }
-
-  return 'Otros';
 }
 
 function capitalizeFirst(str) {
   return str.charAt(0).toUpperCase() + str.slice(1);
 }
 
-async function findCategoryId(userId, categoryName) {
-  // Try to find the category by name for this user
+async function findCategoryId(userId, categoryInput) {
+  // If no category provided, return "Otros"
+  if (!categoryInput) {
+    return await findOtrosCategory(userId);
+  }
+
+  const normalizedInput = categoryInput.toLowerCase();
+
+  // Fetch all categories for this user
   const categoriesSnapshot = await db
     .collection(COLLECTIONS.CATEGORIES)
     .where('userId', '==', userId)
-    .where('name', '==', categoryName)
-    .limit(1)
     .get();
 
-  if (!categoriesSnapshot.empty) {
-    return categoriesSnapshot.docs[0].id;
+  if (categoriesSnapshot.empty) {
+    return { id: '', name: 'Otros' };
   }
 
-  // Try to find "Otros" category
+  const categories = categoriesSnapshot.docs.map(doc => ({
+    id: doc.id,
+    name: doc.data().name || ''
+  }));
+
+  // 1. Try exact match (case-insensitive)
+  const exactMatch = categories.find(c => c.name.toLowerCase() === normalizedInput);
+  if (exactMatch) {
+    return exactMatch;
+  }
+
+  // 2. Try partial match (category name starts with input)
+  const partialMatch = categories.find(c => c.name.toLowerCase().startsWith(normalizedInput));
+  if (partialMatch) {
+    return partialMatch;
+  }
+
+  // 3. Try partial match (input is contained in category name)
+  const containsMatch = categories.find(c => c.name.toLowerCase().includes(normalizedInput));
+  if (containsMatch) {
+    return containsMatch;
+  }
+
+  // 4. Fallback to "Otros"
+  return await findOtrosCategory(userId);
+}
+
+async function findOtrosCategory(userId) {
   const otrosSnapshot = await db
     .collection(COLLECTIONS.CATEGORIES)
     .where('userId', '==', userId)
@@ -458,11 +507,10 @@ async function findCategoryId(userId, categoryName) {
     .get();
 
   if (!otrosSnapshot.empty) {
-    return otrosSnapshot.docs[0].id;
+    return { id: otrosSnapshot.docs[0].id, name: 'Otros' };
   }
 
-  // Return empty string if no category found
-  return '';
+  return { id: '', name: 'Otros' };
 }
 
 // Normalize Argentine phone numbers (remove the 9 after country code)
