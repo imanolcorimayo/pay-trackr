@@ -197,6 +197,24 @@ async function processMessage(phoneNumber, text, contactName) {
     return;
   }
 
+  // Check for RESUMEN command
+  if (normalizedText === 'resumen') {
+    await handleResumenCommand(phoneNumber);
+    return;
+  }
+
+  // Check for FIJOS command
+  if (normalizedText === 'fijos') {
+    await handleFijosCommand(phoneNumber);
+    return;
+  }
+
+  // Check for ANALISIS command
+  if (normalizedText === 'analisis') {
+    await handleAnalisisCommand(phoneNumber);
+    return;
+  }
+
   // Try to parse as expense
   await handleExpenseMessage(phoneNumber, text);
 }
@@ -341,6 +359,9 @@ Podes escribir parte del nombre:
 #sal -> Salidas
 
 *Comandos:*
+RESUMEN - Tu mes actual
+FIJOS - Gastos recurrentes
+ANALISIS - Feedback con IA
 CATEGORIAS - Ver todas
 AYUDA - Ver este mensaje`;
 
@@ -396,6 +417,428 @@ Ejemplos:
   } catch (error) {
     console.error('Error fetching categories:', error);
     await sendWhatsAppMessage(phoneNumber, 'Error al obtener las categorias.');
+  }
+}
+
+// ============================================
+// RESUMEN Command - Monthly Overview
+// ============================================
+async function handleResumenCommand(phoneNumber) {
+  const linkDoc = await db.collection(COLLECTIONS.WHATSAPP_LINKS).doc(phoneNumber).get();
+
+  if (!linkDoc.exists || linkDoc.data()?.status !== 'linked') {
+    await sendWhatsAppMessage(phoneNumber, 'Este numero no esta vinculado a ninguna cuenta de PayTrackr.');
+    return;
+  }
+
+  const userId = linkDoc.data().userId;
+
+  try {
+    const now = new Date();
+    const currentMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+    const currentMonthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
+    const prevMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    const prevMonthEnd = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59);
+
+    // Get current month payments
+    const currentPaymentsSnapshot = await db
+      .collection(COLLECTIONS.PAYMENTS)
+      .where('userId', '==', userId)
+      .where('createdAt', '>=', currentMonthStart)
+      .where('createdAt', '<=', currentMonthEnd)
+      .get();
+
+    // Get previous month payments
+    const prevPaymentsSnapshot = await db
+      .collection(COLLECTIONS.PAYMENTS)
+      .where('userId', '==', userId)
+      .where('createdAt', '>=', prevMonthStart)
+      .where('createdAt', '<=', prevMonthEnd)
+      .get();
+
+    // Calculate current month total and by category
+    const currentPayments = currentPaymentsSnapshot.docs.map(doc => doc.data());
+    const currentTotal = currentPayments.reduce((sum, p) => sum + (p.amount || 0), 0);
+    const currentCount = currentPayments.length;
+
+    // Calculate previous month total
+    const prevPayments = prevPaymentsSnapshot.docs.map(doc => doc.data());
+    const prevTotal = prevPayments.reduce((sum, p) => sum + (p.amount || 0), 0);
+
+    // Get categories for names
+    const categoriesSnapshot = await db
+      .collection(COLLECTIONS.CATEGORIES)
+      .where('userId', '==', userId)
+      .get();
+
+    const categoryMap = {};
+    categoriesSnapshot.docs.forEach(doc => {
+      categoryMap[doc.id] = doc.data().name;
+    });
+
+    // Calculate by category
+    const byCategory = {};
+    currentPayments.forEach(p => {
+      const catName = categoryMap[p.categoryId] || 'Otros';
+      byCategory[catName] = (byCategory[catName] || 0) + (p.amount || 0);
+    });
+
+    // Sort categories by amount and get top 3
+    const topCategories = Object.entries(byCategory)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 3);
+
+    // Count pending recurrent payments
+    const pendingRecurrentSnapshot = await db
+      .collection(COLLECTIONS.PAYMENTS)
+      .where('userId', '==', userId)
+      .where('paymentType', '==', 'recurrent')
+      .where('isPaid', '==', false)
+      .get();
+
+    const pendingRecurrentCount = pendingRecurrentSnapshot.size;
+
+    // Format amounts
+    const formatAmount = (amount) => new Intl.NumberFormat('es-AR', {
+      style: 'currency',
+      currency: 'ARS',
+      maximumFractionDigits: 0
+    }).format(amount);
+
+    // Calculate comparison
+    let comparison = '';
+    if (prevTotal > 0) {
+      const diff = currentTotal - prevTotal;
+      const pct = Math.round((diff / prevTotal) * 100);
+      const sign = diff >= 0 ? '+' : '';
+      comparison = `vs mes anterior: ${sign}${pct}% (${sign}${formatAmount(diff)})`;
+    }
+
+    // Format month name
+    const monthNames = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+      'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+    const monthName = monthNames[now.getMonth()];
+
+    // Build top categories text
+    let topCatsText = '';
+    if (topCategories.length > 0) {
+      topCatsText = '\n\n*Top categorias:*\n' + topCategories
+        .map(([name, amount]) => `#${name.toLowerCase()} ${formatAmount(amount)}`)
+        .join('\n');
+    }
+
+    // Build pending text
+    let pendingText = '';
+    if (pendingRecurrentCount > 0) {
+      pendingText = `\n\nRecurrentes pendientes: ${pendingRecurrentCount}`;
+    }
+
+    const message = `*${monthName} ${now.getFullYear()}*
+
+Gastaste: ${formatAmount(currentTotal)}
+${currentCount} pagos registrados
+${comparison}${topCatsText}${pendingText}`;
+
+    await sendWhatsAppMessage(phoneNumber, message);
+  } catch (error) {
+    console.error('Error in RESUMEN command:', error);
+    await sendWhatsAppMessage(phoneNumber, 'Error al obtener el resumen. Intenta nuevamente.');
+  }
+}
+
+// ============================================
+// FIJOS Command - Recurring Payments
+// ============================================
+async function handleFijosCommand(phoneNumber) {
+  const linkDoc = await db.collection(COLLECTIONS.WHATSAPP_LINKS).doc(phoneNumber).get();
+
+  if (!linkDoc.exists || linkDoc.data()?.status !== 'linked') {
+    await sendWhatsAppMessage(phoneNumber, 'Este numero no esta vinculado a ninguna cuenta de PayTrackr.');
+    return;
+  }
+
+  const userId = linkDoc.data().userId;
+
+  try {
+    // Get all recurrent templates
+    const recurrentSnapshot = await db
+      .collection('recurrent')
+      .where('userId', '==', userId)
+      .get();
+
+    if (recurrentSnapshot.empty) {
+      await sendWhatsAppMessage(phoneNumber, 'No tenes gastos fijos configurados.\n\nPodes agregarlos desde la app en la seccion "Recurrentes".');
+      return;
+    }
+
+    const recurrents = recurrentSnapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    }));
+
+    // Get current month's recurrent payment instances to check which are pending
+    const now = new Date();
+    const currentMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+    const currentMonthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
+
+    const instancesSnapshot = await db
+      .collection(COLLECTIONS.PAYMENTS)
+      .where('userId', '==', userId)
+      .where('paymentType', '==', 'recurrent')
+      .where('createdAt', '>=', currentMonthStart)
+      .where('createdAt', '<=', currentMonthEnd)
+      .get();
+
+    // Map instances by recurrentId
+    const instancesByRecurrent = {};
+    instancesSnapshot.docs.forEach(doc => {
+      const data = doc.data();
+      if (data.recurrentId) {
+        instancesByRecurrent[data.recurrentId] = data;
+      }
+    });
+
+    // Build list with pending status
+    const formatAmount = (amount) => new Intl.NumberFormat('es-AR', {
+      style: 'currency',
+      currency: 'ARS',
+      maximumFractionDigits: 0
+    }).format(amount);
+
+    // Separate pending and paid
+    const pending = [];
+    const paid = [];
+
+    recurrents.forEach(r => {
+      const instance = instancesByRecurrent[r.id];
+      const isPaid = instance?.isPaid ?? false;
+      const dueDateDay = parseInt(r.dueDateDay) || 1;
+
+      // Calculate due date for this month
+      const dueDate = new Date(now.getFullYear(), now.getMonth(), dueDateDay);
+      const daysUntilDue = Math.ceil((dueDate - now) / (1000 * 60 * 60 * 24));
+
+      const item = {
+        title: r.title,
+        amount: r.amount,
+        daysUntilDue,
+        dueDateDay
+      };
+
+      if (isPaid) {
+        paid.push(item);
+      } else {
+        pending.push(item);
+      }
+    });
+
+    // Sort pending by due date (most urgent first)
+    pending.sort((a, b) => a.daysUntilDue - b.daysUntilDue);
+
+    // Calculate total
+    const totalMonthly = recurrents.reduce((sum, r) => sum + (r.amount || 0), 0);
+
+    // Format due date text
+    const formatDue = (days) => {
+      if (days < 0) return `vencido hace ${Math.abs(days)} dias`;
+      if (days === 0) return 'vence hoy';
+      if (days === 1) return 'vence manana';
+      return `vence en ${days} dias`;
+    };
+
+    // Build message
+    let message = `*Gastos fijos: ${formatAmount(totalMonthly)}/mes*\n`;
+
+    if (pending.length > 0) {
+      message += `\n*Pendientes (${pending.length}):*\n`;
+      pending.forEach(p => {
+        message += `${p.title} ${formatAmount(p.amount)}\n  _${formatDue(p.daysUntilDue)}_\n`;
+      });
+    }
+
+    if (paid.length > 0) {
+      message += `\n*Pagados (${paid.length}):*\n`;
+      paid.forEach(p => {
+        message += `${p.title} ${formatAmount(p.amount)}\n`;
+      });
+    }
+
+    await sendWhatsAppMessage(phoneNumber, message.trim());
+  } catch (error) {
+    console.error('Error in FIJOS command:', error);
+    await sendWhatsAppMessage(phoneNumber, 'Error al obtener los gastos fijos. Intenta nuevamente.');
+  }
+}
+
+// ============================================
+// ANALISIS Command - AI Financial Health Analysis
+// ============================================
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
+
+async function handleAnalisisCommand(phoneNumber) {
+  const linkDoc = await db.collection(COLLECTIONS.WHATSAPP_LINKS).doc(phoneNumber).get();
+
+  if (!linkDoc.exists || linkDoc.data()?.status !== 'linked') {
+    await sendWhatsAppMessage(phoneNumber, 'Este numero no esta vinculado a ninguna cuenta de PayTrackr.');
+    return;
+  }
+
+  const userId = linkDoc.data().userId;
+
+  // Check if AI is configured
+  if (!GEMINI_API_KEY) {
+    await sendWhatsAppMessage(phoneNumber, 'El analisis con IA no esta disponible en este momento.');
+    return;
+  }
+
+  try {
+    await sendWhatsAppMessage(phoneNumber, 'Analizando tus finanzas... esto puede tomar unos segundos.');
+
+    // Get last 3 months of data
+    const now = new Date();
+    const threeMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 3, 1);
+
+    // Get payments
+    const paymentsSnapshot = await db
+      .collection(COLLECTIONS.PAYMENTS)
+      .where('userId', '==', userId)
+      .where('createdAt', '>=', threeMonthsAgo)
+      .orderBy('createdAt', 'desc')
+      .get();
+
+    // Get recurrent templates
+    const recurrentSnapshot = await db
+      .collection('recurrent')
+      .where('userId', '==', userId)
+      .get();
+
+    // Get categories
+    const categoriesSnapshot = await db
+      .collection(COLLECTIONS.CATEGORIES)
+      .where('userId', '==', userId)
+      .get();
+
+    const categoryMap = {};
+    categoriesSnapshot.docs.forEach(doc => {
+      categoryMap[doc.id] = doc.data().name;
+    });
+
+    // Process payments data
+    const payments = paymentsSnapshot.docs.map(doc => {
+      const data = doc.data();
+      return {
+        amount: data.amount,
+        category: categoryMap[data.categoryId] || 'Otros',
+        type: data.paymentType,
+        month: data.createdAt?.toDate()?.toISOString().slice(0, 7) || 'unknown'
+      };
+    });
+
+    // Calculate monthly totals by category
+    const monthlyData = {};
+    payments.forEach(p => {
+      if (!monthlyData[p.month]) {
+        monthlyData[p.month] = { total: 0, byCategory: {}, count: 0 };
+      }
+      monthlyData[p.month].total += p.amount;
+      monthlyData[p.month].count++;
+      monthlyData[p.month].byCategory[p.category] =
+        (monthlyData[p.month].byCategory[p.category] || 0) + p.amount;
+    });
+
+    // Get recurrent totals
+    const recurrents = recurrentSnapshot.docs.map(doc => ({
+      title: doc.data().title,
+      amount: doc.data().amount,
+      category: categoryMap[doc.data().categoryId] || 'Otros'
+    }));
+
+    const totalRecurrent = recurrents.reduce((sum, r) => sum + (r.amount || 0), 0);
+
+    // Prepare data summary for AI
+    const dataSummary = {
+      monthlyData,
+      totalRecurrent,
+      recurrentCount: recurrents.length,
+      recurrents: recurrents.slice(0, 10), // Top 10 for context
+      totalPayments: payments.length,
+      months: Object.keys(monthlyData).sort()
+    };
+
+    // Call AI for analysis
+    const analysis = await getAIAnalysis(dataSummary);
+
+    await sendWhatsAppMessage(phoneNumber, analysis);
+  } catch (error) {
+    console.error('Error in ANALISIS command:', error);
+    await sendWhatsAppMessage(phoneNumber, 'Error al analizar tus finanzas. Intenta nuevamente.');
+  }
+}
+
+async function getAIAnalysis(data) {
+  const prompt = `Eres un asesor financiero personal amigable. Analiza los siguientes datos de gastos de un usuario argentino y proporciona feedback conciso sobre su salud financiera.
+
+DATOS DEL USUARIO:
+- Meses analizados: ${data.months.join(', ')}
+- Total de pagos registrados: ${data.totalPayments}
+- Gastos fijos mensuales: $${data.totalRecurrent} (${data.recurrentCount} recurrentes)
+
+GASTOS POR MES:
+${Object.entries(data.monthlyData).map(([month, info]) =>
+  `${month}: $${info.total.toLocaleString('es-AR')} (${info.count} pagos)
+   Categorias: ${Object.entries(info.byCategory).map(([cat, amt]) => `${cat}: $${amt.toLocaleString('es-AR')}`).join(', ')}`
+).join('\n\n')}
+
+RECURRENTES PRINCIPALES:
+${data.recurrents.map(r => `- ${r.title}: $${r.amount.toLocaleString('es-AR')} (${r.category})`).join('\n')}
+
+INSTRUCCIONES:
+1. Analiza tendencias de gasto (subiendo, bajando, estable)
+2. Identifica categorias con mayor gasto. Identifica posible gastos irresponsables, evitables o anomalos
+3. Evalua la proporcion de gastos fijos vs variables
+4. Da 2-3 consejos practicos y especificos
+5. Usa un tono amigable y motivador. No marques errores ni juzgues los habitos. Sos el aliado que quiere ayudar.
+6. NO uses emojis
+7. Responde en espanol argentino
+8. Manten la respuesta CORTA (max 800 caracteres) para WhatsApp
+9. Usa *asteriscos* para negritas
+10. Si aplica, haz notar algun patron interesante en los datos
+
+Responde directamente con el analisis, sin introduccion.`;
+
+  try {
+    const response = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent?key=${GEMINI_API_KEY}`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          contents: [{
+            parts: [{
+              text: prompt
+            }]
+          }],
+          generationConfig: {
+            maxOutputTokens: 500,
+            temperature: 0.7
+          }
+        })
+      }
+    );
+
+    if (!response.ok) {
+      console.error('Gemini API error:', await response.text());
+      return 'No se pudo completar el analisis. Intenta nuevamente.';
+    }
+
+    const result = await response.json();
+    const text = result.candidates?.[0]?.content?.parts?.[0]?.text;
+    return text || 'No se pudo generar el analisis.';
+  } catch (error) {
+    console.error('Error calling Gemini:', error);
+    return 'Error al conectar con el servicio de analisis.';
   }
 }
 
