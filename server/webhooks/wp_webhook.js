@@ -45,9 +45,63 @@ const COLLECTIONS = {
 };
 
 // ============================================
-// Common categories for help message
+// Fallback categories (used when no payment history)
 // ============================================
-const COMMON_CATEGORIES = ['supermercado', 'salidas', 'transporte', 'servicios', 'suscripciones'];
+const FALLBACK_CATEGORIES = ['supermercado', 'salidas', 'transporte', 'servicios', 'suscripciones'];
+
+// ============================================
+// Get user's most common categories from last 10 payments
+// ============================================
+async function getUserCommonCategories(userId) {
+  try {
+    // Get last 10 payments
+    const paymentsSnapshot = await db
+      .collection(COLLECTIONS.PAYMENTS)
+      .where('userId', '==', userId)
+      .orderBy('createdAt', 'desc')
+      .limit(10)
+      .get();
+
+    if (paymentsSnapshot.empty) {
+      return FALLBACK_CATEGORIES;
+    }
+
+    // Get category IDs from payments
+    const categoryIds = paymentsSnapshot.docs
+      .map(doc => doc.data().categoryId)
+      .filter(id => id);
+
+    if (categoryIds.length === 0) {
+      return FALLBACK_CATEGORIES;
+    }
+
+    // Get unique category IDs preserving order of first appearance
+    const uniqueCategoryIds = [...new Set(categoryIds)];
+
+    // Fetch category names
+    const categoriesSnapshot = await db
+      .collection(COLLECTIONS.CATEGORIES)
+      .where('userId', '==', userId)
+      .get();
+
+    const categoryMap = {};
+    categoriesSnapshot.docs.forEach(doc => {
+      categoryMap[doc.id] = doc.data().name;
+    });
+
+    // Map IDs to names, filter out missing, take first 5
+    const categoryNames = uniqueCategoryIds
+      .map(id => categoryMap[id])
+      .filter(name => name && name.toLowerCase() !== 'otros')
+      .slice(0, 5)
+      .map(name => name.toLowerCase());
+
+    return categoryNames.length > 0 ? categoryNames : FALLBACK_CATEGORIES;
+  } catch (error) {
+    console.error('Error getting common categories:', error);
+    return FALLBACK_CATEGORIES;
+  }
+}
 
 // ============================================
 // Middleware
@@ -211,7 +265,14 @@ async function handleLinkCommand(phoneNumber, code, contactName) {
 
     await sendWhatsAppMessage(
       phoneNumber,
-      `Cuenta vinculada exitosamente!\n\nAhora podes registrar gastos enviando mensajes como:\n- "$500 Super #supermercado"\n- "$1500 Cena #salidas d:Cumple de Juan"\n\nEscribi "ayuda" para mas informacion.`
+      `Cuenta vinculada!
+
+Ahora podes registrar gastos:
+
+\`$500 Super #supermercado\`
+\`$1500 Cena #salidas\`
+
+Escribi AYUDA para mas info.`
     );
   } catch (error) {
     console.error('Error linking account:', error);
@@ -250,25 +311,38 @@ async function handleUnlinkCommand(phoneNumber) {
 }
 
 async function sendHelpMessage(phoneNumber) {
-  const commonCats = COMMON_CATEGORIES.map(c => `#${c}`).join(', ');
+  // Get user's common categories if linked
+  let commonCats = FALLBACK_CATEGORIES;
+  const linkDoc = await db.collection(COLLECTIONS.WHATSAPP_LINKS).doc(phoneNumber).get();
+  if (linkDoc.exists && linkDoc.data()?.status === 'linked') {
+    const userId = linkDoc.data().userId;
+    commonCats = await getUserCommonCategories(userId);
+  }
+
+  const catsFormatted = commonCats.map(c => `#${c}`).join('\n');
+
   const helpText = `*PayTrackr - Ayuda*
 
-*Registrar un gasto:*
-$<monto> <titulo> #<categoria> d:<descripcion>
+*Formato:*
+\`\`\`
+$<monto> <titulo> #<cat>
+\`\`\`
 
-Ejemplos:
-- "$500 Super #supermercado"
-- "$1500 Cena con amigos #salidas d:Cumple de Juan"
-- "$2000 Uber" (sin categoria = Otros)
+*Ejemplos:*
+\`$500 Super #supermercado\`
+\`$1500 Cena #salidas d:Cumple\`
+\`$2000 Uber\` (sin cat = Otros)
 
-*Categorias frecuentes:*
-${commonCats}
+*Tus categorias frecuentes:*
+${catsFormatted}
+
+Podes escribir parte del nombre:
+#super -> Supermercado
+#sal -> Salidas
 
 *Comandos:*
-- VINCULAR <codigo> - Vincular este numero
-- DESVINCULAR - Desvincular este numero
-- CATEGORIAS - Ver todas las categorias
-- AYUDA - Ver este mensaje`;
+CATEGORIAS - Ver todas
+AYUDA - Ver este mensaje`;
 
   await sendWhatsAppMessage(phoneNumber, helpText);
 }
@@ -302,12 +376,22 @@ async function handleCategoriesCommand(phoneNumber) {
     const categoryNames = categoriesSnapshot.docs
       .map(doc => doc.data().name)
       .filter(name => name)
-      .sort()
-      .map(name => `#${name.toLowerCase()}`);
+      .sort();
+
+    const categoriesFormatted = categoryNames.map(name => `#${name.toLowerCase()}`).join('\n');
 
     await sendWhatsAppMessage(
       phoneNumber,
-      `*Tus categorias:*\n${categoryNames.join(', ')}`
+      `*Tus categorias:*
+
+${categoriesFormatted}
+
+*Tip:* Podes escribir solo parte del nombre y se detecta automaticamente.
+
+Ejemplos:
+#super -> Supermercado
+#sal -> Salidas
+#trans -> Transporte`
     );
   } catch (error) {
     console.error('Error fetching categories:', error);
@@ -334,9 +418,25 @@ async function handleExpenseMessage(phoneNumber, text) {
   const parsed = parseExpenseMessage(text);
 
   if (!parsed) {
+    // Get user's common categories for suggestion
+    const commonCats = await getUserCommonCategories(userId);
+    const catsFormatted = commonCats.slice(0, 3).map(c => `#${c}`).join(' ');
+
     await sendWhatsAppMessage(
       phoneNumber,
-      'No pude entender el mensaje. Usa el formato:\n$<monto> <titulo> #<categoria> d:<descripcion>\n\nEjemplos:\n- "$500 Super #supermercado"\n- "$1500 Cena #salidas d:Cumple de Juan"'
+      `No pude entender el mensaje.
+
+*Formato:*
+\`$<monto> <titulo> #<cat>\`
+
+*Ejemplos:*
+\`$500 Super #supermercado\`
+\`$1500 Cena #salidas\`
+
+*Categorias sugeridas:*
+${catsFormatted}
+
+Escribi AYUDA para mas info.`
     );
     return;
   }
@@ -370,10 +470,17 @@ async function handleExpenseMessage(phoneNumber, text) {
       currency: 'ARS'
     }).format(parsed.amount);
 
-    await sendWhatsAppMessage(
-      phoneNumber,
-      `Gasto registrado!\n\n*${parsed.title}*\nMonto: ${formattedAmount}\nCategoria: ${categoryResult.name}${parsed.description ? `\nDescripcion: ${parsed.description}` : ''}`
-    );
+    let successMessage = `Gasto registrado!
+
+*${parsed.title}*
+${formattedAmount}
+#${categoryResult.name.toLowerCase()}`;
+
+    if (parsed.description) {
+      successMessage += `\n_${parsed.description}_`;
+    }
+
+    await sendWhatsAppMessage(phoneNumber, successMessage);
   } catch (error) {
     console.error('Error creating payment:', error);
     await sendWhatsAppMessage(

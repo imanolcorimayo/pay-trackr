@@ -198,23 +198,23 @@
                   @click.stop="togglePaymentStatus(payment.id, !payment.isPaid)"
                   class="text-sm py-1.5 px-3 rounded-lg flex items-center gap-1.5 font-medium transition-all"
                   :class="payment.isPaid
-                    ? 'bg-warning/10 text-warning hover:bg-warning/20'
-                    : 'bg-success/10 text-success hover:bg-success/20'"
+                    ? 'bg-warning/20 text-warning hover:bg-warning/30 border border-warning/30'
+                    : 'bg-success/20 text-success hover:bg-success/30 border border-success/30'"
                   :disabled="togglingPayment === payment.id"
                 >
-                  <MdiLoading v-if="togglingPayment === payment.id" class="animate-spin text-base" />
-                  <MdiCheck v-else-if="!payment.isPaid" class="text-base" />
-                  <MdiUndo v-else class="text-base" />
-                  <span class="hidden sm:inline">{{ payment.isPaid ? "No Pagado" : "Marcar Pagado" }}</span>
+                  <MdiLoading v-if="togglingPayment === payment.id" class="animate-spin text-base text-current" />
+                  <MdiCheck v-else-if="!payment.isPaid" class="text-base text-success" />
+                  <MdiUndo v-else class="text-base text-warning" />
+                  <span class="hidden sm:inline">{{ payment.isPaid ? "No Pagado" : "Pagado" }}</span>
                 </button>
                 <!-- Review Button for WhatsApp pending payments -->
                 <button
                   v-if="payment.isWhatsapp && payment.status === 'pending'"
                   @click.stop="showReview(payment.id)"
-                  class="text-sm py-1.5 px-3 rounded-lg flex items-center gap-1.5 font-medium transition-all bg-primary/10 text-primary hover:bg-primary/20"
+                  class="text-sm py-1.5 px-3 rounded-lg flex items-center gap-1.5 font-medium transition-all bg-primary/20 text-primary hover:bg-primary/30 border border-primary/30"
                 >
-                  <MdiEye class="text-base" />
-                  <span class="hidden sm:inline">Revisar</span>
+                  <MdiEye class="text-base text-primary" />
+                  <span>Revisar</span>
                 </button>
               </div>
               <button

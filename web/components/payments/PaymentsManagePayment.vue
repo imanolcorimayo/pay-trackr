@@ -199,6 +199,20 @@
                 />
               </div>
             </div>
+
+            <!-- Mark as pending for later review (WhatsApp payments only) -->
+            <div v-if="form.isWhatsapp && form.status === 'reviewed' && !isSubmitting" class="space-y-2">
+              <label class="block text-sm font-medium text-gray-400">Revisión</label>
+              <button
+                type="button"
+                @click="markAsPending"
+                class="w-full p-2 text-sm text-warning bg-warning/20 hover:bg-warning/30 border border-warning/30 rounded-md transition-colors flex items-center justify-center gap-2"
+              >
+                <MdiClockOutline class="text-base text-warning" />
+                <span>Revisar después</span>
+              </button>
+              <p class="text-xs text-gray-500">El pago volverá a aparecer como pendiente de revisión</p>
+            </div>
           </div>
         </form>
       </template>
@@ -220,6 +234,19 @@
           </button>
         </div>
 
+        <!-- Review Mode Footer -->
+        <div v-else-if="props.isReview" class="flex justify-end w-full">
+          <button
+            @click="markAsReviewed"
+            class="px-5 py-2.5 bg-success text-white rounded-lg hover:bg-success/90 transition-colors flex items-center gap-2 font-medium"
+            :disabled="isSubmitting"
+          >
+            <span v-if="isSubmitting" class="inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+            <MdiCheck v-else class="text-lg" />
+            <span>Todo perfecto</span>
+          </button>
+        </div>
+
         <!-- Normal Footer -->
         <div v-else class="flex justify-between w-full">
           <button
@@ -231,36 +258,11 @@
 
           <div class="flex space-x-2">
             <button
-              v-if="isEdit && !props.isReview"
+              v-if="isEdit"
               @click="confirmDelete"
               class="px-4 py-2 bg-danger/10 text-danger rounded-lg hover:bg-danger/20 transition-colors"
             >
               Eliminar
-            </button>
-
-            <!-- Mark as pending for later review (only for WhatsApp payments that are reviewed) -->
-            <button
-              v-if="isEdit && form.isWhatsapp && form.status === 'reviewed'"
-              @click="markAsPending"
-              class="px-4 py-2 bg-warning/10 text-warning rounded-lg hover:bg-warning/20 transition-colors"
-              :disabled="isSubmitting"
-            >
-              Revisar después
-            </button>
-
-            <!-- Review Mode: "Todo perfecto" button -->
-            <button
-              v-if="props.isReview"
-              @click="markAsReviewed"
-              class="px-4 py-2 bg-success text-white rounded-lg hover:bg-success/90 transition-colors flex items-center gap-2"
-              :disabled="isSubmitting"
-            >
-              <span v-if="isSubmitting">
-                <span
-                  class="inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"
-                ></span>
-              </span>
-              <span v-else>✓ Todo perfecto</span>
             </button>
 
             <button
@@ -274,7 +276,7 @@
                 ></span>
                 Guardando...
               </span>
-              <span v-else>{{ props.isReview ? "Guardar cambios" : (isEdit ? "Actualizar" : "Crear") }}</span>
+              <span v-else>{{ isEdit ? "Actualizar" : "Crear" }}</span>
             </button>
           </div>
         </div>
@@ -295,6 +297,8 @@ import { ref, computed, watch, onMounted } from "vue";
 import { storeToRefs } from "pinia";
 import { getCurrentUser } from "~/utils/firebase";
 import { serverTimestamp, Timestamp } from "firebase/firestore";
+import MdiClockOutline from "~icons/mdi/clock-outline";
+import MdiCheck from "~icons/mdi/check";
 
 const props = defineProps({
   paymentId: {
