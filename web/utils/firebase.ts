@@ -11,6 +11,13 @@ import {
   setPersistence,
   browserLocalPersistence
 } from 'firebase/auth'
+import {
+  getMessaging,
+  getToken,
+  onMessage,
+  type Messaging,
+  type MessagePayload
+} from 'firebase/messaging'
 
 // Firebase configuration interface
 interface FirebaseConfig {
@@ -40,6 +47,7 @@ export const getFirebaseConfig = (): FirebaseConfig => {
 let firebaseApp: FirebaseApp | null = null
 let firestore: Firestore | null = null
 let auth: Auth | null = null
+let messaging: Messaging | null = null
 
 export const initializeFirebase = (): FirebaseApp => {
   if (firebaseApp) {
@@ -161,4 +169,73 @@ export const isFirebaseConfigured = (): boolean => {
   } catch {
     return false
   }
+}
+
+// Get Messaging instance
+export const getMessagingInstance = (): Messaging | null => {
+  if (typeof window === 'undefined') {
+    return null
+  }
+
+  if (messaging) {
+    return messaging
+  }
+
+  const app = initializeFirebase()
+  messaging = getMessaging(app)
+
+  return messaging
+}
+
+// Request FCM token (asks for permission if needed)
+export const requestFCMToken = async (vapidKey: string): Promise<string | null> => {
+  try {
+    const messagingInstance = getMessagingInstance()
+    if (!messagingInstance) {
+      console.warn('Messaging not available (server-side or unsupported browser)')
+      return null
+    }
+
+    // Check if notifications are supported
+    if (!('Notification' in window)) {
+      console.warn('Notifications not supported in this browser')
+      return null
+    }
+
+    // Request permission if not already granted
+    if (Notification.permission === 'default') {
+      const permission = await Notification.requestPermission()
+      if (permission !== 'granted') {
+        console.log('Notification permission denied')
+        return null
+      }
+    } else if (Notification.permission === 'denied') {
+      console.log('Notification permission was previously denied')
+      return null
+    }
+
+    // Register service worker for FCM
+    const registration = await navigator.serviceWorker.register('/firebase-messaging-sw.js')
+
+    // Get FCM token
+    const token = await getToken(messagingInstance, {
+      vapidKey,
+      serviceWorkerRegistration: registration
+    })
+
+    return token
+  } catch (error) {
+    console.error('Error getting FCM token:', error)
+    return null
+  }
+}
+
+// Listen for foreground messages (when app is open)
+export const onForegroundMessage = (callback: (payload: MessagePayload) => void): (() => void) => {
+  const messagingInstance = getMessagingInstance()
+  if (!messagingInstance) {
+    return () => {}
+  }
+
+  return onMessage(messagingInstance, callback)
 }

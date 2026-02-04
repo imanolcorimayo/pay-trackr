@@ -5,7 +5,9 @@
   "type": "module",
   "scripts": {
     "dev": "node --watch webhooks/index.js",
-    "start": "node webhooks/index.js"
+    "start": "node webhooks/index.js",
+    "test:notifications": "node scripts/test-notifications.js",
+    "test:notifications:once": "node scripts/test-notifications.js --once"
   },
   "dependencies": {
     "express": "^4.21.0",

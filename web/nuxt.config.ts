@@ -35,7 +35,9 @@ export default defineNuxtConfig({
       firebaseProjectId: process.env.FIREBASE_PROJECT_ID,
       firebaseStorageBucket: "pay-tracker-7a5a6.appspot.com",
       firebaseMessagingSenderId: "16390920244",
-      firebaseAppId: "1:16390920244:web:adc5a4919d9dd457705261"
+      firebaseAppId: "1:16390920244:web:adc5a4919d9dd457705261",
+      // FCM Push Notifications
+      firebaseVapidKey: process.env.FIREBASE_VAPID_KEY
     }
   },
 
@@ -71,8 +73,9 @@ export default defineNuxtConfig({
       ]
     },
     workbox: {
-      navigateFallback: "/",
-      globPatterns: ['**/*.{js,css,html,png,svg,ico}'],
+      navigateFallback: null,
+      globPatterns: ['**/*.{js,css,png,svg,ico,woff,woff2}'],
+      navigateFallbackDenylist: [/^\/firebase-messaging-sw\.js$/],
       runtimeCaching: [
         {
           urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,

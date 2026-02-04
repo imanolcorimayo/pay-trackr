@@ -16,12 +16,21 @@
       <MdiWhatsapp class="text-lg" />
       <span>WhatsApp</span>
     </NuxtLink>
+    <NuxtLink
+      to="/settings/notifications"
+      class="settings-tab"
+      :class="{ 'settings-tab-active': route.path === '/settings/notifications' }"
+    >
+      <MdiBell class="text-lg" />
+      <span>Notificaciones</span>
+    </NuxtLink>
   </div>
 </template>
 
 <script setup>
 import MdiTag from '~icons/mdi/tag';
 import MdiWhatsapp from '~icons/mdi/whatsapp';
+import MdiBell from '~icons/mdi/bell';
 
 const route = useRoute();
 </script>
