@@ -150,7 +150,7 @@ runtimeConfig: {
 ---
 
 ## Step 8: Create Cron Script Structure
-**Status**: ⬜ Pending
+**Status**: ✅ Complete
 
 Set up the cron scripts directory and base structure.
 
@@ -164,29 +164,51 @@ Set up the cron scripts directory and base structure.
 ---
 
 ## Step 9: Implement Send Reminders Logic
-**Status**: ⬜ Pending
+**Status**: ✅ Complete
 
 Complete the cron script logic.
 
-**Logic**:
-1. Query `users` collection where `fcmToken != null` and `notificationsEnabled == true`
-2. For each user, query unpaid recurrent payments due within 3 days
-3. Send FCM notification for each user with due payments
+**Schedule behavior**:
+- **8am**: Notify for payments due in exactly 3 days + due TODAY
+- **7pm**: Notify for payments due TODAY only
+
+**Notification timeline per payment** (3 total):
+| Days until due | 8am | 7pm |
+|----------------|-----|-----|
+| 3 days         | ✅  | ❌  |
+| 2 days         | ❌  | ❌  |
+| 1 day          | ❌  | ❌  |
+| Today          | ✅  | ✅  |
+
+**Script flow**:
+1. Query `payment2` collection where:
+   - `isPaid = false`
+   - `paymentType = "recurrent"`
+   - `dueDate = today` OR `dueDate = today + 3 days` (8am only)
+2. Group payments by `userId`
+3. For each user with pending payments:
+   - Fetch FCM tokens from `fcmTokens` collection
+   - Skip if no tokens found
+4. Send personalized notification per payment
+
+**Message format**:
+- 3 days: `"Tu pago de '{title}' de $X.XXX,XX vence en 3 días"`
+- Today: `"Tu pago de '{title}' de $X.XXX,XX vence hoy"`
 
 **Verification**: Running script manually sends test notification
 
 ---
 
 ## Step 10: GitHub Actions Workflow
-**Status**: ⬜ Pending
+**Status**: ✅ Complete
 
 Create workflow to run the cron script.
 
 **File**: `/.github/workflows/send-notifications.yml`
 
 **Schedule**:
-- `0 11 * * *` (8am ART)
-- `0 22 * * *` (7pm ART)
+- `0 11 * * *` (8am ART) → 3-day + today reminders
+- `0 22 * * *` (7pm ART) → today-only reminders
 
 **Secrets needed**:
 - `FIREBASE_SERVICE_ACCOUNT` (base64 encoded)
@@ -206,6 +228,6 @@ Create workflow to run the cron script.
 | 5 | Notification Store | ✅ Complete |
 | 6 | NotificationManager | ✅ Complete |
 | 7 | Nuxt Config | ✅ Complete |
-| 8 | Cron Structure | ⬜ Pending |
-| 9 | Cron Logic | ⬜ Pending |
-| 10 | GitHub Actions | ⬜ Pending |
+| 8 | Cron Structure | ✅ Complete |
+| 9 | Cron Logic | ✅ Complete |
+| 10 | GitHub Actions | ✅ Complete |
