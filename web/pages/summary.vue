@@ -8,7 +8,7 @@
         <select
           v-model="monthsToDisplay"
           @change="async () => await updateCharts()"
-          class="px-3 py-1.5 rounded-lg border border-gray-300 bg-gray-800 focus:ring-2 focus:ring-primary focus:border-transparent"
+          class="px-3 py-1.5 rounded-lg border border-gray-600 bg-gray-800 focus:ring-2 focus:ring-primary focus:border-transparent"
         >
           <option value="3">Últimos 3 meses</option>
           <option value="6">Últimos 6 meses</option>
@@ -17,7 +17,7 @@
     </div>
 
     <!-- Loading Skeleton -->
-    <div v-if="isLoading" class="grid grid-cols-1 lg:grid-cols-2 gap-6 p-3 animate-pulse">
+    <div v-if="isLoading" class="grid grid-cols-1 lg:grid-cols-2 gap-6 p-3 skeleton-shimmer">
       <!-- Chart Skeleton 1 -->
       <div class="bg-gray-800 rounded-lg border border-gray-700 p-4">
         <div class="h-6 w-48 bg-gray-700 rounded mb-2"></div>
@@ -51,7 +51,7 @@
     <!-- Content -->
     <div v-else class="grid grid-cols-1 lg:grid-cols-2 gap-6 p-3">
       <!-- Monthly Spending Trends -->
-      <div class="bg-gray-800 rounded-lg shadow-sm border border-gray-100 p-4">
+      <div class="bg-gray-800 rounded-lg shadow-sm border border-gray-700 p-4">
         <h2 class="text-lg font-semibold mb-2 flex items-center">
           <MdiChartLine class="mr-2 text-primary" />
           Tendencias de Gastos Mensuales
@@ -63,7 +63,7 @@
       </div>
 
       <!-- Spending Distribution -->
-      <div class="bg-gray-800 rounded-lg shadow-sm border border-gray-100 p-4">
+      <div class="bg-gray-800 rounded-lg shadow-sm border border-gray-700 p-4">
         <h2 class="text-lg font-semibold mb-2 flex items-center">
           <MdiChartPie class="mr-2 text-primary" />
           Distribución de Gastos
@@ -73,7 +73,7 @@
           <select
             v-model="selectedMonth"
             @change="updateCategoryPieChart"
-            class="px-2 py-1 text-sm rounded-lg border border-gray-300 bg-gray-800 focus:ring-2 focus:ring-primary focus:border-transparent"
+            class="px-2 py-1 text-sm rounded-lg border border-gray-600 bg-gray-800 focus:ring-2 focus:ring-primary focus:border-transparent"
           >
             <option v-for="month in availableMonths" :key="month.value" :value="month.value">
               {{ month.label }}
@@ -90,7 +90,7 @@
       </div>
 
       <!-- Key Statistics -->
-      <div class="bg-gray-800 rounded-lg shadow-sm border border-gray-100 p-4">
+      <div class="bg-gray-800 rounded-lg shadow-sm border border-gray-700 p-4">
         <h2 class="text-lg font-semibold mb-2 flex items-center">
           <MdiChartMultiple class="mr-2 text-primary" />
           Estadísticas Clave
@@ -99,48 +99,48 @@
 
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
           <!-- Average Monthly Spend -->
-          <div class="flex flex-col p-3 bg-gray-50 rounded-lg">
-            <span class="text-xs text-gray-500">Gasto Mensual Promedio</span>
-            <span class="text-xl font-bold text-gray-800">{{ formatPrice(stats.averageMonthlySpend) }}</span>
+          <div class="flex flex-col p-3 bg-gray-700/40 rounded-lg">
+            <span class="text-xs text-gray-400">Gasto Mensual Promedio</span>
+            <span class="text-xl font-bold text-white">{{ formatPrice(stats.averageMonthlySpend) }}</span>
             <div class="text-sm mt-1">
               <span :class="stats.monthOverMonthChange >= 0 ? 'text-danger' : 'text-success'">
                 {{ stats.monthOverMonthChange >= 0 ? "↑" : "↓" }} {{ Math.abs(stats.monthOverMonthChange).toFixed(1) }}%
               </span>
-              <span class="text-gray-500 ml-1">vs mes anterior</span>
+              <span class="text-gray-400 ml-1">vs mes anterior</span>
             </div>
           </div>
 
           <!-- Peak Spending Month -->
-          <div class="flex flex-col p-3 bg-gray-50 rounded-lg">
-            <span class="text-xs text-gray-500">Mes con Mayor Gasto</span>
-            <span class="text-xl font-bold text-gray-800">{{ stats.peakSpendingMonth || "N/A" }}</span>
-            <span class="text-sm text-gray-500">{{ formatPrice(stats.peakSpendingAmount) }}</span>
+          <div class="flex flex-col p-3 bg-gray-700/40 rounded-lg">
+            <span class="text-xs text-gray-400">Mes con Mayor Gasto</span>
+            <span class="text-xl font-bold text-white">{{ stats.peakSpendingMonth || "N/A" }}</span>
+            <span class="text-sm text-gray-400">{{ formatPrice(stats.peakSpendingAmount) }}</span>
           </div>
 
           <!-- Recurring vs One-time -->
-          <div class="flex flex-col p-3 bg-gray-50 rounded-lg">
-            <span class="text-xs text-gray-500">Recurrentes vs Únicos</span>
+          <div class="flex flex-col p-3 bg-gray-700/40 rounded-lg">
+            <span class="text-xs text-gray-400">Recurrentes vs Únicos</span>
             <div class="flex items-center gap-2">
-              <span class="text-xl font-bold text-gray-800">{{ stats.recurringPercentage }}%</span>
-              <span class="text-sm text-gray-500">recurrentes</span>
+              <span class="text-xl font-bold text-white">{{ stats.recurringPercentage }}%</span>
+              <span class="text-sm text-gray-400">recurrentes</span>
             </div>
-            <div class="w-full h-2 bg-gray-200 rounded-full mt-2 overflow-hidden">
+            <div class="w-full h-2 bg-gray-600 rounded-full mt-2 overflow-hidden">
               <div class="h-full bg-primary rounded-full" :style="`width: ${stats.recurringPercentage}%`"></div>
             </div>
           </div>
 
           <!-- Avg One-time Transaction -->
-          <div class="flex flex-col p-3 bg-gray-50 rounded-lg">
-            <span class="text-xs text-gray-500">Promedio Pago Único</span>
-            <span class="text-xl font-bold text-gray-800">{{ formatPrice(stats.avgOneTimeTransaction) }}</span>
-            <span class="text-sm text-gray-500">por transacción</span>
+          <div class="flex flex-col p-3 bg-gray-700/40 rounded-lg">
+            <span class="text-xs text-gray-400">Promedio Pago Único</span>
+            <span class="text-xl font-bold text-white">{{ formatPrice(stats.avgOneTimeTransaction) }}</span>
+            <span class="text-sm text-gray-400">por transacción</span>
           </div>
 
           <!-- Top Expense Category -->
-          <div class="flex flex-col p-3 bg-gray-50 rounded-lg">
-            <span class="text-xs text-gray-500">Categoría Principal</span>
+          <div class="flex flex-col p-3 bg-gray-700/40 rounded-lg">
+            <span class="text-xs text-gray-400">Categoría Principal</span>
             <div class="flex items-center gap-2">
-              <span class="text-xl font-bold text-gray-800">{{ getCategoryDisplayLabel(stats.topCategory) }}</span>
+              <span class="text-xl font-bold text-white">{{ getCategoryDisplayLabel(stats.topCategory) }}</span>
               <span
                 v-if="stats.topCategoryTrend !== 0"
                 :class="stats.topCategoryTrend >= 0 ? 'text-danger' : 'text-success'"
@@ -149,14 +149,14 @@
                 {{ stats.topCategoryTrend >= 0 ? "↑" : "↓" }} {{ Math.abs(stats.topCategoryTrend).toFixed(0) }}%
               </span>
             </div>
-            <span class="text-sm text-gray-500">{{ stats.topCategoryPercentage }}% del gasto total</span>
+            <span class="text-sm text-gray-400">{{ stats.topCategoryPercentage }}% del gasto total</span>
           </div>
 
           <!-- Payment Completion Rate -->
-          <div class="flex flex-col p-3 bg-gray-50 rounded-lg">
-            <span class="text-xs text-gray-500">Tasa de Pagos Completados</span>
-            <span class="text-xl font-bold text-gray-800">{{ stats.paymentCompletionRate }}%</span>
-            <div class="w-full h-2 bg-gray-200 rounded-full mt-2 overflow-hidden">
+          <div class="flex flex-col p-3 bg-gray-700/40 rounded-lg">
+            <span class="text-xs text-gray-400">Tasa de Pagos Completados</span>
+            <span class="text-xl font-bold text-white">{{ stats.paymentCompletionRate }}%</span>
+            <div class="w-full h-2 bg-gray-600 rounded-full mt-2 overflow-hidden">
               <div
                 class="h-full rounded-full"
                 :class="
@@ -174,7 +174,7 @@
       </div>
 
       <!-- Payment Breakdown -->
-      <div class="bg-gray-800 rounded-lg shadow-sm border border-gray-100 p-4">
+      <div class="bg-gray-800 rounded-lg shadow-sm border border-gray-700 p-4">
         <h2 class="text-lg font-semibold mb-2 flex items-center">
           <MdiCreditCardOutline class="mr-2 text-primary" />
           Desglose de Pagos
@@ -198,7 +198,7 @@
                 </div>
                 <p class="font-semibold">{{ formatPrice(payment.amount) }}</p>
               </div>
-              <div class="w-full h-2 bg-gray-200 rounded-full overflow-hidden">
+              <div class="w-full h-2 bg-gray-600 rounded-full overflow-hidden">
                 <div
                   class="h-full bg-primary rounded-full"
                   :style="`width: ${(payment.amount / topPayments[0].amount) * 100}%`"
@@ -219,6 +219,7 @@
 </template>
 
 <script setup>
+import { formatPrice } from "~/utils";
 import { Chart, registerables } from "chart.js";
 import MdiChartLine from "~icons/mdi/chart-line";
 import MdiChartPie from "~icons/mdi/chart-pie";
@@ -325,13 +326,6 @@ const combinedPayments = computed(() => {
 });
 
 // ----- Define Methods ---------
-function formatPrice(amount) {
-  return new Intl.NumberFormat("es-AR", {
-    style: "currency",
-    currency: "ARS",
-    minimumFractionDigits: 2
-  }).format(amount || 0);
-}
 
 // Get monthly data points for the charts
 function getMonthlyData() {

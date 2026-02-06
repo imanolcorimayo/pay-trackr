@@ -13,7 +13,7 @@
       </div>
 
       <!-- Loading State -->
-      <div v-if="isLoading" class="flex flex-col gap-4 animate-pulse">
+      <div v-if="isLoading" class="flex flex-col gap-4 skeleton-shimmer">
         <div class="h-48 w-full bg-gray-700 rounded-xl"></div>
       </div>
 
@@ -297,12 +297,3 @@ useHead({
 });
 </script>
 
-<style scoped>
-.btn-danger {
-  @apply bg-red-600 hover:bg-red-700 text-white px-4 py-3 rounded-lg font-medium transition-colors;
-}
-
-.btn-secondary {
-  @apply bg-gray-600 hover:bg-gray-500 text-white px-4 py-3 rounded-lg font-medium transition-colors;
-}
-</style>

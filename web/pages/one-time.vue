@@ -25,14 +25,14 @@
       <button
         @click="showNewPayment"
         class="flex items-center justify-center w-14 h-14 rounded-full bg-primary text-white shadow-lg shadow-primary/30 hover:shadow-xl hover:shadow-primary/40 hover:scale-105 transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-900 focus:ring-primary"
-        aria-label="Add new payment"
+        aria-label="Agregar nuevo pago"
       >
         <MdiPlus class="text-2xl" />
       </button>
     </div>
 
     <!-- Loading Skeleton -->
-    <div v-if="isLoading" class="flex flex-col gap-4 animate-pulse">
+    <div v-if="isLoading" class="flex flex-col gap-4 skeleton-shimmer">
       <!-- Header Skeleton -->
       <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 p-3">
         <div class="h-8 w-48 bg-gray-700 rounded"></div>
@@ -69,7 +69,7 @@
           <button
             @click="changeMonth(1)"
             class="p-2 rounded-lg hover:bg-gray-700 transition-colors"
-            aria-label="Previous month"
+            aria-label="Mes anterior"
           >
             <MdiChevronLeft class="text-xl" />
           </button>
@@ -81,7 +81,7 @@
             class="p-2 rounded-lg transition-colors"
             :class="isCurrentMonth ? 'opacity-30 cursor-not-allowed' : 'hover:bg-gray-700'"
             :disabled="isCurrentMonth"
-            aria-label="Next month"
+            aria-label="Mes siguiente"
           >
             <MdiChevronRight class="text-xl" />
           </button>
@@ -220,7 +220,7 @@
               <button
                 @click.stop="showEdit(payment.id)"
                 class="p-2 rounded-lg text-gray-400 hover:text-gray-200 hover:bg-gray-600/50 transition-colors"
-                aria-label="Edit payment"
+                aria-label="Editar pago"
               >
                 <MdiPencil class="text-lg" />
               </button>
@@ -233,6 +233,7 @@
 </template>
 
 <script setup>
+import { formatPrice } from "~/utils";
 import MdiCheck from "~icons/mdi/check";
 import MdiClockOutline from "~icons/mdi/clock-outline";
 import MdiCircleOutline from "~icons/mdi/circle-outline";
@@ -314,14 +315,6 @@ const monthTotals = computed(() => {
 });
 
 // ----- Define Methods ---------
-// Format price to currency
-function formatPrice(amount) {
-  return new Intl.NumberFormat("es-AR", {
-    style: "currency",
-    currency: "ARS",
-    minimumFractionDigits: 2
-  }).format(amount || 0);
-}
 
 // Format date
 function formatDate(timestamp) {

@@ -2,7 +2,7 @@
     <Modal ref="modal">
       <template #header>
         <div class="flex items-center">
-          <div v-if="isLoading" class="w-3 h-14 rounded-full mr-3 bg-gray-200 animate-pulse"></div>
+          <div v-if="isLoading" class="w-3 h-14 rounded-full mr-3 bg-gray-700 animate-pulse"></div>
           <div v-else-if="payment" class="w-3 h-14 rounded-full mr-3" :style="{ backgroundColor: getDisplayCategoryColor(payment) }"></div>
           <div>
             <h2 class="text-xl font-bold">
@@ -80,9 +80,9 @@
           <!-- Recurring Payment History -->
           <div v-if="isRecurrent && paymentInstances.length > 0">
             <h3 class="text-lg font-semibold mb-3">Historial de Pagos</h3>
-            <div class="overflow-y-auto max-h-[300px]">
+            <div class="overflow-y-auto max-h-[300px] dark-scrollbar">
               <table class="w-full">
-                <thead class="text-left bg-gray-100">
+                <thead class="text-left bg-gray-700/50">
                   <tr>
                     <th class="py-2 px-3 rounded-tl-lg">Fecha</th>
                     <th class="py-2 px-3">Monto</th>
@@ -140,7 +140,7 @@
         <div class="flex justify-between w-full">
           <button
             @click="closeModal"
-            class="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+            class="px-4 py-2 border border-gray-600 rounded-lg hover:bg-gray-700 transition-colors"
           >
             Cerrar
           </button>
@@ -180,6 +180,7 @@
   <script setup>
   import { ref, computed, watch, onMounted } from 'vue';
   import { storeToRefs } from 'pinia';
+  import { formatPrice } from '~/utils';
   import MdiCheck from '~icons/mdi/check';
   import MdiUndo from '~icons/mdi/undo';
 
@@ -269,14 +270,6 @@
     }
   }
   
-  function formatPrice(amount) {
-    return new Intl.NumberFormat('es-AR', {
-      style: 'currency',
-      currency: 'ARS',
-      minimumFractionDigits: 2
-    }).format(amount || 0);
-  }
-
   function formatDate(timestamp) {
     if (!timestamp) return 'N/A';
     const { $dayjs } = useNuxtApp();

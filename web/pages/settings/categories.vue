@@ -4,42 +4,47 @@
     <SettingsNav />
 
     <!-- Edit Modal -->
-    <ModalStructure ref="editModal" @onClose="resetEditForm">
+    <Modal ref="editModal" @onClose="resetEditForm">
       <template #header>
         <h2 class="text-xl font-semibold">Editar Categoría</h2>
       </template>
 
-      <div class="flex flex-col gap-4 px-4">
-        <div class="flex flex-col gap-2">
-          <label for="edit-name" class="text-sm font-medium text-gray-300">Nombre</label>
-          <input
-            id="edit-name"
-            v-model="editForm.name"
-            type="text"
-            class="w-full px-4 py-3 rounded-lg bg-gray-700 border border-gray-600 focus:border-primary focus:outline-none"
-            placeholder="Nombre de la categoría"
-          />
-        </div>
-
-        <div class="flex flex-col gap-2">
-          <label for="edit-color" class="text-sm font-medium text-gray-300">Color</label>
-          <div class="flex items-center gap-3">
+      <template #body>
+        <div class="flex flex-col gap-4">
+          <div class="flex flex-col gap-2">
+            <label for="edit-name" class="text-sm font-medium text-gray-400">Nombre*</label>
             <input
-              id="edit-color"
-              v-model="editForm.color"
-              type="color"
-              class="w-12 h-12 rounded-lg cursor-pointer border-0 bg-transparent"
-            />
-            <input
-              v-model="editForm.color"
+              id="edit-name"
+              v-model="editForm.name"
               type="text"
-              class="flex-1 px-4 py-3 rounded-lg bg-gray-700 border border-gray-600 focus:border-primary focus:outline-none uppercase"
-              placeholder="#FFFFFF"
-              maxlength="7"
+              @blur="editTouched.name = true"
+              class="w-full px-4 py-3 rounded-lg bg-gray-700 border focus:outline-none"
+              :class="editTouched.name && !editForm.name ? 'border-red-500 ring-2 ring-red-500' : 'border-gray-600 focus:border-primary'"
+              placeholder="Nombre de la categoría"
             />
+            <span v-if="editTouched.name && !editForm.name" class="text-xs text-red-400">Este campo es obligatorio</span>
+          </div>
+
+          <div class="flex flex-col gap-2">
+            <label for="edit-color" class="text-sm font-medium text-gray-400">Color</label>
+            <div class="flex items-center gap-3">
+              <input
+                id="edit-color"
+                v-model="editForm.color"
+                type="color"
+                class="w-12 h-12 rounded-lg cursor-pointer border-0 bg-transparent"
+              />
+              <input
+                v-model="editForm.color"
+                type="text"
+                class="flex-1 px-4 py-3 rounded-lg bg-gray-700 border border-gray-600 focus:border-primary focus:outline-none uppercase"
+                placeholder="#FFFFFF"
+                maxlength="7"
+              />
+            </div>
           </div>
         </div>
-      </div>
+      </template>
 
       <template #footer>
         <button
@@ -51,7 +56,7 @@
           Guardar Cambios
         </button>
       </template>
-    </ModalStructure>
+    </Modal>
 
     <!-- Delete Confirmation -->
     <ConfirmDialogue
@@ -77,17 +82,20 @@
         <h2 class="text-lg font-semibold mb-4">Nueva Categoría</h2>
         <div class="flex flex-col sm:flex-row gap-4">
           <div class="flex-1">
-            <label for="new-name" class="block text-sm font-medium text-gray-300 mb-2">Nombre</label>
+            <label for="new-name" class="block text-sm font-medium text-gray-400 mb-2">Nombre*</label>
             <input
               id="new-name"
               v-model="newCategory.name"
               type="text"
-              class="w-full px-4 py-3 rounded-lg bg-gray-700 border border-gray-600 focus:border-primary focus:outline-none"
+              @blur="newTouched.name = true"
+              class="w-full px-4 py-3 rounded-lg bg-gray-700 border focus:outline-none"
+              :class="newTouched.name && !newCategory.name ? 'border-red-500 ring-2 ring-red-500' : 'border-gray-600 focus:border-primary'"
               placeholder="Nombre de la categoría"
             />
+            <span v-if="newTouched.name && !newCategory.name" class="text-xs text-red-400">Este campo es obligatorio</span>
           </div>
           <div class="w-full sm:w-auto sm:shrink-0">
-            <label for="new-color" class="block text-sm font-medium text-gray-300 mb-2">Color</label>
+            <label for="new-color" class="block text-sm font-medium text-gray-400 mb-2">Color</label>
             <div class="flex items-center gap-2">
               <input
                 id="new-color"
@@ -105,7 +113,7 @@
             </div>
           </div>
           <div class="flex flex-col shrink-0">
-            <label class="hidden sm:block text-sm font-medium text-gray-300 mb-2 invisible">Acción</label>
+            <label class="hidden sm:block text-sm font-medium text-gray-400 mb-2 invisible">Acción</label>
             <button
               @click="addCategory"
               :disabled="!newCategory.name || !newCategory.color || isAdding"
@@ -120,7 +128,7 @@
       </div>
 
       <!-- Loading State -->
-      <div v-if="isLoading" class="flex flex-col gap-4 animate-pulse">
+      <div v-if="isLoading" class="flex flex-col gap-4 skeleton-shimmer">
         <div v-for="i in 5" :key="i" class="h-16 w-full bg-gray-700 rounded-lg"></div>
       </div>
 
@@ -195,12 +203,14 @@ const newCategory = ref({
   name: '',
   color: '#808080'
 });
+const newTouched = ref({ name: false });
 
 const editForm = ref({
   id: '',
   name: '',
   color: ''
 });
+const editTouched = ref({ name: false });
 
 // ----- Computed ---------
 const categories = computed(() => getCategories.value);
@@ -225,6 +235,7 @@ async function addCategory() {
       name: '',
       color: '#808080'
     };
+    newTouched.value = { name: false };
   } else {
     useToast("error", categoryStore.error || "Error al crear la categoría");
   }
@@ -236,6 +247,7 @@ function openEditModal(category) {
     name: category.name,
     color: category.color
   };
+  editTouched.value = { name: false };
   editModal.value.showModal();
 }
 

@@ -7,7 +7,7 @@
     </div>
 
     <!-- Loading Skeleton -->
-    <div v-if="isLoading" class="grid grid-cols-1 lg:grid-cols-2 gap-6 p-3 animate-pulse">
+    <div v-if="isLoading" class="grid grid-cols-1 lg:grid-cols-2 gap-6 p-3 skeleton-shimmer">
       <div class="bg-base rounded-xl border border-gray-600 p-4">
         <div class="h-6 w-40 bg-gray-700 rounded mb-4"></div>
         <div class="space-y-3">
@@ -55,11 +55,12 @@
           <p class="text-sm">No hubo pagos la semana pasada</p>
         </div>
 
-        <div v-else class="space-y-2 max-h-[300px] overflow-y-auto">
+        <div v-else class="space-y-2 max-h-[300px] overflow-y-auto dark-scrollbar">
           <div
             v-for="payment in duePastWeek"
             :key="payment.id"
-            class="flex items-center justify-between p-3 bg-gray-700/40 rounded-lg"
+            class="flex items-center justify-between p-3 bg-gray-700/40 rounded-lg cursor-pointer hover:bg-gray-600/50 transition-colors"
+            @click="navigateTo('/recurrent')"
           >
             <div class="flex items-center gap-3">
               <div
@@ -111,11 +112,12 @@
           <p class="text-sm">No hay pagos la semana entrante</p>
         </div>
 
-        <div v-else class="space-y-2 max-h-[300px] overflow-y-auto">
+        <div v-else class="space-y-2 max-h-[300px] overflow-y-auto dark-scrollbar">
           <div
             v-for="payment in dueNextWeek"
             :key="payment.id"
-            class="flex items-center justify-between p-3 bg-gray-700/40 rounded-lg"
+            class="flex items-center justify-between p-3 bg-gray-700/40 rounded-lg cursor-pointer hover:bg-gray-600/50 transition-colors"
+            @click="navigateTo('/recurrent')"
           >
             <div class="flex items-center gap-3">
               <div

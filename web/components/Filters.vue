@@ -24,7 +24,7 @@
           <button
             class="h-10 w-10 flex items-center justify-center bg-base hover:bg-gray-700 rounded-md border border-gray-600 text-white transition-colors"
             @click="toggleTooltip"
-            aria-label="Filter options"
+            aria-label="Opciones de filtro"
           >
             <MdiFilterOutline class="text-xl" />
           </button>
@@ -46,11 +46,13 @@
                   <component :is="filter.icon" class="text-primary text-lg" /> 
                   <span class="text-white">{{ filter.label }}</span>
                 </div>
-                <MingcuteArrowUpFill
-                  v-if="selectedFilter.name === filter.name"
-                  class="text-primary text-lg"
-                  :class="selectedFilter.order === 'desc' ? 'rotate-180' : ''"
-                />
+                <div v-if="selectedFilter.name === filter.name" class="flex items-center gap-1">
+                  <span class="text-primary text-xs whitespace-nowrap">{{ getSortLabel(filter.name, selectedFilter.order) }}</span>
+                  <MingcuteArrowUpFill
+                    class="text-primary text-lg"
+                    :class="selectedFilter.order === 'desc' ? 'rotate-180' : ''"
+                  />
+                </div>
               </div>
             </div>
           </template>
@@ -110,6 +112,16 @@ const filters = [
   { name: 'amount', label: 'Monto', icon: MaterialSymbolsPaidRounded, class: '' },
   { name: 'title', label: 'Título', icon: BiAlphabet, class: 'rounded-b-lg' }
 ];
+
+function getSortLabel(filterName, order) {
+  const labels = {
+    amount: { asc: 'Menor-Mayor', desc: 'Mayor-Menor' },
+    date: { asc: 'Mas antiguo', desc: 'Mas reciente' },
+    title: { asc: 'A-Z', desc: 'Z-A' },
+    unpaid_first: { asc: 'No pagados', desc: 'Pagados' }
+  };
+  return labels[filterName]?.[order] || '';
+}
 
 function selectFilter(filter) {
   if (selectedFilter.value.name === filter.name && selectedFilter.value.order === 'asc') {

@@ -6,7 +6,7 @@
           <img src="/img/new-logo.png" class="w-24" width="94" height="74" alt="PayTrackr Logo" />
         </NuxtLink>
         <div class="relative" v-if="user">
-          <button class="text-sm p-0 rounded-full no-button" @click="switchMenu">
+          <button class="text-sm p-0 rounded-full no-button" @click="switchMenu" aria-label="Menú de usuario">
             <img class="w-14 h-14 rounded-full" :src="user?.photoURL" :alt="`${user?.displayName}'s photo`" width="90" height="90">
           </button>
           <!-- Dropdown menu -->
@@ -15,36 +15,20 @@
             v-if="showMenu" ref="dropdownMenu"
             >
             <div class="px-4 py-3">
-              <span class="block text-sm text-gray-900 dark:text-white min-w-60">{{ user?.displayName }}</span>
-              <span class="block text-sm  text-gray-500 truncate dark:text-gray-400">{{ user?.email }}</span>
+              <span class="block text-sm text-white min-w-60">{{ user?.displayName }}</span>
+              <span class="block text-sm text-gray-400 truncate">{{ user?.email }}</span>
             </div>
             <ul class="py-2">
               <li @click="switchMenu">
-                <NuxtLink to="/"
-                  class="block px-4 py-2 text-sm text-gray-700 dark:text-gray-200 dark:hover:text-white" :class="{selected: route.path =='/'}">Inicio</NuxtLink>
-              </li>
-              <li @click="switchMenu">
-                <NuxtLink to="/recurrent"
-                  class="block px-4 py-2 text-sm text-gray-700 dark:text-gray-200 dark:hover:text-white" :class="{selected: route.path =='/recurrent'}">Pagos Recurrentes</NuxtLink>
-              </li>
-              <li @click="switchMenu">
-                <NuxtLink to="/one-time"
-                  class="block px-4 py-2 text-sm text-gray-700 dark:text-gray-200 dark:hover:text-white" :class="{selected: route.path =='/one-time'}">Pagos Únicos</NuxtLink>
-              </li>
-              <li @click="switchMenu">
-                <NuxtLink to="/summary"
-                  class="block px-4 py-2 text-sm text-gray-700 dark:text-gray-200 dark:hover:text-white" :class="{selected: route.path =='/summary'}">Resumen</NuxtLink>
-              </li>
-              <li @click="switchMenu">
-                <NuxtLink to="/weekly-summary"
-                  class="block px-4 py-2 text-sm text-gray-700 dark:text-gray-200 dark:hover:text-white" :class="{selected: route.path =='/weekly-summary'}">Resumen Semanal</NuxtLink>
+                <NuxtLink to="/settings/categories"
+                  class="block px-4 py-2 text-sm text-gray-200 hover:text-white" :class="{selected: route.path.startsWith('/settings')}">Configuracion</NuxtLink>
               </li>
               <li @click="switchMenu">
                 <NuxtLink to="/contact-us"
-                  class="block px-4 py-2 text-sm text-gray-700 dark:text-gray-200 dark:hover:text-white" :class="{selected: route.path =='/contact-us'}">Contacto</NuxtLink>
+                  class="block px-4 py-2 text-sm text-gray-200 hover:text-white" :class="{selected: route.path =='/contact-us'}">Contacto</NuxtLink>
               </li>
               <li @click="switchMenu">
-                <button @click="signOut" class="block px-4 py-2 text-sm text-gray-700 dark:text-gray-200 dark:hover:text-white no-button">Cerrar Sesión</button>
+                <button @click="signOut" class="block px-4 py-2 text-sm text-gray-200 hover:text-white no-button">Cerrar Sesión</button>
               </li>
             </ul>
           </div>

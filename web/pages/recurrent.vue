@@ -1,11 +1,12 @@
 <template>
   <div class="recurrent-page">
     <RecurrentsManagePayment ref="editPayment" :paymentId="activeRecurrentId" isEdit />
+    <RecurrentsManagePayment ref="newPaymentModal" @onClose="fetchData" />
     <RecurrentsDetails ref="recurrentDetails" :paymentId="activeRecurrentId" @openEdit="showEdit" />
     <RecurrentsNewPayment v-if="!isLoading" @onCreated="fetchData" />
 
     <!-- Loading Skeleton -->
-    <div v-if="isLoading" class="flex flex-col gap-4 animate-pulse">
+    <div v-if="isLoading" class="flex flex-col gap-4 skeleton-shimmer">
       <!-- Header Skeleton -->
       <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 p-3">
         <div class="h-8 w-48 bg-gray-700 rounded"></div>
@@ -28,11 +29,23 @@
 
     <!-- Content -->
     <div v-else class="flex flex-col gap-4">
+      <!-- Page Title -->
+      <div class="px-3 pt-2">
+        <div class="flex items-center justify-between">
+          <div>
+            <h1 class="text-2xl font-bold">Pagos Recurrentes</h1>
+            <p class="text-sm text-gray-500">
+              {{ recurrents.length }} pago{{ recurrents.length !== 1 ? 's' : '' }}
+            </p>
+          </div>
+        </div>
+      </div>
+
       <!-- Header & Summary -->
       <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 p-3">
         <!-- Month Navigation & Title -->
         <div class="flex items-center justify-between w-full md:w-auto bg-base rounded-xl p-1 border border-gray-600 shadow-sm shadow-white/5">
-          <button @click="changeMonthRange(3)" class="p-2 rounded-lg hover:bg-gray-700 transition-colors">
+          <button @click="changeMonthRange(3)" class="p-2 rounded-lg hover:bg-gray-700 transition-colors" aria-label="Meses anteriores">
             <MdiChevronLeft class="text-xl" />
           </button>
           <h2 class="text-lg font-semibold px-4">
@@ -43,6 +56,7 @@
             class="p-2 rounded-lg transition-colors"
             :disabled="isCurrentPeriod"
             :class="isCurrentPeriod ? 'opacity-30 cursor-not-allowed' : 'hover:bg-gray-700'"
+            aria-label="Meses siguientes"
           >
             <MdiChevronRight class="text-xl" />
           </button>
@@ -78,7 +92,12 @@
               <th scope="col" class="text-start font-semibold">Pago</th>
               <th scope="col" class="w-28 font-semibold">Monto</th>
               <th scope="col" class="w-14 font-semibold">Día</th>
-              <th v-for="month in months" :key="`${month.key}-${month.year}`" class="font-semibold">
+              <th
+                v-for="month in months"
+                :key="`${month.key}-${month.year}`"
+                class="font-semibold"
+                :class="month.key === currentMonthKey && month.year === $dayjs().format('YYYY') ? 'text-primary' : ''"
+              >
                 {{ month.display }}
                 <span v-if="month.year !== currentYear" class="text-xs text-gray-500"
                   >'{{ month.year.substring(2) }}</span
@@ -131,6 +150,7 @@
                         : 'bg-gray-700'
                     ]"
                     :disabled="togglingPayment === `${payment.id}-${month.key}`"
+                    :aria-label="payment.months[month.key].isPaid ? 'Marcar como no pagado' : 'Marcar como pagado'"
                   >
                     <MdiLoading v-if="togglingPayment === `${payment.id}-${month.key}`" class="text-primary text-xl animate-spin" />
                     <MdiCheck v-else-if="payment.months[month.key].isPaid" class="text-success text-xl" />
@@ -156,7 +176,7 @@
               <!-- Actions -->
               <td>
                 <div class="flex justify-center">
-                  <button @click.stop="showEdit(payment.id)" class="p-2 rounded-lg text-gray-400 hover:text-gray-200 hover:bg-gray-600/50 transition-colors">
+                  <button @click.stop="showEdit(payment.id)" class="p-2 rounded-lg text-gray-400 hover:text-gray-200 hover:bg-gray-600/50 transition-colors" :aria-label="`Editar ${payment.title}`">
                     <MdiPencil />
                   </button>
                 </div>
@@ -165,10 +185,11 @@
 
             <!-- Empty State -->
             <tr v-if="recurrents.length === 0">
-              <td colspan="100%" class="py-10 text-center text-gray-500">
-                <MdiCashOff class="text-5xl mx-auto mb-3 opacity-30" />
-                <p>No se encontraron pagos recurrentes</p>
-                <button @click="showNewPaymentModal" class="btn btn-primary mt-3">Agregar Pago</button>
+              <td colspan="100%" class="py-16 text-center">
+                <MdiCashOff class="text-6xl mx-auto mb-4 text-gray-500" />
+                <p class="text-lg font-medium text-white mb-2">No tenés pagos recurrentes</p>
+                <p class="text-sm text-gray-400 mb-6 max-w-md mx-auto">Agrega tus pagos recurrentes como Netflix, internet, alquiler y mas para llevar un control mensual de tus gastos fijos.</p>
+                <button @click="showNewPaymentModal" class="px-6 py-2.5 bg-primary text-white rounded-lg font-medium hover:bg-primary/80 transition-colors">Agregar Primer Pago</button>
               </td>
             </tr>
           </tbody>
@@ -209,7 +230,10 @@
               :key="`${payment.id}-${month.key}-${month.year}`"
               class="flex flex-col items-center"
             >
-              <span class="text-xs text-gray-500 mb-1">{{ month.display }}</span>
+              <span
+                class="text-xs mb-1"
+                :class="month.key === currentMonthKey && month.year === $dayjs().format('YYYY') ? 'text-primary font-bold' : 'text-gray-500'"
+              >{{ month.display }}</span>
 
               <div v-if="payment.months[month.key]" class="flex flex-col items-center">
                 <button
@@ -223,6 +247,7 @@
                       : 'bg-gray-700'
                   ]"
                   :disabled="togglingPayment === `${payment.id}-${month.key}`"
+                  :aria-label="payment.months[month.key].isPaid ? 'Marcar como no pagado' : 'Marcar como pagado'"
                 >
                   <MdiLoading v-if="togglingPayment === `${payment.id}-${month.key}`" class="text-primary text-xl animate-spin" />
                   <MdiCheck v-else-if="payment.months[month.key].isPaid" class="text-success text-xl" />
@@ -240,6 +265,7 @@
                 v-else
                 @click="createPaymentForMonth(payment.id, month.key, false, month.year)"
                 class="inline-flex items-center justify-center h-10 w-10 rounded-full bg-gray-700"
+                aria-label="Agregar pago para este mes"
               >
                 <MdiPlusCircleOutline class="text-gray-400 text-xl" />
               </button>
@@ -248,17 +274,18 @@
 
           <!-- Actions -->
           <div class="flex justify-end p-2 border-t border-gray-600">
-            <button @click="showEdit(payment.id)" class="p-2 rounded-lg text-gray-400 hover:text-gray-200 hover:bg-gray-600/50 transition-colors">
+            <button @click="showEdit(payment.id)" class="p-2 rounded-lg text-gray-400 hover:text-gray-200 hover:bg-gray-600/50 transition-colors" :aria-label="`Editar ${payment.title}`">
               <MdiPencil />
             </button>
           </div>
         </div>
 
         <!-- Empty State -->
-        <div v-if="recurrents.length === 0" class="py-10 text-center text-gray-500">
-          <MdiCashOff class="text-5xl mx-auto mb-3 opacity-30" />
-          <p>No se encontraron pagos recurrentes</p>
-          <button @click="showNewPaymentModal" class="btn btn-primary mt-3">Agregar Pago</button>
+        <div v-if="recurrents.length === 0" class="py-16 text-center">
+          <MdiCashOff class="text-6xl mx-auto mb-4 text-gray-500" />
+          <p class="text-lg font-medium text-white mb-2">No tenés pagos recurrentes</p>
+          <p class="text-sm text-gray-400 mb-6 max-w-sm mx-auto">Agrega tus pagos recurrentes como Netflix, internet, alquiler y mas para llevar un control mensual de tus gastos fijos.</p>
+          <button @click="showNewPaymentModal" class="px-6 py-2.5 bg-primary text-white rounded-lg font-medium hover:bg-primary/80 transition-colors">Agregar Primer Pago</button>
         </div>
       </div>
     </div>
@@ -266,6 +293,7 @@
 </template>
 
 <script setup>
+import { formatPrice } from "~/utils";
 import MdiChevronLeft from "~icons/mdi/chevron-left";
 import MdiChevronRight from "~icons/mdi/chevron-right";
 import MdiCheck from "~icons/mdi/check";
@@ -307,6 +335,7 @@ function getDisplayCategoryName(payment) {
 const isLoading = ref(true);
 const activeRecurrentId = ref(null);
 const editPayment = ref(null);
+const newPaymentModal = ref(null);
 const recurrentDetails = ref(null);
 const recurrents = ref([]);
 const monthsOffset = ref(0);
@@ -360,6 +389,9 @@ const currentYear = computed(() => {
 });
 // Determine if we're looking at the current period
 const isCurrentPeriod = computed(() => monthsOffset.value === 0);
+
+// Current month key for highlighting
+const currentMonthKey = computed(() => $dayjs().format("MMM"));
 
 // ----- Define Methods ---------
 // Check if a date is in the past
@@ -519,18 +551,9 @@ function applySortOrder(orderQuery) {
 
 // Show new payment modal
 function showNewPaymentModal() {
-  // Implement this based on your payment creation flow
-  // e.g., navigating to a new payment page or showing a modal
+  newPaymentModal.value?.showModal();
 }
 
-// Format price/currency
-function formatPrice(amount) {
-  return new Intl.NumberFormat("es-AR", {
-    style: "currency",
-    currency: "ARS",
-    minimumFractionDigits: 2
-  }).format(amount);
-}
 
 // Fetch all required data
 async function fetchData() {

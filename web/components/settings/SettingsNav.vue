@@ -5,7 +5,7 @@
       class="settings-tab"
       :class="{ 'settings-tab-active': route.path === '/settings/categories' }"
     >
-      <MdiTag class="text-lg" />
+      <MdiTag class="text-xl" />
       <span>Categorias</span>
     </NuxtLink>
     <NuxtLink
@@ -13,7 +13,7 @@
       class="settings-tab"
       :class="{ 'settings-tab-active': route.path === '/settings/whatsapp' }"
     >
-      <MdiWhatsapp class="text-lg" />
+      <MdiWhatsapp class="text-xl" />
       <span>WhatsApp</span>
     </NuxtLink>
     <NuxtLink
@@ -21,7 +21,7 @@
       class="settings-tab"
       :class="{ 'settings-tab-active': route.path === '/settings/notifications' }"
     >
-      <MdiBell class="text-lg" />
+      <MdiBell class="text-xl" />
       <span>Notificaciones</span>
     </NuxtLink>
   </div>

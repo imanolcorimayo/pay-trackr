@@ -4,7 +4,7 @@
 
     <!-- Main navigation tabs (only for authenticated users) -->
     <div v-if="user" class="w-full bg-base border-b border-gray-700 mb-4">
-      <div class="max-w-[80rem] m-auto px-0 sm:px-[1.429rem]">
+      <div class="max-w-7xl m-auto px-0 sm:px-6">
         <nav class="flex overflow-x-auto" aria-label="Navegación principal">
           <NuxtLink to="/recurrent" class="nav-tab" :class="{ 'nav-tab-active': route.path === '/recurrent' }">
             <span class="flex items-center gap-2"><span class="hidden sm:inline">Pagos</span> Recurrentes</span>
@@ -24,7 +24,7 @@
         </nav>
       </div>
     </div>
-    <div class="flex flex-col gap-[3rem] max-w-[80rem] m-auto px-0 sm:px-[1.429rem]">
+    <div class="flex flex-col gap-12 max-w-7xl m-auto px-0 sm:px-6">
       <main>
         <slot @totals="updateTotals" />
       </main>

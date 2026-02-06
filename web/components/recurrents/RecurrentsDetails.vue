@@ -43,9 +43,9 @@
         <!-- Payment History -->
         <div>
           <h3 class="text-lg font-semibold mb-3">Historial de Pagos Reciente</h3>
-          <div class="overflow-y-auto max-h-[300px]">
+          <div class="overflow-y-auto max-h-[300px] dark-scrollbar">
             <table class="w-full">
-              <thead class="text-left bg-gray-100">
+              <thead class="text-left bg-gray-700/50">
                 <tr>
                   <th class="py-2 px-3 rounded-tl-lg">Mes</th>
                   <th class="py-2 px-3">Monto</th>
@@ -75,7 +75,7 @@
                       </button>
                       <button
                         @click="editPaymentInstance(instance.id)"
-                        class="text-gray-500 hover:text-gray-700 text-sm font-medium ml-2"
+                        class="text-gray-500 hover:text-gray-300 text-sm font-medium ml-2"
                       >
                         Editar
                       </button>
@@ -100,7 +100,7 @@
       <div class="flex justify-between w-full">
         <button 
           @click="closeModal"
-          class="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+          class="px-4 py-2 border border-gray-600 rounded-lg hover:bg-gray-700 transition-colors"
         >
           Cerrar
         </button>
@@ -143,6 +143,7 @@
 </template>
 
 <script setup>
+import { formatPrice } from '~/utils';
 
 const props = defineProps({
   paymentId: {
@@ -207,14 +208,6 @@ async function fetchPaymentDetails(paymentId) {
     .sort((a, b) => b.createdAt.toDate() - a.createdAt.toDate()); // Most recent first
   
   isLoading.value = false;
-}
-
-function formatPrice(amount) {
-  return new Intl.NumberFormat('es-AR', {
-    style: 'currency',
-    currency: 'ARS',
-    minimumFractionDigits: 2
-  }).format(amount || 0);
 }
 
 function formatDate(timestamp) {

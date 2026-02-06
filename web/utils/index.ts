@@ -23,7 +23,7 @@ export const formatPrice = (price: number) => {
     style: 'currency',
     currency: 'ARS',
     minimumFractionDigits: 2
-  }).format(price);
+  }).format(price || 0);
 };
 
 // Legacy category string to color mapping (for backward compatibility)

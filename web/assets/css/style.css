@@ -61,7 +61,7 @@ h1 {
     text-align: center;
 }
 
-.btn-primary, .form-input {
+.form-input {
     height: 48px;
     box-shadow: none;
     outline: none;
@@ -98,10 +98,9 @@ select option {
     box-shadow: none;
 }
 
-input, 
+input,
 textarea, select {
     background-color: transparent;
-    border: 2px solid rgba(255, 255, 255, 0.35);
     color: inherit;
 }
 

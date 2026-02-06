@@ -21,7 +21,7 @@
                 clip-rule="evenodd"
               ></path>
             </svg>
-            <span class="sr-only">Close modal</span>
+            <span class="sr-only">Cerrar</span>
           </button>
           <svg
             v-if="!isEdit"
@@ -80,17 +80,17 @@ const props = defineProps({
   message: {
     required: false,
     type: String,
-    default: "Are you sure to continue?"
+    default: "¿Estás seguro de continuar?"
   },
   textCancelButton: {
     required: false,
     type: String,
-    default: "No, cancel"
+    default: "No, cancelar"
   },
   textConfirmButton: {
     required: false,
     type: String,
-    default: "Yes, I'm sure"
+    default: "Sí, confirmar"
   }
 });
 

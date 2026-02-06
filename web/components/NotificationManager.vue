@@ -18,7 +18,7 @@
       <button
         @click="enableNotifications"
         :disabled="notificationStore.isLoading"
-        class="flex-1 bg-primary text-white px-3 py-1.5 rounded-md text-sm font-medium disabled:opacity-50"
+        class="flex-[2] bg-primary text-white px-3 py-2 rounded-md text-sm font-semibold disabled:opacity-50 shadow-sm shadow-primary/30"
       >
         <span v-if="notificationStore.isLoading">Activando...</span>
         <span v-else>Activar</span>
@@ -26,7 +26,7 @@
       <button
         @click="dismissBanner"
         :disabled="notificationStore.isLoading"
-        class="flex-1 bg-gray-700 text-white px-3 py-1.5 rounded-md text-sm font-medium disabled:opacity-50"
+        class="flex-[1] bg-gray-700 text-gray-300 px-3 py-2 rounded-md text-sm font-medium disabled:opacity-50"
       >
         Ahora no
       </button>

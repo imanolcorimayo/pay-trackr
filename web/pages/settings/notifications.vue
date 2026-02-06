@@ -220,16 +220,3 @@ useHead({
 });
 </script>
 
-<style scoped>
-.btn-primary {
-  @apply bg-primary hover:bg-primary/80 text-white px-4 py-3 rounded-lg font-medium transition-colors;
-}
-
-.btn-danger {
-  @apply bg-red-600 hover:bg-red-700 text-white px-4 py-3 rounded-lg font-medium transition-colors;
-}
-
-.btn-secondary {
-  @apply bg-gray-600 hover:bg-gray-500 text-white px-4 py-3 rounded-lg font-medium transition-colors;
-}
-</style>

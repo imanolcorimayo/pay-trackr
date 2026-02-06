@@ -3,7 +3,7 @@
     <Modal ref="modal">
       <template #header>
         <div class="flex items-center">
-          <div v-if="isLoading" class="w-3 h-14 rounded-full mr-3 bg-gray-200 animate-pulse"></div>
+          <div v-if="isLoading" class="w-3 h-14 rounded-full mr-3 bg-gray-700 animate-pulse"></div>
           <div
             v-else-if="form.categoryId"
             class="w-3 h-14 rounded-full mr-3"
@@ -83,9 +83,12 @@
               type="text"
               :disabled="props.isRecurrent"
               required
-              class="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+              @blur="touched.title = true"
+              class="w-full p-2 bg-gray-700 border rounded-md focus:outline-none focus:ring-2 focus:border-transparent"
+              :class="touched.title && !form.title ? 'border-red-500 ring-2 ring-red-500 focus:ring-red-500' : 'border-gray-600 focus:ring-primary'"
               placeholder="ej. Suscripción Netflix"
             />
+            <span v-if="touched.title && !form.title" class="text-xs text-red-400">Este campo es obligatorio</span>
           </div>
 
           <div class="space-y-2" v-if="!props.isRecurrent">
@@ -100,7 +103,7 @@
               v-if="showDescription"
               id="description"
               v-model="form.description"
-              class="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+              class="w-full p-2 bg-gray-700 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
               placeholder="Agregá detalles sobre este pago"
               rows="2"
             ></textarea>
@@ -120,11 +123,14 @@
                   inputmode="decimal"
                   pattern="[0-9]*[.,]?[0-9]*"
                   @input="normalizeAmount"
+                  @blur="touched.amount = true"
                   required
-                  class="w-full p-2 pl-7 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                  class="w-full p-2 pl-7 bg-gray-700 border rounded-md focus:outline-none focus:ring-2 focus:border-transparent"
+                  :class="touched.amount && !form.amount ? 'border-red-500 ring-2 ring-red-500 focus:ring-red-500' : 'border-gray-600 focus:ring-primary'"
                   placeholder="0,00"
                 />
               </div>
+              <span v-if="touched.amount && !form.amount" class="text-xs text-red-400">Este campo es obligatorio</span>
             </div>
 
             <div class="space-y-2" v-if="!props.isRecurrent">
@@ -132,8 +138,10 @@
               <select
                 id="category"
                 v-model="form.categoryId"
+                @blur="touched.categoryId = true"
                 required
-                class="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                class="w-full p-2 bg-gray-700 border rounded-md focus:outline-none focus:ring-2 focus:border-transparent"
+                :class="touched.categoryId && !form.categoryId ? 'border-red-500 ring-2 ring-red-500 focus:ring-red-500' : 'border-gray-600 focus:ring-primary'"
               >
                 <option v-for="cat in categories" :key="cat.id" :value="cat.id">
                   {{ cat.name }}
@@ -149,9 +157,12 @@
               id="dueDate"
               v-model="form.dueDate"
               type="date"
+              @blur="touched.dueDate = true"
               required
-              class="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+              class="w-full p-2 bg-gray-700 border rounded-md focus:outline-none focus:ring-2 focus:border-transparent"
+              :class="touched.dueDate && !form.dueDate ? 'border-red-500 ring-2 ring-red-500 focus:ring-red-500' : 'border-gray-600 focus:ring-primary'"
             />
+            <span v-if="touched.dueDate && !form.dueDate" class="text-xs text-red-400">Este campo es obligatorio</span>
           </div>
 
           <!-- Save as Template Option (only on creation) -->
@@ -174,9 +185,12 @@
                 id="dueDate"
                 v-model="form.dueDate"
                 type="date"
+                @blur="touched.dueDate = true"
                 required
-                class="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                class="w-full p-2 bg-gray-700 border rounded-md focus:outline-none focus:ring-2 focus:border-transparent"
+                :class="touched.dueDate && !form.dueDate ? 'border-red-500 ring-2 ring-red-500 focus:ring-red-500' : 'border-gray-600 focus:ring-primary'"
               />
+              <span v-if="touched.dueDate && !form.dueDate" class="text-xs text-red-400">Este campo es obligatorio</span>
             </div>
 
             <div class="space-y-2">
@@ -195,7 +209,7 @@
                   id="paidDate"
                   v-model="form.paidDate"
                   type="date"
-                  class="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                  class="w-full p-2 bg-gray-700 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
                 />
               </div>
             </div>
@@ -228,7 +242,7 @@
           </button>
           <button
             @click="closeModal"
-            class="px-6 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+            class="px-6 py-2 border border-gray-600 rounded-lg hover:bg-gray-700 transition-colors"
           >
             Listo
           </button>
@@ -251,7 +265,7 @@
         <div v-else class="flex justify-between w-full">
           <button
             @click="closeModal"
-            class="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+            class="px-4 py-2 border border-gray-600 rounded-lg hover:bg-gray-700 transition-colors"
           >
             Cancelar
           </button>
@@ -374,6 +388,7 @@ const defaultForm = computed(() => {
 });
 
 const form = ref({ ...defaultForm.value });
+const touched = ref({ title: false, amount: false, categoryId: false, dueDate: false });
 const showDescription = ref(false);
 const continueAdding = ref(false);
 const saveAsTemplate = ref(false);
@@ -406,6 +421,7 @@ async function showModal(paymentId = null, templateData = null) {
     saveAsTemplate.value = false;
   }
 
+  touched.value = { title: false, amount: false, categoryId: false, dueDate: false };
   templatesExpanded.value = false;
   modal.value?.open();
 }
@@ -505,6 +521,7 @@ function closeModal() {
 function addAnother() {
   continueAdding.value = false;
   saveAsTemplate.value = false;
+  touched.value = { title: false, amount: false, categoryId: false, dueDate: false };
 
   if (currentTemplate.value) {
     // Template mode: re-apply template (keeps title, description, category)
@@ -731,7 +748,7 @@ defineExpose({
 
 <style scoped>
 .form-checkbox {
-  @apply text-primary border-gray-300 rounded;
+  @apply text-primary border-gray-600 rounded;
 }
 
 /* Hide scrollbar but keep functionality */
