@@ -1,6 +1,7 @@
 import 'dotenv/config';
 import express from 'express';
 import admin from 'firebase-admin';
+import GeminiHandler from '../handlers/GeminiHandler.js';
 
 // ============================================
 // Configuration
@@ -673,7 +674,9 @@ async function handleFijosCommand(phoneNumber) {
 // ============================================
 // ANALISIS Command - AI Financial Health Analysis
 // ============================================
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
+const geminiHandler = process.env.GEMINI_API_KEY
+  ? new GeminiHandler(process.env.GEMINI_API_KEY)
+  : null;
 
 async function handleAnalisisCommand(phoneNumber) {
   const linkDoc = await db.collection(COLLECTIONS.WHATSAPP_LINKS).doc(phoneNumber).get();
@@ -686,7 +689,7 @@ async function handleAnalisisCommand(phoneNumber) {
   const userId = linkDoc.data().userId;
 
   // Check if AI is configured
-  if (!GEMINI_API_KEY) {
+  if (!geminiHandler) {
     await sendWhatsAppMessage(phoneNumber, 'El analisis con IA no esta disponible en este momento.');
     return;
   }
@@ -766,79 +769,12 @@ async function handleAnalisisCommand(phoneNumber) {
     };
 
     // Call AI for analysis
-    const analysis = await getAIAnalysis(dataSummary);
+    const analysis = await geminiHandler.getFinancialAnalysis(dataSummary);
 
     await sendWhatsAppMessage(phoneNumber, analysis);
   } catch (error) {
     console.error('Error in ANALISIS command:', error);
     await sendWhatsAppMessage(phoneNumber, 'Error al analizar tus finanzas. Intenta nuevamente.');
-  }
-}
-
-async function getAIAnalysis(data) {
-  const prompt = `Eres un asesor financiero personal amigable. Analiza los siguientes datos de gastos de un usuario argentino y proporciona feedback conciso sobre su salud financiera.
-
-DATOS DEL USUARIO:
-- Meses analizados: ${data.months.join(', ')}
-- Total de pagos registrados: ${data.totalPayments}
-- Gastos fijos mensuales: $${data.totalRecurrent} (${data.recurrentCount} recurrentes)
-
-GASTOS POR MES:
-${Object.entries(data.monthlyData).map(([month, info]) =>
-  `${month}: $${info.total.toLocaleString('es-AR')} (${info.count} pagos)
-   Categorias: ${Object.entries(info.byCategory).map(([cat, amt]) => `${cat}: $${amt.toLocaleString('es-AR')}`).join(', ')}`
-).join('\n\n')}
-
-RECURRENTES PRINCIPALES:
-${data.recurrents.map(r => `- ${r.title}: $${r.amount.toLocaleString('es-AR')} (${r.category})`).join('\n')}
-
-INSTRUCCIONES:
-1. Analiza tendencias de gasto (subiendo, bajando, estable)
-2. Identifica categorias con mayor gasto. Identifica posible gastos irresponsables, evitables o anomalos
-3. Evalua la proporcion de gastos fijos vs variables
-4. Da 2-3 consejos practicos y especificos
-5. Usa un tono amigable y motivador. No marques errores ni juzgues los habitos. Sos el aliado que quiere ayudar.
-6. NO uses emojis
-7. Responde en espanol argentino
-8. Manten la respuesta CORTA (max 800 caracteres) para WhatsApp
-9. Usa *asteriscos* para negritas
-10. Si aplica, haz notar algun patron interesante en los datos
-
-Responde directamente con el analisis, sin introduccion.`;
-
-  try {
-    const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent?key=${GEMINI_API_KEY}`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          contents: [{
-            parts: [{
-              text: prompt
-            }]
-          }],
-          generationConfig: {
-            maxOutputTokens: 500,
-            temperature: 0.7
-          }
-        })
-      }
-    );
-
-    if (!response.ok) {
-      console.error('Gemini API error:', await response.text());
-      return 'No se pudo completar el analisis. Intenta nuevamente.';
-    }
-
-    const result = await response.json();
-    const text = result.candidates?.[0]?.content?.parts?.[0]?.text;
-    return text || 'No se pudo generar el analisis.';
-  } catch (error) {
-    console.error('Error calling Gemini:', error);
-    return 'Error al conectar con el servicio de analisis.';
   }
 }
 

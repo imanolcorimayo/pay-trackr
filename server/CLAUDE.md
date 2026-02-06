@@ -27,7 +27,10 @@ Two independent services sharing the same Firebase project:
 - `send-reminders.js` - Cron-driven payment reminders via FCM push notifications
   - Morning mode: notifies for payments due today + in 3 days
   - Evening mode: notifies for payments due today only
-- `test-notifications.js` - Development testing for push notifications
+- `send-weekly-summary.js` - Weekly digest with per-user stats + AI insight via Gemini
+
+### 3. Handlers (`handlers/`)
+- `GeminiHandler.js` - Reusable Gemini AI API wrapper (used by webhook + weekly summary)
 
 ## Firestore Collections Used
 
@@ -72,7 +75,7 @@ npm run dev                    # Webhook server with --watch
 npm run start                  # Webhook server (production)
 npm run reminders:morning      # Morning reminder cron
 npm run reminders:evening      # Evening reminder cron
-npm run test:notifications     # Test push notifications
+npm run weekly-summary         # Weekly summary cron
 ```
 
 ## Language & Formatting
