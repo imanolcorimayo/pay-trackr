@@ -12,8 +12,6 @@
         >
           <option value="3">Últimos 3 meses</option>
           <option value="6">Últimos 6 meses</option>
-          <option value="12">Últimos 12 meses</option>
-          <option value="24">Últimos 2 años</option>
         </select>
       </div>
     </div>
@@ -777,12 +775,11 @@ function calculateStatistics() {
   }
 }
 
-// Prepare available months for selection
+// Prepare available months for selection (based on fetched data)
 function prepareAvailableMonths() {
   const months = [];
 
-  // Create an array of months up to the current month
-  for (let i = 0; i < 24; i++) {
+  for (let i = 0; i < 6; i++) {
     const monthDate = $dayjs().subtract(i, "month");
     months.push({
       label: monthDate.format("MMMM YYYY"),
@@ -808,12 +805,17 @@ async function updateCharts() {
 async function fetchData() {
   isLoading.value = true;
   try {
-    // Fetch one-time payments (uses dueDate ordering)
-    await paymentStore.fetchPayments({ });
-    // Fetch recurring payment templates
-    await recurrentStore.fetchRecurrentPayments();
-    // Fetch recurring payment instances (uses createdAt ordering)
-    await recurrentStore.fetchPaymentInstances(24);
+    // Fetch last 6 months of data in parallel
+    const startDate = $dayjs().subtract(5, 'month').startOf('month').toDate();
+    const endDate = $dayjs().endOf('month').toDate();
+
+    await Promise.all([
+      paymentStore.fetchPayments({ startDate, endDate }),
+      (async () => {
+        await recurrentStore.fetchRecurrentPayments();
+        await recurrentStore.fetchPaymentInstances(6);
+      })()
+    ]);
 
     // Prepare months dropdown
     prepareAvailableMonths();

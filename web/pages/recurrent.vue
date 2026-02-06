@@ -536,8 +536,12 @@ function formatPrice(amount) {
 async function fetchData() {
   isLoading.value = true;
 
-  await recurrentStore.fetchRecurrentPayments();
-  await recurrentStore.fetchPaymentInstances(monthsOffset.value + monthsToShow.value);
+  const monthsBack = monthsOffset.value + monthsToShow.value;
+  await Promise.all([
+    recurrentStore.fetchRecurrentPayments(),
+    recurrentStore.fetchPaymentInstances(monthsBack, false, true)
+  ]);
+  recurrentStore.processData(monthsBack);
 
   recurrents.value = [...getProcessedRecurrents.value];
   isLoading.value = false;

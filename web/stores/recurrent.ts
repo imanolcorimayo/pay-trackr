@@ -154,7 +154,7 @@ export const useRecurrentStore = defineStore("recurrent", {
       }
     },
 
-    async fetchPaymentInstances(monthsBack = 6, forceRefresh = false) {
+    async fetchPaymentInstances(monthsBack = 6, forceRefresh = false, skipProcess = false) {
       const user = getCurrentUser();
       const { $dayjs } = useNuxtApp();
 
@@ -165,8 +165,9 @@ export const useRecurrentStore = defineStore("recurrent", {
 
       // Skip fetch if already loaded with enough months (unless force refresh)
       if (!forceRefresh && this.isLoaded && this.lastFetchedMonthsBack >= monthsBack) {
-        // Just reprocess data with the requested months
-        this.processData(monthsBack);
+        if (!skipProcess) {
+          this.processData(monthsBack);
+        }
         return true;
       }
 
@@ -182,7 +183,9 @@ export const useRecurrentStore = defineStore("recurrent", {
 
         if (result.success && result.data) {
           this.paymentInstances = result.data as PaymentInstance[];
-          this.processData(monthsBack);
+          if (!skipProcess) {
+            this.processData(monthsBack);
+          }
           this.isLoaded = true;
           this.lastFetchedMonthsBack = monthsBack;
           return true;
@@ -240,6 +243,14 @@ export const useRecurrentStore = defineStore("recurrent", {
         };
       }).reverse();
 
+      // Index payment instances by recurrentId for O(1) lookup
+      const instancesByRecurrentId = new Map<string, PaymentInstance[]>();
+      this.paymentInstances.forEach((payment) => {
+        const list = instancesByRecurrentId.get(payment.recurrentId) || [];
+        list.push(payment);
+        instancesByRecurrentId.set(payment.recurrentId, list);
+      });
+
       // Group by recurrent payment ID
       this.recurrentPayments.forEach((recurrent) => {
         const recurrentWithMonths: RecurrentWithMonths = {
@@ -280,25 +291,24 @@ export const useRecurrentStore = defineStore("recurrent", {
           };
         });
 
-        // Fill in actual payment data where available
-        this.paymentInstances.forEach((payment) => {
-          if (payment.recurrentId === recurrent.id) {
-            const paymentDate = $dayjs(payment.createdAt.toDate ? payment.createdAt.toDate() : payment.createdAt);
-            const paymentMonth = paymentDate.format("MMM");
+        // Fill in actual payment data from indexed map
+        const instances = instancesByRecurrentId.get(recurrent.id) || [];
+        instances.forEach((payment) => {
+          const paymentDate = $dayjs(payment.createdAt.toDate ? payment.createdAt.toDate() : payment.createdAt);
+          const paymentMonth = paymentDate.format("MMM");
 
-            // Match payment to the correct month and year
-            const matchingMonth = monthsWithYear.find(
-              (m) => m.key === paymentMonth && m.year === paymentDate.format("YYYY")
-            );
+          // Match payment to the correct month and year
+          const matchingMonth = monthsWithYear.find(
+            (m) => m.key === paymentMonth && m.year === paymentDate.format("YYYY")
+          );
 
-            if (matchingMonth && recurrentWithMonths.months[matchingMonth.key] !== undefined) {
-              recurrentWithMonths.months[matchingMonth.key] = {
-                amount: payment.amount,
-                dueDate: paymentDate.format("MM/DD/YYYY"),
-                paymentId: payment.id,
-                isPaid: payment.isPaid
-              };
-            }
+          if (matchingMonth && recurrentWithMonths.months[matchingMonth.key] !== undefined) {
+            recurrentWithMonths.months[matchingMonth.key] = {
+              amount: payment.amount,
+              dueDate: paymentDate.format("MM/DD/YYYY"),
+              paymentId: payment.id,
+              isPaid: payment.isPaid
+            };
           }
         });
 
