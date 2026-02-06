@@ -62,10 +62,16 @@ async function main() {
   }
 
   // ----------------------------------------
-  // Step 1: Fetch all active recurrent templates
+  // Step 1: Fetch recurrent templates matching due dates
   // ----------------------------------------
   console.log('\n--- Fetching recurrent templates ---');
-  const recurrentsSnapshot = await db.collection('recurrent').get();
+  const dueDays = MODE === 'morning'
+    ? [String(todayDay), String(threeDaysDay)]
+    : [String(todayDay)];
+  console.log(`Filtering by dueDateDay in [${dueDays.join(', ')}]`);
+  const recurrentsSnapshot = await db.collection('recurrent')
+    .where('dueDateDay', 'in', dueDays)
+    .get();
 
   if (recurrentsSnapshot.empty) {
     console.log('No recurrent templates found');
