@@ -54,12 +54,18 @@ async function main() {
   const sevenDaysDay = sevenDaysFromNow.getDate();
   const sevenDaysMonth = sevenDaysFromNow.getMonth();
 
+  // Calculate 7 days ago
+  const sevenDaysAgo = new Date(argentinaDate);
+  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+  const sevenDaysAgoDay = sevenDaysAgo.getDate();
+  const sevenDaysAgoMonth = sevenDaysAgo.getMonth();
+
   // Current month boundaries
   const monthStart = new Date(todayYear, todayMonth, 1);
   const monthEnd = new Date(todayYear, todayMonth + 1, 0, 23, 59, 59, 999);
 
   console.log(`Time (ART): ${argentinaDate.toLocaleString('es-AR')}`);
-  console.log(`Today: day ${todayDay}, checking due dates through day ${sevenDaysDay}`);
+  console.log(`Today: day ${todayDay}, past week from day ${sevenDaysAgoDay}, next week through day ${sevenDaysDay}`);
   console.log(`Month range: ${monthStart.toLocaleDateString('es-AR')} - ${monthEnd.toLocaleDateString('es-AR')}`);
 
   // ----------------------------------------
@@ -121,14 +127,23 @@ async function main() {
   for (const userId of userIds) {
     const userRecurrents = recurrentsByUser[userId];
 
-    // Filter recurrents due this week (dueDateDay in [today..today+7])
-    const dueThisWeek = userRecurrents.filter(r => {
+    // Filter recurrents due past week (dueDateDay in [today-7..yesterday])
+    const pastWeekRecurrents = userRecurrents.filter(r => {
+      const dueDay = parseInt(r.dueDateDay);
+      if (sevenDaysAgoMonth === todayMonth) {
+        return dueDay >= sevenDaysAgoDay && dueDay < todayDay;
+      } else {
+        const daysInPrevMonth = new Date(todayYear, todayMonth, 0).getDate();
+        return (dueDay >= sevenDaysAgoDay && dueDay <= daysInPrevMonth) || (dueDay >= 1 && dueDay < todayDay);
+      }
+    });
+
+    // Filter recurrents due next week (dueDateDay in [today..today+7])
+    const nextWeekRecurrents = userRecurrents.filter(r => {
       const dueDay = parseInt(r.dueDateDay);
       if (todayMonth === sevenDaysMonth) {
-        // Same month: simple range check
         return dueDay >= todayDay && dueDay <= sevenDaysDay;
       } else {
-        // Month boundary: due day >= today OR due day <= sevenDaysDay
         const daysInMonth = new Date(todayYear, todayMonth + 1, 0).getDate();
         return (dueDay >= todayDay && dueDay <= daysInMonth) || (dueDay >= 1 && dueDay <= sevenDaysDay);
       }
@@ -155,13 +170,32 @@ async function main() {
     const instanceRecurrentIds = new Set(recurrentInstances.map(p => p.recurrentId));
     const noInstanceCount = userRecurrents.filter(r => !instanceRecurrentIds.has(r.id)).length;
 
-    const dueThisWeekAmount = dueThisWeek.reduce((sum, r) => sum + (r.amount || 0), 0);
     const totalPaidAmount = paidRecurrents.reduce((sum, p) => sum + (p.amount || 0), 0);
     const oneTimeAmount = oneTimePayments.reduce((sum, p) => sum + (p.amount || 0), 0);
 
+    // Per-week paid/unpaid breakdown using recurrent instance data
+    const paidRecurrentIds = new Set(paidRecurrents.map(p => p.recurrentId));
+
+    const buildWeekStats = (weekRecurrents) => {
+      const paid = weekRecurrents.filter(r => paidRecurrentIds.has(r.id));
+      const unpaid = weekRecurrents.filter(r => !paidRecurrentIds.has(r.id));
+      return {
+        count: weekRecurrents.length,
+        amount: weekRecurrents.reduce((sum, r) => sum + (r.amount || 0), 0),
+        paidCount: paid.length,
+        unpaidCount: unpaid.length,
+        unpaidAmount: unpaid.reduce((sum, r) => sum + (r.amount || 0), 0)
+      };
+    };
+
+    const pastWeek = buildWeekStats(pastWeekRecurrents);
+    const nextWeek = buildWeekStats(nextWeekRecurrents);
+    const totalUnpaidAmount = pastWeek.unpaidAmount + nextWeek.unpaidAmount;
+
     const stats = {
-      dueThisWeekCount: dueThisWeek.length,
-      dueThisWeekAmount,
+      pastWeek,
+      nextWeek,
+      totalUnpaidAmount,
       paidThisMonth: paidRecurrents.length,
       unpaidThisMonth: unpaidRecurrents.length + noInstanceCount,
       totalPaidAmount,
@@ -170,34 +204,50 @@ async function main() {
     };
 
     console.log(`\n   User ${userId.substring(0, 8)}...`);
-    console.log(`   Due this week: ${stats.dueThisWeekCount} ($${stats.dueThisWeekAmount.toLocaleString('es-AR')})`);
+    console.log(`   Past week: ${pastWeek.count} (${pastWeek.paidCount} paid, ${pastWeek.unpaidCount} unpaid)`);
+    console.log(`   Next week: ${nextWeek.count} (${nextWeek.paidCount} paid, ${nextWeek.unpaidCount} unpaid)`);
+    console.log(`   Total unpaid: $${totalUnpaidAmount.toLocaleString('es-AR')}`);
     console.log(`   Month: ${stats.paidThisMonth} paid, ${stats.unpaidThisMonth} unpaid`);
     console.log(`   One-time: ${stats.oneTimeCount} ($${stats.oneTimeAmount.toLocaleString('es-AR')})`);
 
     // ----------------------------------------
     // Step 3: AI insight
     // ----------------------------------------
-    let insightLine = '';
+    let aiInsight = null;
     if (geminiHandler) {
-      const insight = await geminiHandler.getWeeklyInsight(stats);
-      if (insight) {
-        insightLine = `\n💡 ${insight}`;
-        console.log(`   AI insight: ${insight}`);
+      aiInsight = await geminiHandler.getWeeklyInsight(stats);
+      if (aiInsight) {
+        console.log(`   AI insight: ${aiInsight}`);
       } else {
         console.log('   AI insight: unavailable');
       }
     }
 
     // ----------------------------------------
+    // Step 3.5: Persist weekly summary to Firestore (one doc per user, overwritten)
+    // ----------------------------------------
+    try {
+      await db.collection('weeklySummaries').doc(userId).set({
+        userId,
+        stats,
+        aiInsight,
+        createdAt: admin.firestore.FieldValue.serverTimestamp()
+      });
+      console.log(`   Saved weekly summary to Firestore`);
+    } catch (err) {
+      console.error(`   Failed to save weekly summary: ${err.message}`);
+    }
+
+    // ----------------------------------------
     // Step 4: Build notification body
     // ----------------------------------------
-    let body = `Semana: ${stats.dueThisWeekCount} pago(s) por ${formatAmount(stats.dueThisWeekAmount)}. Mes: ${stats.paidThisMonth} pagados, ${stats.unpaidThisMonth} pendientes.`;
+    let body = `Entrante: ${nextWeek.count} pago(s) por ${formatAmount(nextWeek.amount)}. Pendiente total: ${formatAmount(totalUnpaidAmount)}.`;
 
     if (stats.oneTimeCount > 0) {
       body += ` Gastos únicos: ${stats.oneTimeCount} (${formatAmount(stats.oneTimeAmount)}).`;
     }
 
-    body += insightLine;
+    body += '\nVer resumen';
 
     // ----------------------------------------
     // Step 5: Fetch FCM tokens and send

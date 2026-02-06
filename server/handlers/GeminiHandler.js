@@ -68,16 +68,32 @@ Responde directamente con el analisis, sin introduccion.`;
   }
 
   async getWeeklyInsight(weeklyStats) {
-    const prompt = `Sos un asesor financiero breve. Dado estos datos semanales de un usuario argentino, da UN tip corto y accionable (max 150 caracteres). Sin emojis. Español argentino. Responde SOLO el tip, nada mas.
+    const pastWeek = weeklyStats.pastWeek;
+    const nextWeek = weeklyStats.nextWeek;
 
-Datos:
-- Pagos que vencen esta semana: ${weeklyStats.dueThisWeekCount} por $${weeklyStats.dueThisWeekAmount.toLocaleString('es-AR')}
+    const prompt = `Sos un asesor financiero personal amigable. Analizá los datos semanales de un usuario argentino y armá un resumen breve con dos partes:
+
+1. RESUMEN: En 2-3 oraciones contá qué pasó la semana pasada y qué se viene. Mencioná qué fue lo más pesado, qué estuvo tranquilo, si viene bien o atrasado con los pagos.
+2. TIPS: 1-2 comentarios genéricos, amigables y motivadores. NO sugieras acciones concretas (no "pagá tal cosa", "revisá tal otra"). Solo observaciones positivas o datos curiosos sobre sus finanzas.
+
+DATOS:
+- Semana pasada: ${pastWeek.count} pagos por $${pastWeek.amount.toLocaleString('es-AR')} (${pastWeek.paidCount} pagados, ${pastWeek.unpaidCount} pendientes por $${pastWeek.unpaidAmount.toLocaleString('es-AR')})
+- Semana entrante: ${nextWeek.count} pagos por $${nextWeek.amount.toLocaleString('es-AR')} (${nextWeek.paidCount} pagados, ${nextWeek.unpaidCount} pendientes por $${nextWeek.unpaidAmount.toLocaleString('es-AR')})
+- Total pendiente ambas semanas: $${weeklyStats.totalUnpaidAmount.toLocaleString('es-AR')}
 - Pagados este mes: ${weeklyStats.paidThisMonth}
 - Pendientes este mes: ${weeklyStats.unpaidThisMonth}
-- Total pagado: $${weeklyStats.totalPaidAmount.toLocaleString('es-AR')}
-- Gastos unicos: ${weeklyStats.oneTimeCount} por $${weeklyStats.oneTimeAmount.toLocaleString('es-AR')}`;
+- Total pagado este mes: $${weeklyStats.totalPaidAmount.toLocaleString('es-AR')}
+- Gastos únicos este mes: ${weeklyStats.oneTimeCount} por $${weeklyStats.oneTimeAmount.toLocaleString('es-AR')}
 
-    return await this.generateContent(prompt, { maxOutputTokens: 100, temperature: 0.8 });
+REGLAS:
+- Español argentino, tono amigable y cercano
+- Sin emojis
+- No uses encabezados ni listas, escribí todo como texto corrido
+- Separá el resumen de los tips con un salto de línea
+- Máximo 600 caracteres en total
+- Respondé directamente, sin introducción`;
+
+    return await this.generateContent(prompt, { maxOutputTokens: 350, temperature: 0.8 });
   }
 }
 
