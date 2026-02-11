@@ -129,23 +129,16 @@ export const getCurrentUser = (): User | null => {
   return auth.currentUser
 }
 
-// Get current user (async - waits for auth state to be determined)
-export const getCurrentUserAsync = (): Promise<User | null> => {
-  return new Promise((resolve) => {
-    const auth = getAuthInstance()
+// Get current user (async - waits for auth state to be fully determined)
+export const getCurrentUserAsync = async (): Promise<User | null> => {
+  const auth = getAuthInstance()
 
-    // If already have a user, return immediately
-    if (auth.currentUser) {
-      resolve(auth.currentUser)
-      return
-    }
+  // authStateReady() resolves once Firebase has finished restoring
+  // the persisted session — avoids the race where onAuthStateChanged
+  // fires with null before the stored token is loaded.
+  await auth.authStateReady()
 
-    // Wait for auth state to be determined
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      unsubscribe()
-      resolve(user)
-    })
-  })
+  return auth.currentUser
 }
 
 // Listen to auth state changes

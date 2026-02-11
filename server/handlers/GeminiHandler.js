@@ -5,15 +5,19 @@ class GeminiHandler {
     this.baseUrl = 'https://generativelanguage.googleapis.com/v1beta/models';
   }
 
-  async generateContent(prompt, { maxOutputTokens = 500, temperature = 0.7 } = {}) {
+  async generateContent(prompt, { maxOutputTokens = 500, temperature = 0.7, parts = null } = {}) {
     try {
+      const contents = parts
+        ? [{ parts }]
+        : [{ parts: [{ text: prompt }] }];
+
       const response = await fetch(
         `${this.baseUrl}/${this.model}:generateContent?key=${this.apiKey}`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            contents: [{ parts: [{ text: prompt }] }],
+            contents,
             generationConfig: { maxOutputTokens, temperature }
           })
         }
@@ -32,13 +36,178 @@ class GeminiHandler {
     }
   }
 
+  async transcribeAudio(base64, mimeType, userCategories = []) {
+    const categoriesList = userCategories.length > 0
+      ? `Categorias del usuario: ${userCategories.join(', ')}`
+      : '';
+
+    const parts = [
+      {
+        inlineData: {
+          mimeType,
+          data: base64
+        }
+      },
+      {
+        text: `Transcribi este audio en español argentino. El audio describe un gasto o compra.
+
+Extrae la siguiente informacion y devolvela SOLO como JSON valido, sin markdown ni texto extra:
+{
+  "transcription": "texto completo transcrito",
+  "title": "titulo corto del gasto (max 30 chars)",
+  "items": ["item1", "item2"],
+  "totalAmount": 0,
+  "description": "descripcion breve si la hay",
+  "category": "categoria sugerida"
+}
+
+${categoriesList}
+
+Si no podes determinar el monto, usa 0.
+Si no podes determinar la categoria, usa "Otros".
+El titulo debe ser conciso y descriptivo.`
+      }
+    ];
+
+    const text = await this.generateContent(null, {
+      maxOutputTokens: 1000,
+      temperature: 0.3,
+      parts
+    });
+
+    if (!text) return null;
+
+    try {
+      const cleaned = text.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+      return JSON.parse(cleaned);
+    } catch (error) {
+      console.error('Error parsing transcription JSON:', error, 'Raw:', text);
+      return null;
+    }
+  }
+
+  async parseTransferImage(base64, mimeType) {
+    const parts = [
+      {
+        inlineData: {
+          mimeType,
+          data: base64
+        }
+      },
+      {
+        text: `Analiza este comprobante de transferencia bancaria argentina.
+
+Extrae la siguiente informacion y devolvela SOLO como JSON valido, sin markdown ni texto extra:
+{
+  "amount": 0,
+  "recipientName": "nombre del destinatario",
+  "recipientCBU": "CBU o CVU si aparece",
+  "recipientAlias": "alias si aparece",
+  "recipientBank": "banco del destinatario",
+  "senderBank": "banco del emisor",
+  "date": "fecha en formato YYYY-MM-DD",
+  "reference": "numero de referencia o comprobante",
+  "concept": "concepto si aparece"
+}
+
+Si algun campo no esta visible o no se puede determinar, usa null.
+El monto debe ser un numero (sin signos ni separadores).`
+      }
+    ];
+
+    const text = await this.generateContent(null, {
+      maxOutputTokens: 1000,
+      temperature: 0.3,
+      parts
+    });
+
+    if (!text) return null;
+
+    try {
+      const cleaned = text.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+      return JSON.parse(cleaned);
+    } catch (error) {
+      console.error('Error parsing transfer image JSON:', error, 'Raw:', text);
+      return null;
+    }
+  }
+
+  async parseTransferPDF(base64, mimeType) {
+    const parts = [
+      {
+        inlineData: {
+          mimeType: mimeType || 'application/pdf',
+          data: base64
+        }
+      },
+      {
+        text: `Analiza este comprobante de transferencia bancaria argentina en PDF.
+
+Extrae la siguiente informacion y devolvela SOLO como JSON valido, sin markdown ni texto extra:
+{
+  "amount": 0,
+  "recipientName": "nombre del destinatario",
+  "recipientCBU": "CBU o CVU si aparece",
+  "recipientAlias": "alias si aparece",
+  "recipientBank": "banco del destinatario",
+  "senderBank": "banco del emisor",
+  "date": "fecha en formato YYYY-MM-DD",
+  "reference": "numero de referencia o comprobante",
+  "concept": "concepto si aparece"
+}
+
+Si algun campo no esta visible o no se puede determinar, usa null.
+El monto debe ser un numero (sin signos ni separadores).`
+      }
+    ];
+
+    const text = await this.generateContent(null, {
+      maxOutputTokens: 1000,
+      temperature: 0.3,
+      parts
+    });
+
+    if (!text) return null;
+
+    try {
+      const cleaned = text.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+      return JSON.parse(cleaned);
+    } catch (error) {
+      console.error('Error parsing transfer PDF JSON:', error, 'Raw:', text);
+      return null;
+    }
+  }
+
+  async categorizeExpense(title, description, userCategories = []) {
+    if (userCategories.length === 0) return 'Otros';
+
+    const prompt = `Clasifica este gasto en una de las categorias del usuario.
+
+Gasto: "${title}"${description ? ` - ${description}` : ''}
+
+Categorias disponibles: ${userCategories.join(', ')}
+
+Responde SOLO con el nombre exacto de la categoria que mejor aplique. Si ninguna aplica, responde "Otros".`;
+
+    const text = await this.generateContent(prompt, {
+      maxOutputTokens: 50,
+      temperature: 0.2
+    });
+
+    if (!text) return 'Otros';
+
+    const result = text.trim();
+    const match = userCategories.find(c => c.toLowerCase() === result.toLowerCase());
+    return match || 'Otros';
+  }
+
   async getFinancialAnalysis(dataSummary) {
     const prompt = `Eres un asesor financiero personal amigable. Analiza los siguientes datos de gastos de un usuario argentino y proporciona feedback conciso sobre su salud financiera.
 
 DATOS DEL USUARIO:
 - Meses analizados: ${dataSummary.months.join(', ')}
 - Total de pagos registrados: ${dataSummary.totalPayments}
-- Gastos fijos mensuales: $${dataSummary.totalRecurrent} (${dataSummary.recurrentCount} recurrentes)
+- Gastos fijos mensuales: $${dataSummary.totalRecurrent} (${dataSummary.recurrentCount} fijos)
 
 GASTOS POR MES:
 ${Object.entries(dataSummary.monthlyData).map(([month, info]) =>
@@ -46,7 +215,7 @@ ${Object.entries(dataSummary.monthlyData).map(([month, info]) =>
    Categorias: ${Object.entries(info.byCategory).map(([cat, amt]) => `${cat}: $${amt.toLocaleString('es-AR')}`).join(', ')}`
 ).join('\n\n')}
 
-RECURRENTES PRINCIPALES:
+GASTOS FIJOS PRINCIPALES:
 ${dataSummary.recurrents.map(r => `- ${r.title}: $${r.amount.toLocaleString('es-AR')} (${r.category})`).join('\n')}
 
 INSTRUCCIONES:

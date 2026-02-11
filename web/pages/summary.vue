@@ -56,7 +56,7 @@
           <MdiChartLine class="mr-2 text-primary" />
           Tendencias de Gastos Mensuales
         </h2>
-        <p class="text-sm text-gray-500 mb-4">Compará tus gastos recurrentes y únicos por mes</p>
+        <p class="text-sm text-gray-500 mb-4">Compará tus gastos fijos y únicos por mes</p>
         <div class="relative h-[350px]">
           <canvas id="monthlyTrendsChart"></canvas>
         </div>
@@ -119,10 +119,10 @@
 
           <!-- Recurring vs One-time -->
           <div class="flex flex-col p-3 bg-gray-700/40 rounded-lg">
-            <span class="text-xs text-gray-400">Recurrentes vs Únicos</span>
+            <span class="text-xs text-gray-400">Fijos vs Únicos</span>
             <div class="flex items-center gap-2">
               <span class="text-xl font-bold text-white">{{ stats.recurringPercentage }}%</span>
-              <span class="text-sm text-gray-400">recurrentes</span>
+              <span class="text-sm text-gray-400">fijos</span>
             </div>
             <div class="w-full h-2 bg-gray-600 rounded-full mt-2 overflow-hidden">
               <div class="h-full bg-primary rounded-full" :style="`width: ${stats.recurringPercentage}%`"></div>
@@ -193,7 +193,7 @@
                   <div class="w-2 h-10 rounded-full mr-3" :style="{ backgroundColor: getDisplayCategoryColor(payment) }"></div>
                   <div>
                     <p class="font-medium">{{ payment.title }}</p>
-                    <p class="text-xs text-gray-500">{{ payment.isRecurring ? "Recurrente" : "Único" }}</p>
+                    <p class="text-xs text-gray-500">{{ payment.isRecurring ? "Fijo" : "Único" }}</p>
                   </div>
                 </div>
                 <p class="font-semibold">{{ formatPrice(payment.amount) }}</p>
@@ -402,7 +402,7 @@ async function createMonthlyTrendsChart() {
         order: 3
       },
       {
-        label: "Recurrentes",
+        label: "Fijos",
         data: recurringData,
         borderColor: "rgb(75, 192, 192)",
         backgroundColor: "rgba(75, 192, 192, 0.1)",
@@ -838,13 +838,10 @@ watch(monthsToDisplay, async () => {
 });
 
 // ----- Set Page Meta ---------
-useHead({
-  title: "Resumen Financiero - PayTrackr",
-  meta: [
-    {
-      name: "description",
-      content: "Obtené una visión completa de tus finanzas con el resumen detallado y análisis de PayTrackr."
-    }
-  ]
+useSeo({
+  title: 'Resumen Financiero - PayTrackr',
+  description: 'Obtené una visión completa de tus finanzas con el resumen detallado y análisis de PayTrackr.',
+  path: '/summary',
+  noindex: true,
 });
 </script>

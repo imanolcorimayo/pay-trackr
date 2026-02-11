@@ -24,7 +24,24 @@ export default defineNuxtConfig({
     defaultLocale: 'es',
   },
 
-  ssr: false,
+  routeRules: {
+    // Public pages: prerendered at build time for SEO
+    '/': { prerender: true },
+    '/welcome': { prerender: true },
+    '/faq': { prerender: true },
+    '/term-of-service': { prerender: true },
+    '/404': { prerender: true },
+    // Auth-protected pages: SPA mode (no SSR)
+    '/fijos': { ssr: false },
+    '/one-time': { ssr: false },
+    '/summary': { ssr: false },
+    '/weekly-summary': { ssr: false },
+    '/contact-us': { ssr: false },
+    '/settings/**': { ssr: false },
+    '/edit/**': { ssr: false },
+    '/history': { ssr: false },
+    '/new-payment': { ssr: false },
+  },
 
   runtimeConfig: {
     public: {

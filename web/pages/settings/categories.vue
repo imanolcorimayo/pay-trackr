@@ -305,14 +305,11 @@ onMounted(async () => {
 });
 
 // ----- Meta ---------
-useHead({
-  title: "Categorías - PayTrackr",
-  meta: [
-    {
-      name: "description",
-      content: "Administrá las categorías de tus gastos"
-    }
-  ]
+useSeo({
+  title: 'Categorías - PayTrackr',
+  description: 'Administrá las categorías de tus gastos',
+  path: '/settings/categories',
+  noindex: true,
 });
 </script>
 

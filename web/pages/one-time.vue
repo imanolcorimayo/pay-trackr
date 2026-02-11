@@ -148,9 +148,16 @@
                   <span
                     v-if="payment.isWhatsapp"
                     class="flex-shrink-0 flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-md bg-green-500/20 text-green-400"
-                    title="Creado via WhatsApp"
+                    :title="getSourceLabel(payment)"
                   >
-                    <MdiWhatsapp class="text-xs" />
+                    <component :is="getSourceIcon(payment)" class="text-xs" />
+                  </span>
+                  <!-- Needs Revision Indicator -->
+                  <span v-if="payment.needsRevision"
+                        class="flex-shrink-0 flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-md bg-amber-500/20 text-amber-400"
+                        title="Necesita revision">
+                    <MdiAlertCircleOutline class="text-xs" />
+                    Revisar
                   </span>
                 </div>
                 <span
@@ -250,6 +257,10 @@ import MdiCalculator from "~icons/mdi/calculator";
 import MdiUndo from "~icons/mdi/undo";
 import MdiWhatsapp from "~icons/mdi/whatsapp";
 import MdiEye from "~icons/mdi/eye";
+import MdiAlertCircleOutline from "~icons/mdi/alert-circle-outline";
+import MdiMicrophone from "~icons/mdi/microphone";
+import MdiImage from "~icons/mdi/image";
+import MdiFilePdfBox from "~icons/mdi/file-pdf-box";
 
 definePageMeta({
   middleware: ["auth"]
@@ -272,6 +283,25 @@ function getDisplayCategoryName(payment) {
 function getDisplayCategoryColor(payment) {
   if (!payment?.categoryId) return '#808080';
   return categoryStore.getCategoryColor(payment.categoryId);
+}
+
+// ----- Source Icon Helpers ---------
+function getSourceIcon(payment) {
+  switch (payment.source) {
+    case 'whatsapp-audio': return MdiMicrophone;
+    case 'whatsapp-image': return MdiImage;
+    case 'whatsapp-pdf': return MdiFilePdfBox;
+    default: return MdiWhatsapp;
+  }
+}
+
+function getSourceLabel(payment) {
+  switch (payment.source) {
+    case 'whatsapp-audio': return 'Audio de WhatsApp';
+    case 'whatsapp-image': return 'Imagen de WhatsApp';
+    case 'whatsapp-pdf': return 'PDF de WhatsApp';
+    default: return 'Creado via WhatsApp';
+  }
 }
 
 // ----- Define Refs ---------
@@ -492,6 +522,16 @@ function applySortOrder(orderCriteria) {
           comparison = aDate - bDate;
         }
         break;
+      case "needs_revision":
+        // needsRevision first, then by date
+        if (a.needsRevision !== b.needsRevision) {
+          comparison = a.needsRevision ? -1 : 1;
+        } else {
+          const aDate = a.dueDate ? a.dueDate.toDate() : a.createdAt.toDate();
+          const bDate = b.dueDate ? b.dueDate.toDate() : b.createdAt.toDate();
+          comparison = bDate - aDate;
+        }
+        return comparison; // Don't multiply by direction for this sort
       default:
         comparison = a.createdAt.toDate() - b.createdAt.toDate();
     }
@@ -528,14 +568,11 @@ watch(getPayments, () => {
 }, { deep: true });
 
 // ----- Define Hooks --------
-useHead({
-  title: "Pagos Únicos - PayTrackr",
-  meta: [
-    {
-      name: "description",
-      content: "Seguí y gestioná tus pagos y gastos únicos"
-    }
-  ]
+useSeo({
+  title: 'Pagos Únicos - PayTrackr',
+  description: 'Seguí y gestioná tus pagos y gastos únicos',
+  path: '/one-time',
+  noindex: true,
 });
 </script>
 

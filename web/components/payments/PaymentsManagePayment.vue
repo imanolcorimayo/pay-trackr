@@ -11,7 +11,7 @@
           ></div>
           <div>
             <h2 class="text-xl font-bold">
-              {{ props.isReview ? "Revisar" : (isEdit ? "Editar" : "Crear") }} Pago {{ isRecurrent ? "Recurrente" : "Único" }}
+              {{ props.isReview ? "Revisar" : (isEdit ? "Editar" : "Crear") }} Pago {{ isRecurrent ? "Fijo" : "Único" }}
             </h2>
             <p class="text-sm text-gray-500" v-if="isEdit && form.title">{{ form.title }}</p>
             <p class="text-xs text-green-400 flex items-center gap-1 mt-1" v-if="props.isReview">
@@ -107,6 +107,35 @@
               placeholder="Agregá detalles sobre este pago"
               rows="2"
             ></textarea>
+          </div>
+
+          <!-- Recipient Info (from transfer) -->
+          <div v-if="form.recipient" class="rounded-lg bg-gray-800/50 border border-gray-700 p-3 space-y-1.5">
+            <span class="text-xs font-medium text-gray-500 uppercase tracking-wider">Datos del destinatario</span>
+            <div class="grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
+              <div v-if="form.recipient.name">
+                <span class="text-gray-500">Nombre:</span>
+                <span class="text-gray-300 ml-1">{{ form.recipient.name }}</span>
+              </div>
+              <div v-if="form.recipient.bank">
+                <span class="text-gray-500">Banco:</span>
+                <span class="text-gray-300 ml-1">{{ form.recipient.bank }}</span>
+              </div>
+              <div v-if="form.recipient.alias" class="col-span-2">
+                <span class="text-gray-500">Alias:</span>
+                <span class="text-gray-300 ml-1">{{ form.recipient.alias }}</span>
+              </div>
+              <div v-if="form.recipient.cbu" class="col-span-2">
+                <span class="text-gray-500">CBU:</span>
+                <span class="text-gray-300 ml-1 font-mono text-xs">{{ form.recipient.cbu }}</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Audio Transcription -->
+          <div v-if="form.audioTranscription" class="rounded-lg bg-gray-800/50 border border-gray-700 p-3 space-y-1.5">
+            <span class="text-xs font-medium text-gray-500 uppercase tracking-wider">Transcripcion del audio</span>
+            <p class="text-sm text-gray-300 italic">"{{ form.audioTranscription }}"</p>
           </div>
 
           <!-- Amount & Category -->
@@ -576,7 +605,11 @@ async function fetchPaymentDetails(paymentId) {
           paidDate: paidDate,
           paymentType: payment.paymentType || "one-time",
           isWhatsapp: payment.isWhatsapp || false,
-          status: payment.status || "reviewed"
+          status: payment.status || "reviewed",
+          needsRevision: payment.needsRevision || false,
+          source: payment.source || 'manual',
+          recipient: payment.recipient || null,
+          audioTranscription: payment.audioTranscription || null
         };
 
         // Show description if it has content
@@ -624,7 +657,8 @@ async function savePayment() {
       recurrentId: null,
       paymentType: "one-time",
       isWhatsapp: form.value.isWhatsapp || false,
-      status: form.value.status || 'reviewed'
+      status: form.value.status || 'reviewed',
+      needsRevision: false
     };
 
     if (props.isRecurrent) {
@@ -635,7 +669,7 @@ async function savePayment() {
     }
 
     if (props.isRecurrent && !props.isEdit) {
-      useToast("error", "Los pagos recurrentes no se pueden crear desde este formulario");
+      useToast("error", "Los pagos fijos no se pueden crear desde este formulario");
       isSubmitting.value = false;
       return;
     }

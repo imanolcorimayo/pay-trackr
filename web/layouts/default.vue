@@ -6,8 +6,8 @@
     <div v-if="user" class="w-full bg-base border-b border-gray-700 mb-4">
       <div class="max-w-7xl m-auto px-0 sm:px-6">
         <nav class="flex overflow-x-auto" aria-label="Navegación principal">
-          <NuxtLink to="/recurrent" class="nav-tab" :class="{ 'nav-tab-active': route.path === '/recurrent' }">
-            <span class="flex items-center gap-2"><span class="hidden sm:inline">Pagos</span> Recurrentes</span>
+          <NuxtLink to="/fijos" class="nav-tab" :class="{ 'nav-tab-active': route.path === '/fijos' }">
+            <span class="flex items-center gap-2"><span class="hidden sm:inline">Gastos</span> Fijos</span>
           </NuxtLink>
           <NuxtLink to="/one-time" class="nav-tab" :class="{ 'nav-tab-active': route.path === '/one-time' }">
             <span class="flex items-center gap-2"><span class="hidden sm:inline">Pagos</span> Únicos</span>
@@ -36,7 +36,7 @@
 <script setup>
 import { getCurrentUserAsync } from '~/utils/firebase';
 
-const user = await getCurrentUserAsync();
+const user = import.meta.server ? null : await getCurrentUserAsync();
 const route = useRoute();
 // ----- Define Pinia Vars -----------
 // ----- Define Computed ---------

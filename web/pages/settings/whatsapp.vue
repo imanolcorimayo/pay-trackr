@@ -286,14 +286,11 @@ onUnmounted(() => {
 });
 
 // ----- Meta ---------
-useHead({
+useSeo({
   title: 'WhatsApp - PayTrackr',
-  meta: [
-    {
-      name: 'description',
-      content: 'Vincula tu WhatsApp para registrar gastos'
-    }
-  ]
+  description: 'Vincula tu WhatsApp para registrar gastos',
+  path: '/settings/whatsapp',
+  noindex: true,
 });
 </script>
 

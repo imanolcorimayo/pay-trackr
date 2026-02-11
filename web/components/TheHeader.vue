@@ -50,8 +50,8 @@
 import { getAuthInstance, getCurrentUserAsync } from '~/utils/firebase';
 
 // ----- Define Useful Properties ---------
-const auth = getAuthInstance();
-const user = await getCurrentUserAsync();
+const auth = import.meta.server ? null : getAuthInstance();
+const user = import.meta.server ? null : await getCurrentUserAsync();
 const route = useRoute();
 
 // ----- Define Pinia Vars ----------

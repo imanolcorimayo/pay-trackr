@@ -142,12 +142,12 @@ export const useRecurrentStore = defineStore("recurrent", {
           );
           return true;
         } else {
-          this.$state.error = result.error || "Error al obtener los pagos recurrentes";
+          this.$state.error = result.error || "Error al obtener los pagos fijos";
           return false;
         }
       } catch (error) {
         console.error("Error fetching recurrent payments:", error);
-        this.$state.error = "Error al obtener los pagos recurrentes";
+        this.$state.error = "Error al obtener los pagos fijos";
         return false;
       } finally {
         this.isLoading = false;
@@ -216,12 +216,12 @@ export const useRecurrentStore = defineStore("recurrent", {
           this.processData();
           return true;
         } else {
-          this.$state.error = result.error || "Error al crear el pago recurrente";
+          this.$state.error = result.error || "Error al crear el pago fijo";
           return false;
         }
       } catch (error) {
         console.error("Error creating recurrent payment:", error);
-        this.$state.error = "Error al crear el pago recurrente";
+        this.$state.error = "Error al crear el pago fijo";
         return false;
       } finally {
         this.isLoading = false;
@@ -367,7 +367,7 @@ export const useRecurrentStore = defineStore("recurrent", {
         // Find the recurrent payment
         const recurrent = this.recurrentPayments.find((r) => r.id === recurrentId);
         if (!recurrent) {
-          this.$state.error = "Pago recurrente no encontrado";
+          this.$state.error = "Pago fijo no encontrado";
           return false;
         }
 
@@ -450,12 +450,12 @@ export const useRecurrentStore = defineStore("recurrent", {
           this.processData();
           return true;
         } else {
-          this.$state.error = result.error || "Error al actualizar el pago recurrente";
+          this.$state.error = result.error || "Error al actualizar el pago fijo";
           return false;
         }
       } catch (error) {
         console.error("Error updating recurrent payment:", error);
-        this.$state.error = "Error al actualizar el pago recurrente";
+        this.$state.error = "Error al actualizar el pago fijo";
         return false;
       } finally {
         this.isLoading = false;
@@ -496,7 +496,7 @@ export const useRecurrentStore = defineStore("recurrent", {
         const result = await recurrentSchema.delete(recurrentId);
 
         if (!result.success) {
-          this.$state.error = result.error || "Error al eliminar el pago recurrente";
+          this.$state.error = result.error || "Error al eliminar el pago fijo";
           return false;
         }
 

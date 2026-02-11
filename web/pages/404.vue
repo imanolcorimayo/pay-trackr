@@ -14,7 +14,10 @@
 </template>
 
 <script setup>
-useHead({
-  title: '404 - PayTrackr'
+useSeo({
+  title: '404 - PayTrackr',
+  description: 'Página no encontrada.',
+  path: '/404',
+  noindex: true,
 });
 </script>

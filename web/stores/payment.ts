@@ -22,6 +22,10 @@ interface Payment {
   dueDate: any;
   isWhatsapp?: boolean;
   status?: 'pending' | 'reviewed';
+  source?: 'manual' | 'whatsapp-text' | 'whatsapp-audio' | 'whatsapp-image' | 'whatsapp-pdf';
+  needsRevision?: boolean;
+  recipient?: { name: string; cbu?: string | null; alias?: string | null; bank?: string | null } | null;
+  audioTranscription?: string | null;
 }
 
 interface PaymentFilters {
@@ -376,7 +380,8 @@ export const usePaymentStore = defineStore('payment', {
     async markAsReviewed(paymentId: string) {
       try {
         const result = await paymentSchema.update(paymentId, {
-          status: 'reviewed'
+          status: 'reviewed',
+          needsRevision: false
         });
 
         if (result.success) {
@@ -384,11 +389,13 @@ export const usePaymentStore = defineStore('payment', {
           const index = this.payments.findIndex(p => p.id === paymentId);
           if (index !== -1) {
             this.payments[index].status = 'reviewed';
+            this.payments[index].needsRevision = false;
           }
 
           // Update current payment if it's the same one
           if (this.currentPayment && this.currentPayment.id === paymentId) {
             this.currentPayment.status = 'reviewed';
+            this.currentPayment.needsRevision = false;
           }
 
           return true;

@@ -83,13 +83,10 @@ async function sendContactUsMessage() {
     }
 
 }
-useHead({
-    title: 'Contacto - PayTrackr',
-    meta: [
-        {
-            name: 'description',
-            content: 'Escribinos para darnos tu opinión o cualquier recomendación.'
-        }
-    ]
+useSeo({
+  title: 'Contacto - PayTrackr',
+  description: 'Escribinos para darnos tu opinión o cualquier recomendación.',
+  path: '/contact-us',
+  noindex: true,
 })
 </script>

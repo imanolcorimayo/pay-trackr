@@ -33,7 +33,7 @@
       <div class="px-3 pt-2">
         <div class="flex items-center justify-between">
           <div>
-            <h1 class="text-2xl font-bold">Pagos Recurrentes</h1>
+            <h1 class="text-2xl font-bold">Pagos Fijos</h1>
             <p class="text-sm text-gray-500">
               {{ recurrents.length }} pago{{ recurrents.length !== 1 ? 's' : '' }}
             </p>
@@ -187,8 +187,8 @@
             <tr v-if="recurrents.length === 0">
               <td colspan="100%" class="py-16 text-center">
                 <MdiCashOff class="text-6xl mx-auto mb-4 text-gray-500" />
-                <p class="text-lg font-medium text-white mb-2">No tenés pagos recurrentes</p>
-                <p class="text-sm text-gray-400 mb-6 max-w-md mx-auto">Agrega tus pagos recurrentes como Netflix, internet, alquiler y mas para llevar un control mensual de tus gastos fijos.</p>
+                <p class="text-lg font-medium text-white mb-2">No tenés pagos fijos</p>
+                <p class="text-sm text-gray-400 mb-6 max-w-md mx-auto">Agrega tus pagos fijos como Netflix, internet, alquiler y mas para llevar un control mensual de tus gastos.</p>
                 <button @click="showNewPaymentModal" class="px-6 py-2.5 bg-primary text-white rounded-lg font-medium hover:bg-primary/80 transition-colors">Agregar Primer Pago</button>
               </td>
             </tr>
@@ -283,8 +283,8 @@
         <!-- Empty State -->
         <div v-if="recurrents.length === 0" class="py-16 text-center">
           <MdiCashOff class="text-6xl mx-auto mb-4 text-gray-500" />
-          <p class="text-lg font-medium text-white mb-2">No tenés pagos recurrentes</p>
-          <p class="text-sm text-gray-400 mb-6 max-w-sm mx-auto">Agrega tus pagos recurrentes como Netflix, internet, alquiler y mas para llevar un control mensual de tus gastos fijos.</p>
+          <p class="text-lg font-medium text-white mb-2">No tenés pagos fijos</p>
+          <p class="text-sm text-gray-400 mb-6 max-w-sm mx-auto">Agrega tus pagos fijos como Netflix, internet, alquiler y mas para llevar un control mensual de tus gastos.</p>
           <button @click="showNewPaymentModal" class="px-6 py-2.5 bg-primary text-white rounded-lg font-medium hover:bg-primary/80 transition-colors">Agregar Primer Pago</button>
         </div>
       </div>
@@ -591,14 +591,11 @@ watch(getProcessedRecurrents, (newVal) => {
 });
 
 // ----- Meta ---------
-useHead({
-  title: "Pagos Recurrentes - PayTrackr",
-  meta: [
-    {
-      name: "description",
-      content: "Seguí y gestioná tus gastos mensuales recurrentes"
-    }
-  ]
+useSeo({
+  title: 'Pagos Fijos - PayTrackr',
+  description: 'Seguí y gestioná tus gastos fijos mensuales',
+  path: '/fijos',
+  noindex: true,
 });
 </script>
 

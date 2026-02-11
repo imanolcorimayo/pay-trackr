@@ -210,11 +210,11 @@ async function main() {
               body: body
             },
             data: {
-              url: '/recurrent',
+              url: '/fijos',
               type: 'reminder'
             },
             webpush: {
-              fcmOptions: { link: '/recurrent' },
+              fcmOptions: { link: '/fijos' },
               notification: {
                 icon: '/img/new-logo.png',
                 badge: '/img/new-logo.png'

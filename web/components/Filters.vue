@@ -73,6 +73,7 @@ import IcSharpSearch from '~icons/ic/sharp-search';
 import MingcuteArrowUpFill from '~icons/mingcute/arrow-up-fill';
 import BiAlphabet from '~icons/bi/alphabet';
 import MdiSortBoolAscendingVariant from '~icons/mdi/sort-bool-ascending-variant';
+import MdiAlertCircleOutline from '~icons/mdi/alert-circle-outline';
 
 const props = defineProps({
   showDates: {
@@ -108,6 +109,7 @@ function toggleTooltip() {
 
 const filters = [
   { name: 'unpaid_first', label: 'No pagados', icon: MdiSortBoolAscendingVariant, class: 'rounded-t-lg' },
+  { name: 'needs_revision', label: 'Por revisar', icon: MdiAlertCircleOutline, class: '' },
   { name: 'date', label: 'Fecha', icon: TablerCalendarFilled, class: '' },
   { name: 'amount', label: 'Monto', icon: MaterialSymbolsPaidRounded, class: '' },
   { name: 'title', label: 'Título', icon: BiAlphabet, class: 'rounded-b-lg' }
@@ -118,7 +120,8 @@ function getSortLabel(filterName, order) {
     amount: { asc: 'Menor-Mayor', desc: 'Mayor-Menor' },
     date: { asc: 'Mas antiguo', desc: 'Mas reciente' },
     title: { asc: 'A-Z', desc: 'Z-A' },
-    unpaid_first: { asc: 'No pagados', desc: 'Pagados' }
+    unpaid_first: { asc: 'No pagados', desc: 'Pagados' },
+    needs_revision: { asc: 'Por revisar', desc: 'Revisados' }
   };
   return labels[filterName]?.[order] || '';
 }

@@ -49,7 +49,7 @@ self.addEventListener('notificationclick', (event) => {
   }
 
   // Get the URL to open (from notification data or default)
-  const urlToOpen = event.notification.data?.url || '/recurrent';
+  const urlToOpen = event.notification.data?.url || '/fijos';
 
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {

@@ -7,7 +7,7 @@
           <div>
             <h2 class="text-xl font-bold">
               {{ payment ? payment.title : 'Detalles del Pago' }}
-              <span v-if="isRecurrent" class="text-sm font-normal text-primary ml-2">Recurrente</span>
+              <span v-if="isRecurrent" class="text-sm font-normal text-primary ml-2">Fijo</span>
             </h2>
             <p class="text-sm text-gray-500">{{ payment?.description }}</p>
           </div>
@@ -208,7 +208,7 @@
   // Deletion warning message
   const deletionWarning = computed(() => {
     if (props.isRecurrent) {
-      return " Esto también eliminará todas las instancias de pago de este pago recurrente.";
+      return " Esto también eliminará todas las instancias de pago de este pago fijo.";
     }
     return "";
   });

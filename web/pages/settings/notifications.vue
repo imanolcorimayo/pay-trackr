@@ -209,14 +209,11 @@ onMounted(async () => {
   }
 });
 
-useHead({
+useSeo({
   title: 'Notificaciones - PayTrackr',
-  meta: [
-    {
-      name: 'description',
-      content: 'Configura las notificaciones de recordatorio de pagos'
-    }
-  ]
+  description: 'Configura las notificaciones de recordatorio de pagos',
+  path: '/settings/notifications',
+  noindex: true,
 });
 </script>
 

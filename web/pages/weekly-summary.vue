@@ -60,7 +60,7 @@
             v-for="payment in duePastWeek"
             :key="payment.id"
             class="flex items-center justify-between p-3 bg-gray-700/40 rounded-lg cursor-pointer hover:bg-gray-600/50 transition-colors"
-            @click="navigateTo('/recurrent')"
+            @click="navigateTo('/fijos')"
           >
             <div class="flex items-center gap-3">
               <div
@@ -117,7 +117,7 @@
             v-for="payment in dueNextWeek"
             :key="payment.id"
             class="flex items-center justify-between p-3 bg-gray-700/40 rounded-lg cursor-pointer hover:bg-gray-600/50 transition-colors"
-            @click="navigateTo('/recurrent')"
+            @click="navigateTo('/fijos')"
           >
             <div class="flex items-center gap-3">
               <div
@@ -423,13 +423,10 @@ onMounted(() => {
   fetchData();
 });
 
-useHead({
+useSeo({
   title: 'Resumen Semanal - PayTrackr',
-  meta: [
-    {
-      name: 'description',
-      content: 'Resumen semanal de tus pagos y progreso mensual en PayTrackr.'
-    }
-  ]
+  description: 'Resumen semanal de tus pagos y progreso mensual en PayTrackr.',
+  path: '/weekly-summary',
+  noindex: true,
 });
 </script>

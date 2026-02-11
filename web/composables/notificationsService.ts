@@ -44,7 +44,7 @@ export function useNotifications() {
 
       notification.onclick = function() {
         window.focus();
-        window.open('/recurrent', '_self');
+        window.open('/fijos', '_self');
         notification.close();
       };
 

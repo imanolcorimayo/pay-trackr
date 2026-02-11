@@ -1,7 +1,7 @@
 <template>
   <Modal ref="modal">
     <template #header>
-      <h2 class="text-xl font-bold">{{ isEdit ? "Editar" : "Agregar" }} Pago Recurrente</h2>
+      <h2 class="text-xl font-bold">{{ isEdit ? "Editar" : "Agregar" }} Pago Fijo</h2>
     </template>
 
     <template #body>

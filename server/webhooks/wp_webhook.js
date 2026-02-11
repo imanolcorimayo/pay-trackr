@@ -154,13 +154,31 @@ app.post('/webhook', async (req, res) => {
 
     const message = value.messages[0];
     const from = message.from; // Phone number
-    const messageText = message.text?.body || '';
     const contactName = value.contacts?.[0]?.profile?.name || 'Usuario';
 
-    console.log(`Message from ${from} (${contactName}): ${messageText}`);
-
-    // Process the message
-    await processMessage(from, messageText, contactName);
+    // Route by message type
+    if (message.type === 'text') {
+      const messageText = message.text?.body || '';
+      console.log(`Text from ${from} (${contactName}): ${messageText}`);
+      await processMessage(from, messageText, contactName);
+    } else if (message.type === 'audio') {
+      console.log(`Audio from ${from} (${contactName})`);
+      await processAudioMessage(from, message.audio.id, contactName);
+    } else if (message.type === 'image') {
+      console.log(`Image from ${from} (${contactName})`);
+      await processImageMessage(from, message.image.id, message.image?.caption, contactName);
+    } else if (message.type === 'document') {
+      const mimeType = message.document?.mime_type || '';
+      if (mimeType === 'application/pdf') {
+        console.log(`PDF from ${from} (${contactName})`);
+        await processPDFMessage(from, message.document.id, message.document?.caption, contactName);
+      } else {
+        console.log(`Unsupported document type from ${from}: ${mimeType}`);
+        await sendWhatsAppMessage(from, 'Solo se aceptan documentos PDF.');
+      }
+    } else {
+      console.log(`Unsupported message type from ${from}: ${message.type}`);
+    }
   } catch (error) {
     console.error('Error processing webhook:', error);
   }
@@ -359,9 +377,14 @@ Podes escribir parte del nombre:
 #super -> Supermercado
 #sal -> Salidas
 
+*Tambien podes enviar:*
+- Audio describiendo un gasto
+- Foto de comprobante de transferencia
+- PDF de comprobante de transferencia
+
 *Comandos:*
 RESUMEN - Tu mes actual
-FIJOS - Gastos recurrentes
+FIJOS - Gastos fijos
 ANALISIS - Feedback con IA
 CATEGORIAS - Ver todas
 AYUDA - Ver este mensaje`;
@@ -531,7 +554,7 @@ async function handleResumenCommand(phoneNumber) {
     // Build pending text
     let pendingText = '';
     if (pendingRecurrentCount > 0) {
-      pendingText = `\n\nRecurrentes pendientes: ${pendingRecurrentCount}`;
+      pendingText = `\n\nFijos pendientes: ${pendingRecurrentCount}`;
     }
 
     const message = `*${monthName} ${now.getFullYear()}*
@@ -568,7 +591,7 @@ async function handleFijosCommand(phoneNumber) {
       .get();
 
     if (recurrentSnapshot.empty) {
-      await sendWhatsAppMessage(phoneNumber, 'No tenes gastos fijos configurados.\n\nPodes agregarlos desde la app en la seccion "Recurrentes".');
+      await sendWhatsAppMessage(phoneNumber, 'No tenes gastos fijos configurados.\n\nPodes agregarlos desde la app en la seccion "Fijos".');
       return;
     }
 
@@ -838,7 +861,11 @@ Escribi AYUDA para mas info.`
       dueDate: admin.firestore.FieldValue.serverTimestamp(),
       recurrentId: null,
       isWhatsapp: true,
-      status: 'pending'
+      status: 'pending',
+      source: 'whatsapp-text',
+      needsRevision: false,
+      recipient: null,
+      audioTranscription: null
     };
 
     await db.collection(COLLECTIONS.PAYMENTS).add(paymentData);
@@ -937,6 +964,369 @@ function parseExpenseMessage(text) {
 
 function capitalizeFirst(str) {
   return str.charAt(0).toUpperCase() + str.slice(1);
+}
+
+// ============================================
+// Media Download Helper
+// ============================================
+async function downloadWhatsAppMedia(mediaId) {
+  if (!WP_ACCESS_TOKEN) {
+    console.log('WhatsApp credentials not configured, cannot download media');
+    return null;
+  }
+  try {
+    const mediaResponse = await fetch(
+      `https://graph.facebook.com/v21.0/${mediaId}`,
+      { headers: { 'Authorization': `Bearer ${WP_ACCESS_TOKEN}` } }
+    );
+    if (!mediaResponse.ok) {
+      console.error('Error getting media URL:', await mediaResponse.text());
+      return null;
+    }
+    const mediaInfo = await mediaResponse.json();
+    const mediaUrl = mediaInfo.url;
+    const mimeType = mediaInfo.mime_type || 'application/octet-stream';
+
+    const downloadResponse = await fetch(mediaUrl, {
+      headers: { 'Authorization': `Bearer ${WP_ACCESS_TOKEN}` }
+    });
+    if (!downloadResponse.ok) {
+      console.error('Error downloading media');
+      return null;
+    }
+    const buffer = await downloadResponse.arrayBuffer();
+    const base64 = Buffer.from(buffer).toString('base64');
+    return { base64, mimeType };
+  } catch (error) {
+    console.error('Error downloading WhatsApp media:', error);
+    return null;
+  }
+}
+
+// ============================================
+// Recipient History Matching
+// ============================================
+async function findRecipientHistory(userId, recipientData) {
+  try {
+    let query = null;
+
+    // Try matching by recipient name first
+    if (recipientData.recipientName) {
+      query = db
+        .collection(COLLECTIONS.PAYMENTS)
+        .where('userId', '==', userId)
+        .where('recipient.name', '==', recipientData.recipientName)
+        .orderBy('createdAt', 'desc')
+        .limit(5);
+    } else if (recipientData.recipientCBU) {
+      query = db
+        .collection(COLLECTIONS.PAYMENTS)
+        .where('userId', '==', userId)
+        .where('recipient.cbu', '==', recipientData.recipientCBU)
+        .orderBy('createdAt', 'desc')
+        .limit(5);
+    }
+
+    if (!query) return null;
+
+    const snapshot = await query.get();
+    if (snapshot.empty) return null;
+
+    const pastPayments = snapshot.docs.map(doc => doc.data());
+
+    // Find most common title
+    const titleCounts = {};
+    const categoryCounts = {};
+    pastPayments.forEach(p => {
+      if (p.title) titleCounts[p.title] = (titleCounts[p.title] || 0) + 1;
+      if (p.categoryId) categoryCounts[p.categoryId] = (categoryCounts[p.categoryId] || 0) + 1;
+    });
+
+    const suggestedTitle = Object.entries(titleCounts).sort((a, b) => b[1] - a[1])[0]?.[0] || null;
+    const suggestedCategoryId = Object.entries(categoryCounts).sort((a, b) => b[1] - a[1])[0]?.[0] || null;
+
+    return { pastPayments, suggestedTitle, suggestedCategoryId };
+  } catch (error) {
+    console.error('Error finding recipient history:', error);
+    return null;
+  }
+}
+
+// ============================================
+// Shared Transfer Processing
+// ============================================
+async function processTransferData(phoneNumber, userId, transferData, caption, source) {
+  const formatAmount = (amount) => new Intl.NumberFormat('es-AR', {
+    style: 'currency',
+    currency: 'ARS'
+  }).format(amount);
+
+  const amount = parseFloat(transferData.amount) || 0;
+  if (amount <= 0) {
+    await sendWhatsAppMessage(phoneNumber, 'No pude determinar el monto del comprobante.');
+    return;
+  }
+
+  // Build recipient object
+  const recipient = {
+    name: transferData.recipientName || null,
+    cbu: transferData.recipientCBU || null,
+    alias: transferData.recipientAlias || null,
+    bank: transferData.recipientBank || null
+  };
+
+  // Check recipient history for auto-fill
+  const history = await findRecipientHistory(userId, transferData);
+
+  let title;
+  let categoryId;
+  let needsRevision;
+
+  if (history?.suggestedTitle) {
+    title = history.suggestedTitle;
+    categoryId = history.suggestedCategoryId;
+    needsRevision = false;
+  } else {
+    const recipientLabel = transferData.recipientName || transferData.recipientAlias || 'desconocido';
+    title = `Transferencia a ${recipientLabel}`;
+    const otrosCategory = await findOtrosCategory(userId);
+    categoryId = otrosCategory.id;
+    needsRevision = true;
+  }
+
+  // If caption provided, parse it to override title/category
+  if (caption) {
+    const parsed = parseExpenseMessage(`$${amount} ${caption}`);
+    if (parsed) {
+      title = parsed.title || title;
+      if (parsed.category) {
+        const categoryResult = await findCategoryId(userId, parsed.category);
+        categoryId = categoryResult.id;
+        needsRevision = false;
+      }
+    }
+  }
+
+  // Save payment
+  const paymentData = {
+    title,
+    description: transferData.concept || '',
+    amount,
+    categoryId: categoryId || '',
+    isPaid: true,
+    paidDate: admin.firestore.FieldValue.serverTimestamp(),
+    paymentType: 'one-time',
+    userId,
+    createdAt: admin.firestore.FieldValue.serverTimestamp(),
+    dueDate: admin.firestore.FieldValue.serverTimestamp(),
+    recurrentId: null,
+    isWhatsapp: true,
+    status: 'pending',
+    source,
+    needsRevision,
+    recipient,
+    audioTranscription: null
+  };
+
+  await db.collection(COLLECTIONS.PAYMENTS).add(paymentData);
+
+  // Get category name for display
+  let categoryName = 'Otros';
+  if (categoryId) {
+    const catDoc = await db.collection(COLLECTIONS.CATEGORIES).doc(categoryId).get();
+    if (catDoc.exists) categoryName = catDoc.data().name;
+  }
+
+  let successMessage = `Transferencia registrada!
+
+*${title}*
+${formatAmount(amount)}
+#${categoryName.toLowerCase()}`;
+
+  if (transferData.recipientName) {
+    successMessage += `\n_Destinatario: ${transferData.recipientName}_`;
+  }
+
+  if (needsRevision) {
+    successMessage += '\n\n_Revisa el titulo y categoria desde la app._';
+  }
+
+  await sendWhatsAppMessage(phoneNumber, successMessage);
+}
+
+// ============================================
+// Audio Message Handler
+// ============================================
+async function processAudioMessage(from, audioId, contactName) {
+  // Check linked account
+  const linkDoc = await db.collection(COLLECTIONS.WHATSAPP_LINKS).doc(from).get();
+  if (!linkDoc.exists || linkDoc.data()?.status !== 'linked') {
+    await sendWhatsAppMessage(
+      from,
+      'Este numero no esta vinculado a ninguna cuenta de PayTrackr.\n\nPara vincular tu cuenta:\n1. Ingresa a la app\n2. Ve a Configuracion > WhatsApp\n3. Genera un codigo de vinculacion\n4. Envialo aqui: VINCULAR <codigo>'
+    );
+    return;
+  }
+
+  if (!geminiHandler) {
+    await sendWhatsAppMessage(from, 'Esta funcion no esta disponible en este momento.');
+    return;
+  }
+
+  const userId = linkDoc.data().userId;
+
+  // Download audio
+  const media = await downloadWhatsAppMedia(audioId);
+  if (!media) {
+    await sendWhatsAppMessage(from, 'Error al descargar. Intenta nuevamente.');
+    return;
+  }
+
+  // Fetch user's category names
+  const categoriesSnapshot = await db
+    .collection(COLLECTIONS.CATEGORIES)
+    .where('userId', '==', userId)
+    .get();
+  const categoryNames = categoriesSnapshot.docs
+    .map(doc => doc.data().name)
+    .filter(name => name);
+
+  // Transcribe audio with Gemini
+  const transcription = await geminiHandler.transcribeAudio(media.base64, media.mimeType, categoryNames);
+  if (!transcription) {
+    await sendWhatsAppMessage(from, 'No pude procesar. Intenta de nuevo o registra manualmente.');
+    return;
+  }
+
+  const amount = parseFloat(transcription.totalAmount) || 0;
+  if (amount <= 0) {
+    // Show transcription even if we can't determine the expense
+    let msg = 'No pude determinar el gasto.';
+    if (transcription.transcription) {
+      msg = `_"${transcription.transcription}"_\n\n${msg}`;
+    }
+    await sendWhatsAppMessage(from, msg);
+    return;
+  }
+
+  // Match category
+  const categoryResult = await findCategoryId(userId, transcription.category);
+
+  // Save payment
+  const paymentData = {
+    title: transcription.title || 'Gasto por audio',
+    description: transcription.description || '',
+    amount,
+    categoryId: categoryResult.id,
+    isPaid: true,
+    paidDate: admin.firestore.FieldValue.serverTimestamp(),
+    paymentType: 'one-time',
+    userId,
+    createdAt: admin.firestore.FieldValue.serverTimestamp(),
+    dueDate: admin.firestore.FieldValue.serverTimestamp(),
+    recurrentId: null,
+    isWhatsapp: true,
+    status: 'pending',
+    source: 'whatsapp-audio',
+    needsRevision: false,
+    recipient: null,
+    audioTranscription: transcription.transcription || null
+  };
+
+  await db.collection(COLLECTIONS.PAYMENTS).add(paymentData);
+
+  const formattedAmount = new Intl.NumberFormat('es-AR', {
+    style: 'currency',
+    currency: 'ARS'
+  }).format(amount);
+
+  let successMessage = `Gasto registrado por audio!
+
+*${paymentData.title}*
+${formattedAmount}
+#${categoryResult.name.toLowerCase()}`;
+
+  if (transcription.transcription) {
+    successMessage += `\n_"${transcription.transcription}"_`;
+  }
+
+  await sendWhatsAppMessage(from, successMessage);
+}
+
+// ============================================
+// Image Message Handler (Transfer Receipt)
+// ============================================
+async function processImageMessage(from, imageId, caption, contactName) {
+  // Check linked account
+  const linkDoc = await db.collection(COLLECTIONS.WHATSAPP_LINKS).doc(from).get();
+  if (!linkDoc.exists || linkDoc.data()?.status !== 'linked') {
+    await sendWhatsAppMessage(
+      from,
+      'Este numero no esta vinculado a ninguna cuenta de PayTrackr.\n\nPara vincular tu cuenta:\n1. Ingresa a la app\n2. Ve a Configuracion > WhatsApp\n3. Genera un codigo de vinculacion\n4. Envialo aqui: VINCULAR <codigo>'
+    );
+    return;
+  }
+
+  if (!geminiHandler) {
+    await sendWhatsAppMessage(from, 'Esta funcion no esta disponible en este momento.');
+    return;
+  }
+
+  const userId = linkDoc.data().userId;
+
+  // Download image
+  const media = await downloadWhatsAppMedia(imageId);
+  if (!media) {
+    await sendWhatsAppMessage(from, 'Error al descargar. Intenta nuevamente.');
+    return;
+  }
+
+  // Parse transfer image with Gemini
+  const transferData = await geminiHandler.parseTransferImage(media.base64, media.mimeType);
+  if (!transferData) {
+    await sendWhatsAppMessage(from, 'No pude procesar. Intenta de nuevo o registra manualmente.');
+    return;
+  }
+
+  await processTransferData(from, userId, transferData, caption, 'whatsapp-image');
+}
+
+// ============================================
+// PDF Message Handler (Transfer Receipt)
+// ============================================
+async function processPDFMessage(from, docId, caption, contactName) {
+  // Check linked account
+  const linkDoc = await db.collection(COLLECTIONS.WHATSAPP_LINKS).doc(from).get();
+  if (!linkDoc.exists || linkDoc.data()?.status !== 'linked') {
+    await sendWhatsAppMessage(
+      from,
+      'Este numero no esta vinculado a ninguna cuenta de PayTrackr.\n\nPara vincular tu cuenta:\n1. Ingresa a la app\n2. Ve a Configuracion > WhatsApp\n3. Genera un codigo de vinculacion\n4. Envialo aqui: VINCULAR <codigo>'
+    );
+    return;
+  }
+
+  if (!geminiHandler) {
+    await sendWhatsAppMessage(from, 'Esta funcion no esta disponible en este momento.');
+    return;
+  }
+
+  const userId = linkDoc.data().userId;
+
+  // Download PDF
+  const media = await downloadWhatsAppMedia(docId);
+  if (!media) {
+    await sendWhatsAppMessage(from, 'Error al descargar. Intenta nuevamente.');
+    return;
+  }
+
+  // Parse transfer PDF with Gemini
+  const transferData = await geminiHandler.parseTransferPDF(media.base64, media.mimeType);
+  if (!transferData) {
+    await sendWhatsAppMessage(from, 'No pude procesar. Intenta de nuevo o registra manualmente.');
+    return;
+  }
+
+  await processTransferData(from, userId, transferData, caption, 'whatsapp-pdf');
 }
 
 async function findCategoryId(userId, categoryInput) {

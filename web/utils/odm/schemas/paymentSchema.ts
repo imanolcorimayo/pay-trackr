@@ -79,6 +79,26 @@ export class PaymentSchema extends Schema {
       type: 'string',
       required: false,
       default: 'reviewed'
+    },
+    source: {
+      type: 'string',
+      required: false,
+      default: 'manual'
+    },
+    needsRevision: {
+      type: 'boolean',
+      required: false,
+      default: false
+    },
+    recipient: {
+      type: 'object',
+      required: false,
+      default: null
+    },
+    audioTranscription: {
+      type: 'string',
+      required: false,
+      default: null
     }
   };
 
@@ -143,7 +163,7 @@ export class PaymentSchema extends Schema {
       const documents = snapshot.docs.map(doc => this.convertFirestoreDoc(doc));
       return { success: true, data: documents };
     } catch (error) {
-      console.error('Error buscando instancias recurrentes:', error);
+      console.error('Error buscando instancias de pagos fijos:', error);
       return { success: false, error: `Error al buscar instancias: ${error}` };
     }
   }

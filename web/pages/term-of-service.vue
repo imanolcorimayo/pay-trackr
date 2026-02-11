@@ -75,13 +75,9 @@ definePageMeta({
   layout: "landing"
 })
 
-useHead({
-    title: 'Términos y Condiciones - PayTrackr',
-    meta: [
-        {
-            name: 'description',
-            content: 'Conocé los términos y condiciones de uso de PayTrackr.'
-        }
-    ]
+useSeo({
+  title: 'Términos y Condiciones - PayTrackr',
+  description: 'Conocé los términos y condiciones de uso de PayTrackr.',
+  path: '/term-of-service',
 })
 </script>
