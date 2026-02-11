@@ -1,3 +1,5 @@
+import * as Sentry from '@sentry/node';
+
 class GeminiHandler {
   constructor(apiKey) {
     this.apiKey = apiKey;
@@ -24,14 +26,17 @@ class GeminiHandler {
       );
 
       if (!response.ok) {
-        console.error('Gemini API error:', await response.text());
+        const errorText = await response.text();
+        console.error(`[ERROR] Gemini API ${response.status}: ${errorText.slice(0, 150)}`);
+        Sentry.captureMessage('Gemini API error', { level: 'error', extra: { status: response.status, body: errorText } });
         return null;
       }
 
       const result = await response.json();
       return result.candidates?.[0]?.content?.parts?.[0]?.text || null;
     } catch (error) {
-      console.error('Error calling Gemini:', error);
+      console.error(`[ERROR] Gemini request failed: ${error.message}`);
+      Sentry.captureException(error);
       return null;
     }
   }
@@ -84,7 +89,8 @@ Si el audio menciona una fecha (ej: "ayer", "el martes", "el 5"), convertila a Y
       const cleaned = text.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
       return JSON.parse(cleaned);
     } catch (error) {
-      console.error('Error parsing transcription JSON:', error, 'Raw:', text);
+      console.error(`[ERROR] transcribeAudio JSON parse failed: ${error.message} | raw: ${text.slice(0, 100)}`);
+      Sentry.captureException(error, { extra: { rawText: text, context: 'transcribeAudio' } });
       return null;
     }
   }
@@ -137,7 +143,8 @@ Si algun campo no esta visible o no se puede determinar, usa null.`
       const cleaned = text.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
       return JSON.parse(cleaned);
     } catch (error) {
-      console.error('Error parsing transfer image JSON:', error, 'Raw:', text);
+      console.error(`[ERROR] parseTransferImage JSON parse failed: ${error.message} | raw: ${text.slice(0, 100)}`);
+      Sentry.captureException(error, { extra: { rawText: text, context: 'parseTransferImage' } });
       return null;
     }
   }
@@ -190,7 +197,8 @@ Si algun campo no esta visible o no se puede determinar, usa null.`
       const cleaned = text.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
       return JSON.parse(cleaned);
     } catch (error) {
-      console.error('Error parsing transfer PDF JSON:', error, 'Raw:', text);
+      console.error(`[ERROR] parseTransferPDF JSON parse failed: ${error.message} | raw: ${text.slice(0, 100)}`);
+      Sentry.captureException(error, { extra: { rawText: text, context: 'parseTransferPDF' } });
       return null;
     }
   }

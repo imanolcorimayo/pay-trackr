@@ -4,15 +4,16 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "node --watch webhooks/index.js",
-    "start": "node webhooks/index.js",
-    "reminders:morning": "node scripts/send-reminders.js --mode morning",
-    "reminders:evening": "node scripts/send-reminders.js --mode evening",
-    "weekly-summary": "node scripts/send-weekly-summary.js"
+    "dev": "node --import ./instrument.js --watch webhooks/wp_webhook.js",
+    "start": "node --import ./instrument.js webhooks/wp_webhook.js",
+    "reminders:morning": "node --import ./instrument.js scripts/send-reminders.js --mode morning",
+    "reminders:evening": "node --import ./instrument.js scripts/send-reminders.js --mode evening",
+    "weekly-summary": "node --import ./instrument.js scripts/send-weekly-summary.js"
   },
   "dependencies": {
+    "@sentry/node": "^10.38.0",
+    "dotenv": "^16.4.5",
     "express": "^4.21.0",
-    "firebase-admin": "^12.0.0",
-    "dotenv": "^16.4.5"
+    "firebase-admin": "^12.0.0"
   }
 }
