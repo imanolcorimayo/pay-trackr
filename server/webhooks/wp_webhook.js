@@ -966,6 +966,14 @@ function capitalizeFirst(str) {
   return str.charAt(0).toUpperCase() + str.slice(1);
 }
 
+// Parse YYYY-MM-DD date string into Firestore timestamp, fallback to serverTimestamp
+function parseDateOrNow(dateStr) {
+  if (!dateStr) return admin.firestore.FieldValue.serverTimestamp();
+  const parsed = new Date(dateStr + 'T12:00:00');
+  if (isNaN(parsed.getTime())) return admin.firestore.FieldValue.serverTimestamp();
+  return admin.firestore.Timestamp.fromDate(parsed);
+}
+
 // ============================================
 // Media Download Helper
 // ============================================
@@ -1107,6 +1115,9 @@ async function processTransferData(phoneNumber, userId, transferData, caption, s
     }
   }
 
+  // Use date from receipt if available
+  const paymentDate = parseDateOrNow(transferData.date);
+
   // Save payment
   const paymentData = {
     title,
@@ -1114,11 +1125,11 @@ async function processTransferData(phoneNumber, userId, transferData, caption, s
     amount,
     categoryId: categoryId || '',
     isPaid: true,
-    paidDate: admin.firestore.FieldValue.serverTimestamp(),
+    paidDate: paymentDate,
     paymentType: 'one-time',
     userId,
     createdAt: admin.firestore.FieldValue.serverTimestamp(),
-    dueDate: admin.firestore.FieldValue.serverTimestamp(),
+    dueDate: paymentDate,
     recurrentId: null,
     isWhatsapp: true,
     status: 'pending',
@@ -1192,6 +1203,7 @@ async function processAudioMessage(from, audioId, contactName) {
     .filter(name => name);
 
   // Transcribe audio with Gemini
+  await sendWhatsAppMessage(from, 'Procesando audio...');
   const transcription = await geminiHandler.transcribeAudio(media.base64, media.mimeType, categoryNames);
   if (!transcription) {
     await sendWhatsAppMessage(from, 'No pude procesar. Intenta de nuevo o registra manualmente.');
@@ -1212,6 +1224,9 @@ async function processAudioMessage(from, audioId, contactName) {
   // Match category
   const categoryResult = await findCategoryId(userId, transcription.category);
 
+  // Use date from audio if mentioned
+  const paymentDate = parseDateOrNow(transcription.date);
+
   // Save payment
   const paymentData = {
     title: transcription.title || 'Gasto por audio',
@@ -1219,11 +1234,11 @@ async function processAudioMessage(from, audioId, contactName) {
     amount,
     categoryId: categoryResult.id,
     isPaid: true,
-    paidDate: admin.firestore.FieldValue.serverTimestamp(),
+    paidDate: paymentDate,
     paymentType: 'one-time',
     userId,
     createdAt: admin.firestore.FieldValue.serverTimestamp(),
-    dueDate: admin.firestore.FieldValue.serverTimestamp(),
+    dueDate: paymentDate,
     recurrentId: null,
     isWhatsapp: true,
     status: 'pending',
@@ -1282,6 +1297,7 @@ async function processImageMessage(from, imageId, caption, contactName) {
   }
 
   // Parse transfer image with Gemini
+  await sendWhatsAppMessage(from, 'Procesando imagen...');
   const transferData = await geminiHandler.parseTransferImage(media.base64, media.mimeType);
   if (!transferData) {
     await sendWhatsAppMessage(from, 'No pude procesar. Intenta de nuevo o registra manualmente.');
@@ -1320,6 +1336,7 @@ async function processPDFMessage(from, docId, caption, contactName) {
   }
 
   // Parse transfer PDF with Gemini
+  await sendWhatsAppMessage(from, 'Procesando PDF...');
   const transferData = await geminiHandler.parseTransferPDF(media.base64, media.mimeType);
   if (!transferData) {
     await sendWhatsAppMessage(from, 'No pude procesar. Intenta de nuevo o registra manualmente.');

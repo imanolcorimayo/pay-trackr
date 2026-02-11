@@ -50,6 +50,7 @@ class GeminiHandler {
       },
       {
         text: `Transcribi este audio en español argentino. El audio describe un gasto o compra.
+Hoy es ${new Date().toISOString().slice(0, 10)} (año ${new Date().getFullYear()}).
 
 Extrae la siguiente informacion y devolvela SOLO como JSON valido, sin markdown ni texto extra:
 {
@@ -58,14 +59,16 @@ Extrae la siguiente informacion y devolvela SOLO como JSON valido, sin markdown 
   "items": ["item1", "item2"],
   "totalAmount": 0,
   "description": "descripcion breve si la hay",
-  "category": "categoria sugerida"
+  "category": "categoria sugerida",
+  "date": "fecha en formato YYYY-MM-DD o null"
 }
 
 ${categoriesList}
 
 Si no podes determinar el monto, usa 0.
 Si no podes determinar la categoria, usa "Otros".
-El titulo debe ser conciso y descriptivo.`
+El titulo debe ser conciso y descriptivo.
+Si el audio menciona una fecha (ej: "ayer", "el martes", "el 5"), convertila a YYYY-MM-DD usando la fecha de hoy como referencia. Si no menciona fecha, usa null.`
       }
     ];
 
@@ -95,23 +98,30 @@ El titulo debe ser conciso y descriptivo.`
         }
       },
       {
-        text: `Analiza este comprobante de transferencia bancaria argentina.
+        text: `Analiza este comprobante de pago o transferencia bancaria argentina.
+Hoy es ${new Date().toISOString().slice(0, 10)}.
 
 Extrae la siguiente informacion y devolvela SOLO como JSON valido, sin markdown ni texto extra:
 {
   "amount": 0,
-  "recipientName": "nombre del destinatario",
+  "recipientName": "nombre del destinatario o comercio",
   "recipientCBU": "CBU o CVU si aparece",
   "recipientAlias": "alias si aparece",
   "recipientBank": "banco del destinatario",
   "senderBank": "banco del emisor",
   "date": "fecha en formato YYYY-MM-DD",
   "reference": "numero de referencia o comprobante",
-  "concept": "concepto si aparece"
+  "concept": "concepto o categoria si aparece"
 }
 
-Si algun campo no esta visible o no se puede determinar, usa null.
-El monto debe ser un numero (sin signos ni separadores).`
+IMPORTANTE sobre montos argentinos:
+- Los montos usan punto como separador de miles: $67.506 = sesenta y siete mil quinientos seis
+- Los decimales a veces aparecen en tamaño chico/superindice al lado del monto principal. Ej: "$67.506⁰⁸" o "$67.506,08" significa 67506.08 (sesenta y siete mil quinientos seis con 08 centavos)
+- NUNCA interpretes los puntos como decimales. En Argentina el punto es separador de miles.
+- El monto debe ser un numero con decimales si los hay (ej: 67506.08), sin signos ni separadores de miles.
+
+Si la fecha no muestra año, asumi ${new Date().getFullYear()}.
+Si algun campo no esta visible o no se puede determinar, usa null.`
       }
     ];
 
@@ -141,23 +151,30 @@ El monto debe ser un numero (sin signos ni separadores).`
         }
       },
       {
-        text: `Analiza este comprobante de transferencia bancaria argentina en PDF.
+        text: `Analiza este comprobante de pago o transferencia bancaria argentina en PDF.
+Hoy es ${new Date().toISOString().slice(0, 10)}.
 
 Extrae la siguiente informacion y devolvela SOLO como JSON valido, sin markdown ni texto extra:
 {
   "amount": 0,
-  "recipientName": "nombre del destinatario",
+  "recipientName": "nombre del destinatario o comercio",
   "recipientCBU": "CBU o CVU si aparece",
   "recipientAlias": "alias si aparece",
   "recipientBank": "banco del destinatario",
   "senderBank": "banco del emisor",
   "date": "fecha en formato YYYY-MM-DD",
   "reference": "numero de referencia o comprobante",
-  "concept": "concepto si aparece"
+  "concept": "concepto o categoria si aparece"
 }
 
-Si algun campo no esta visible o no se puede determinar, usa null.
-El monto debe ser un numero (sin signos ni separadores).`
+IMPORTANTE sobre montos argentinos:
+- Los montos usan punto como separador de miles: $67.506 = sesenta y siete mil quinientos seis
+- Los decimales a veces aparecen en tamaño chico/superindice al lado del monto principal. Ej: "$67.506⁰⁸" o "$67.506,08" significa 67506.08 (sesenta y siete mil quinientos seis con 08 centavos)
+- NUNCA interpretes los puntos como decimales. En Argentina el punto es separador de miles.
+- El monto debe ser un numero con decimales si los hay (ej: 67506.08), sin signos ni separadores de miles.
+
+Si la fecha no muestra año, asumi ${new Date().getFullYear()}.
+Si algun campo no esta visible o no se puede determinar, usa null.`
       }
     ];
 
