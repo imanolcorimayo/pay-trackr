@@ -1,4 +1,5 @@
 import 'dotenv/config';
+import * as Sentry from '@sentry/node';
 import admin from 'firebase-admin';
 
 // ============================================
@@ -226,6 +227,7 @@ async function main() {
         } catch (error) {
           console.error(`      Failed: "${recurrent.title}" - ${error.message}`);
           totalFailed++;
+          Sentry.captureException(error, { extra: { userId: userId.substring(0, 8), tokenId: tokenDoc.id.substring(0, 8), title: recurrent.title, context: 'fcmSendReminder' } });
 
           // Remove invalid tokens
           if (error.code === 'messaging/invalid-registration-token' ||
@@ -244,10 +246,13 @@ async function main() {
   console.log(`\n========================================`);
   console.log(`Summary: ${totalSent} sent, ${totalFailed} failed`);
   console.log('Done');
+  await Sentry.flush(5000);
   process.exit(0);
 }
 
-main().catch(error => {
+main().catch(async (error) => {
   console.error('Fatal error:', error);
+  Sentry.captureException(error);
+  await Sentry.flush(5000);
   process.exit(1);
 });

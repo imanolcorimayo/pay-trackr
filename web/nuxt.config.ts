@@ -30,6 +30,7 @@ export default defineNuxtConfig({
     '/welcome': { prerender: true },
     '/faq': { prerender: true },
     '/term-of-service': { prerender: true },
+    '/privacy-policy': { prerender: true },
     '/404': { prerender: true },
     // Auth-protected pages: SPA mode (no SSR)
     '/fijos': { ssr: false },
@@ -72,20 +73,20 @@ export default defineNuxtConfig({
       start_url: "/",
       icons: [
         {
-          src: "/img/new-logo.png",
+          src: "/img/icon-192.png",
           sizes: "192x192",
           type: "image/png"
         },
         {
-          src: "/img/new-logo.png",
+          src: "/img/icon-512.png",
           sizes: "512x512",
           type: "image/png"
         },
         {
-          src: "/img/new-logo.png",
+          src: "/img/icon-maskable-512.png",
           sizes: "512x512",
           type: "image/png",
-          purpose: "any maskable"
+          purpose: "maskable"
         }
       ]
     },
@@ -137,7 +138,7 @@ export default defineNuxtConfig({
   app: {
     head: {
       htmlAttrs: { dir: "ltr", lang: "es" },
-      link: [{ rel: "icon", type: "image/png", href: "/img/new-logo.png" }],
+      link: [{ rel: "icon", type: "image/png", href: "/img/icon-192.png" }],
       meta: [
         {
           name: "google-site-verification",

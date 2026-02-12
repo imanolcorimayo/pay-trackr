@@ -1,4 +1,5 @@
 import 'dotenv/config';
+import * as Sentry from '@sentry/node';
 import admin from 'firebase-admin';
 import GeminiHandler from '../handlers/GeminiHandler.js';
 
@@ -32,6 +33,11 @@ const messaging = admin.messaging();
 const geminiHandler = process.env.GEMINI_API_KEY
   ? new GeminiHandler(process.env.GEMINI_API_KEY)
   : null;
+
+if (!geminiHandler) {
+  console.warn('GEMINI_API_KEY not set — AI insights will be skipped');
+  Sentry.captureMessage('Weekly summary: GEMINI_API_KEY not set', { level: 'warning' });
+}
 
 // ============================================
 // Main Script
@@ -220,6 +226,10 @@ async function main() {
         console.log(`   AI insight: ${aiInsight}`);
       } else {
         console.log('   AI insight: unavailable');
+        Sentry.captureMessage('Weekly summary: AI insight returned null', {
+          level: 'error',
+          extra: { userId: userId.substring(0, 8), stats }
+        });
       }
     }
 
@@ -236,6 +246,7 @@ async function main() {
       console.log(`   Saved weekly summary to Firestore`);
     } catch (err) {
       console.error(`   Failed to save weekly summary: ${err.message}`);
+      Sentry.captureException(err, { extra: { userId: userId.substring(0, 8), context: 'saveWeeklySummary' } });
     }
 
     // ----------------------------------------
@@ -290,6 +301,7 @@ async function main() {
       } catch (error) {
         console.error(`      Failed: ${error.message}`);
         totalFailed++;
+        Sentry.captureException(error, { extra: { userId: userId.substring(0, 8), tokenId: tokenDoc.id.substring(0, 8), context: 'fcmSendWeeklySummary' } });
 
         // Remove invalid tokens
         if (error.code === 'messaging/invalid-registration-token' ||
@@ -307,10 +319,13 @@ async function main() {
   console.log(`\n========================================`);
   console.log(`Summary: ${totalSent} sent, ${totalFailed} failed`);
   console.log('Done');
+  await Sentry.flush(5000);
   process.exit(0);
 }
 
-main().catch(error => {
+main().catch(async (error) => {
   console.error('Fatal error:', error);
+  Sentry.captureException(error);
+  await Sentry.flush(5000);
   process.exit(1);
 });
