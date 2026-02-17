@@ -18,6 +18,10 @@
               <span class="inline-block w-2 h-2 rounded-full bg-green-400"></span>
               Creado via WhatsApp
             </p>
+            <p class="text-xs text-green-400 flex items-center gap-1 mt-1" v-else-if="paymentsCreatedCount > 0 && !isEdit">
+              <MdiCheck class="text-sm" />
+              {{ paymentsCreatedCount }} {{ paymentsCreatedCount === 1 ? 'pago creado' : 'pagos creados' }}
+            </p>
           </div>
         </div>
       </template>
@@ -79,6 +83,7 @@
             <label for="title" class="block text-sm font-medium text-gray-400">Título del Pago*</label>
             <input
               id="title"
+              ref="titleInput"
               v-model="form.title"
               type="text"
               :disabled="props.isRecurrent"
@@ -261,24 +266,8 @@
       </template>
 
       <template #footer>
-        <!-- Continue Adding Confirmation -->
-        <div v-if="continueAdding" class="flex justify-center w-full gap-3">
-          <button
-            @click="addAnother"
-            class="px-6 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark transition-colors"
-          >
-            Agregar Otro
-          </button>
-          <button
-            @click="closeModal"
-            class="px-6 py-2 border border-gray-600 rounded-lg hover:bg-gray-700 transition-colors"
-          >
-            Listo
-          </button>
-        </div>
-
         <!-- Review Mode Footer -->
-        <div v-else-if="props.isReview" class="flex justify-end w-full">
+        <div v-if="props.isReview" class="flex justify-end w-full">
           <button
             @click="markAsReviewed"
             class="px-5 py-2.5 bg-success text-white rounded-lg hover:bg-success/90 transition-colors flex items-center gap-2 font-medium"
@@ -296,7 +285,7 @@
             @click="closeModal"
             class="px-4 py-2 border border-gray-600 rounded-lg hover:bg-gray-700 transition-colors"
           >
-            Cancelar
+            {{ paymentsCreatedCount > 0 && !isEdit ? 'Listo' : 'Cancelar' }}
           </button>
 
           <div class="flex space-x-2">
@@ -311,6 +300,7 @@
             <button
               @click="savePayment"
               class="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark transition-colors"
+              :class="{ 'bg-green-600 hover:bg-green-700': justSaved }"
               :disabled="isSubmitting"
             >
               <span v-if="isSubmitting">
@@ -318,6 +308,10 @@
                   class="inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"
                 ></span>
                 Guardando...
+              </span>
+              <span v-else-if="justSaved" class="flex items-center gap-1">
+                <MdiCheck class="text-lg" />
+                Creado
               </span>
               <span v-else>{{ isEdit ? "Actualizar" : "Crear" }}</span>
             </button>
@@ -419,11 +413,13 @@ const defaultForm = computed(() => {
 const form = ref({ ...defaultForm.value });
 const touched = ref({ title: false, amount: false, categoryId: false, dueDate: false });
 const showDescription = ref(false);
-const continueAdding = ref(false);
 const saveAsTemplate = ref(false);
 const amountInput = ref(null);
+const titleInput = ref(null);
 const currentTemplate = ref(null); // Track if opened from template
 const templatesExpanded = ref(false);
+const paymentsCreatedCount = ref(0);
+const justSaved = ref(false);
 
 // ----- Define Methods ---------
 async function showModal(paymentId = null, templateData = null) {
@@ -452,6 +448,8 @@ async function showModal(paymentId = null, templateData = null) {
 
   touched.value = { title: false, amount: false, categoryId: false, dueDate: false };
   templatesExpanded.value = false;
+  paymentsCreatedCount.value = 0;
+  justSaved.value = false;
   modal.value?.open();
 }
 
@@ -541,25 +539,11 @@ function getTemplateStyle(categoryId, isActive) {
 }
 
 function closeModal() {
-  continueAdding.value = false;
   currentTemplate.value = null;
+  paymentsCreatedCount.value = 0;
+  justSaved.value = false;
   modal.value?.close();
   emit("onClose");
-}
-
-function addAnother() {
-  continueAdding.value = false;
-  saveAsTemplate.value = false;
-  touched.value = { title: false, amount: false, categoryId: false, dueDate: false };
-
-  if (currentTemplate.value) {
-    // Template mode: re-apply template (keeps title, description, category)
-    applyTemplate(currentTemplate.value);
-  } else {
-    // Normal mode: reset form but keep date and category
-    form.value = { ...defaultForm.value };
-    showDescription.value = false;
-  }
 }
 
 // In the fetchPaymentDetails function
@@ -707,8 +691,24 @@ async function savePayment() {
           await templateStore.createTemplate(templateData);
         }
 
-        // Ask if user wants to continue adding payments
-        continueAdding.value = true;
+        // Track created count and show brief success state on button
+        paymentsCreatedCount.value++;
+        justSaved.value = true;
+        setTimeout(() => { justSaved.value = false; }, 1500);
+
+        // Auto-clear form for next payment (keep date & category)
+        touched.value = { title: false, amount: false, categoryId: false, dueDate: false };
+        saveAsTemplate.value = false;
+        showDescription.value = false;
+
+        if (currentTemplate.value) {
+          applyTemplate(currentTemplate.value);
+        } else {
+          form.value = { ...defaultForm.value };
+          nextTick(() => {
+            titleInput.value?.focus();
+          });
+        }
       } else {
         useToast("error", paymentStore.error || "Error al crear el pago");
       }
