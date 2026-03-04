@@ -127,6 +127,11 @@ app.use(express.json());
 // Routes
 // ============================================
 
+// GET - Health check for uptime monitoring
+app.get('/health', (req, res) => {
+  res.status(200).json({ status: 'ok' });
+});
+
 // GET - Webhook verification
 app.get('/webhook', (req, res) => {
   const mode = req.query['hub.mode'];
