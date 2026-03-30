@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>mangos — Logo V2 iterations</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Inter', system-ui, sans-serif; background: #F5F3EF; color: #1C1917; padding: 48px; }
+        h1 { font-size: 11px; font-weight: 700; letter-spacing: 4px; text-transform: uppercase; color: #E8870E; margin-bottom: 12px; }
+        .subtitle { font-size: 14px; font-weight: 300; color: #78716C; margin-bottom: 48px; }
+        .grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; max-width: 1100px; }
+        .card {
+            padding: 40px 24px;
+            display: flex; flex-direction: column;
+            align-items: center; justify-content: center;
+            min-height: 260px; position: relative;
+        }
+        .card-light { background: #FFFFFF; border: 1px solid #E7E5E4; }
+        .card-dark { background: #1C1917; }
+        .card-label {
+            position: absolute; top: 10px; left: 14px;
+            font-size: 9px; font-weight: 600; letter-spacing: 2px;
+            text-transform: uppercase; opacity: 0.35;
+        }
+        .card-light .card-label { color: #1C1917; }
+        .card-dark .card-label { color: #FAFAF9; }
+        .card-desc {
+            font-size: 10px; font-weight: 400; color: #A8A29E;
+            margin-top: 14px; text-align: center; line-height: 1.5;
+        }
+        .section { margin-bottom: 56px; }
+        .section-title {
+            font-size: 18px; font-weight: 600; margin-bottom: 20px;
+            padding-bottom: 10px; border-bottom: 1px solid #E7E5E4;
+        }
+        .color-section { margin-top: 80px; }
+        .palette-row {
+            display: flex; gap: 3px; margin-bottom: 20px; border-radius: 12px; overflow: hidden;
+        }
+        .palette-swatch {
+            flex: 1; height: 80px; display: flex; flex-direction: column;
+            justify-content: flex-end; padding: 8px 12px;
+            font-size: 10px; font-weight: 500;
+        }
+        .palette-swatch span { opacity: 0.8; font-size: 9px; margin-top: 2px; }
+        .palette-label {
+            font-size: 13px; font-weight: 500; margin-bottom: 8px;
+        }
+        .palette-desc {
+            font-size: 12px; font-weight: 300; color: #78716C; margin-bottom: 16px;
+        }
+    </style>
+</head>
+<body>
+
+<h1>mangos — logo v2 + colores</h1>
+<p class="subtitle">Mango asimetrico con "pico" en la base. Variaciones de curvatura y angulo.</p>
+
+
+<!-- ═══════════════════════════════════════════ -->
+<!-- SHAPE VARIATIONS                          -->
+<!-- ═══════════════════════════════════════════ -->
+<div class="section">
+    <div class="section-title">Forma del mango — variaciones del pico</div>
+    <div class="grid">
+
+        <!-- V1: Subtle beak -->
+        <div class="card card-light">
+            <span class="card-label">V1</span>
+            <svg width="120" height="165" viewBox="0 0 140 185">
+                <path d="M 70 30
+                         C 105 30, 120 70, 120 100
+                         C 120 130, 108 150, 90 160
+                         C 78 166, 68 164, 60 158
+                         C 42 144, 20 125, 20 100
+                         C 20 70, 35 30, 70 30 Z"
+                      fill="none" stroke="#1C1917" stroke-width="2.5"/>
+                <path d="M 70 30 C 70 20, 72 12, 78 8"
+                      fill="none" stroke="#1C1917" stroke-width="2" stroke-linecap="round"/>
+                <path d="M 72 18 C 80 10, 95 8, 105 14"
+                      fill="none" stroke="#1C1917" stroke-width="2" stroke-linecap="round"/>
+            </svg>
+            <p class="card-desc">Pico sutil.<br>Izq curva suave, der baja ~65&deg;</p>
+        </div>
+
+        <!-- V2: More pronounced beak -->
+        <div class="card card-light">
+            <span class="card-label">V2</span>
+            <svg width="120" height="165" viewBox="0 0 140 185">
+                <path d="M 70 30
+                         C 105 30, 120 70, 120 100
+                         C 120 135, 105 155, 88 165
+                         C 76 172, 64 168, 55 158
+                         C 38 140, 20 120, 20 100
+                         C 20 70, 35 30, 70 30 Z"
+                      fill="none" stroke="#1C1917" stroke-width="2.5"/>
+                <path d="M 70 30 C 70 20, 72 12, 78 8"
+                      fill="none" stroke="#1C1917" stroke-width="2" stroke-linecap="round"/>
+                <path d="M 72 18 C 80 10, 95 8, 105 14"
+                      fill="none" stroke="#1C1917" stroke-width="2" stroke-linecap="round"/>
+            </svg>
+            <p class="card-desc">Pico mas pronunciado.<br>La derecha baja mas largo</p>
+        </div>
+
+        <!-- V3: Strong asymmetry -->
+        <div class="card card-light">
+            <span class="card-label">V3</span>
+            <svg width="120" height="165" viewBox="0 0 140 190">
+                <path d="M 70 30
+                         C 108 30, 122 70, 122 100
+                         C 122 138, 106 160, 85 172
+                         C 74 178, 62 170, 52 158
+                         C 35 138, 18 118, 18 95
+                         C 18 65, 35 30, 70 30 Z"
+                      fill="none" stroke="#1C1917" stroke-width="2.5"/>
+                <path d="M 70 30 C 70 20, 72 12, 78 8"
+                      fill="none" stroke="#1C1917" stroke-width="2" stroke-linecap="round"/>
+                <path d="M 72 18 C 80 10, 95 8, 105 14"
+                      fill="none" stroke="#1C1917" stroke-width="2" stroke-linecap="round"/>
+            </svg>
+            <p class="card-desc">Asimetria fuerte.<br>Izq horizontal, der ~60&deg;</p>
+        </div>
+
+        <!-- V4: Classic mango shape -->
+        <div class="card card-light">
+            <span class="card-label">V4</span>
+            <svg width="120" height="165" viewBox="0 0 140 190">
+                <path d="M 70 28
+                         C 110 28, 125 65, 125 95
+                         C 125 132, 110 155, 90 168
+                         C 78 176, 66 172, 56 162
+                         C 40 145, 22 122, 18 95
+                         C 14 62, 35 28, 70 28 Z"
+                      fill="none" stroke="#1C1917" stroke-width="2.5"/>
+                <path d="M 70 28 C 70 18, 72 10, 78 5"
+                      fill="none" stroke="#1C1917" stroke-width="2" stroke-linecap="round"/>
+                <path d="M 72 15 C 80 6, 96 4, 108 10"
+                      fill="none" stroke="#1C1917" stroke-width="2" stroke-linecap="round"/>
+            </svg>
+            <p class="card-desc">Mango clasico.<br>Mas ancho arriba, pico natural</p>
+        </div>
+
+    </div>
+</div>
+
+<!-- Show selected in dark + with text -->
+<div class="section">
+    <div class="section-title">Todas las variantes con texto</div>
+    <div class="grid">
+        <div class="card card-light">
+            <span class="card-label">V1 + texto</span>
+            <svg width="180" height="110" viewBox="0 0 310 170">
+                <g transform="translate(0, 5)">
+                    <path d="M 70 30 C 105 30, 120 70, 120 100 C 120 130, 108 150, 90 160 C 78 166, 68 164, 60 158 C 42 144, 20 125, 20 100 C 20 70, 35 30, 70 30 Z"
+                          fill="none" stroke="#1C1917" stroke-width="2.5"/>
+                    <path d="M 70 30 C 70 20, 72 12, 78 8" fill="none" stroke="#1C1917" stroke-width="2" stroke-linecap="round"/>
+                    <path d="M 72 18 C 80 10, 95 8, 105 14" fill="none" stroke="#1C1917" stroke-width="2" stroke-linecap="round"/>
+                </g>
+                <text x="215" y="102" text-anchor="middle"
+                      font-family="Inter, sans-serif" font-weight="600" font-size="28"
+                      fill="#1C1917" letter-spacing="6">mangos</text>
+            </svg>
+        </div>
+        <div class="card card-light">
+            <span class="card-label">V2 + texto</span>
+            <svg width="180" height="110" viewBox="0 0 310 175">
+                <g transform="translate(0, 5)">
+                    <path d="M 70 30 C 105 30, 120 70, 120 100 C 120 135, 105 155, 88 165 C 76 172, 64 168, 55 158 C 38 140, 20 120, 20 100 C 20 70, 35 30, 70 30 Z"
+                          fill="none" stroke="#1C1917" stroke-width="2.5"/>
+                    <path d="M 70 30 C 70 20, 72 12, 78 8" fill="none" stroke="#1C1917" stroke-width="2" stroke-linecap="round"/>
+                    <path d="M 72 18 C 80 10, 95 8, 105 14" fill="none" stroke="#1C1917" stroke-width="2" stroke-linecap="round"/>
+                </g>
+                <text x="215" y="105" text-anchor="middle"
+                      font-family="Inter, sans-serif" font-weight="600" font-size="28"
+                      fill="#1C1917" letter-spacing="6">mangos</text>
+            </svg>
+        </div>
+        <div class="card card-light">
+            <span class="card-label">V3 + texto</span>
+            <svg width="180" height="110" viewBox="0 0 310 180">
+                <g transform="translate(0, 5)">
+                    <path d="M 70 30 C 108 30, 122 70, 122 100 C 122 138, 106 160, 85 172 C 74 178, 62 170, 52 158 C 35 138, 18 118, 18 95 C 18 65, 35 30, 70 30 Z"
+                          fill="none" stroke="#1C1917" stroke-width="2.5"/>
+                    <path d="M 70 30 C 70 20, 72 12, 78 8" fill="none" stroke="#1C1917" stroke-width="2" stroke-linecap="round"/>
+                    <path d="M 72 18 C 80 10, 95 8, 105 14" fill="none" stroke="#1C1917" stroke-width="2" stroke-linecap="round"/>
+                </g>
+                <text x="218" y="108" text-anchor="middle"
+                      font-family="Inter, sans-serif" font-weight="600" font-size="28"
+                      fill="#1C1917" letter-spacing="6">mangos</text>
+            </svg>
+        </div>
+        <div class="card card-light">
+            <span class="card-label">V4 + texto</span>
+            <svg width="180" height="110" viewBox="0 0 310 180">
+                <g transform="translate(0, 5)">
+                    <path d="M 70 28 C 110 28, 125 65, 125 95 C 125 132, 110 155, 90 168 C 78 176, 66 172, 56 162 C 40 145, 22 122, 18 95 C 14 62, 35 28, 70 28 Z"
+                          fill="none" stroke="#1C1917" stroke-width="2.5"/>
+                    <path d="M 70 28 C 70 18, 72 10, 78 5" fill="none" stroke="#1C1917" stroke-width="2" stroke-linecap="round"/>
+                    <path d="M 72 15 C 80 6, 96 4, 108 10" fill="none" stroke="#1C1917" stroke-width="2" stroke-linecap="round"/>
+                </g>
+                <text x="218" y="105" text-anchor="middle"
+                      font-family="Inter, sans-serif" font-weight="600" font-size="28"
+                      fill="#1C1917" letter-spacing="6">mangos</text>
+            </svg>
+        </div>
+    </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════ -->
+<!-- COLOR PALETTES                            -->
+<!-- ═══════════════════════════════════════════ -->
+<div class="color-section">
+    <div class="section-title">Paletas de color — inspiradas en el mango</div>
+    <p class="subtitle">Rojo, amarillo, verde del mango adaptados para UI sobre fondo blanco.</p>
+
+    <!-- Palette 1: Warm & Vibrant -->
+    <div class="palette-label">Paleta 1 — Vibrante y calida</div>
+    <p class="palette-desc">Amarillo mango como acento principal, rojo para danger/vencido, verde para pagado. Alta energia.</p>
+    <div class="palette-row">
+        <div class="palette-swatch" style="background: #FFFFFF; color: #1C1917; border: 1px solid #E5E5E5;">Background<span>#FFFFFF</span></div>
+        <div class="palette-swatch" style="background: #1C1917; color: #FAFAF9;">Dark<span>#1C1917</span></div>
+        <div class="palette-swatch" style="background: #F59E0B; color: #1C1917;">Mango<span>#F59E0B</span></div>
+        <div class="palette-swatch" style="background: #DC2626; color: #FFFFFF;">Rojo<span>#DC2626</span></div>
+        <div class="palette-swatch" style="background: #16A34A; color: #FFFFFF;">Verde<span>#16A34A</span></div>
+        <div class="palette-swatch" style="background: #78716C; color: #FFFFFF;">Muted<span>#78716C</span></div>
+        <div class="palette-swatch" style="background: #E7E5E4; color: #1C1917;">Border<span>#E7E5E4</span></div>
+    </div>
+
+    <!-- Palette 2: Earthy Mango -->
+    <div class="palette-label" style="margin-top: 32px;">Paleta 2 — Terrosa y madura</div>
+    <p class="palette-desc">Tonos mas profundos del mango. Rojo terroso, amarillo ocre, verde oliva. Mas sofisticada.</p>
+    <div class="palette-row">
+        <div class="palette-swatch" style="background: #FFFBF5; color: #292524;">Background<span>#FFFBF5</span></div>
+        <div class="palette-swatch" style="background: #292524; color: #FAFAF9;">Dark<span>#292524</span></div>
+        <div class="palette-swatch" style="background: #D97706; color: #FFFFFF;">Mango<span>#D97706</span></div>
+        <div class="palette-swatch" style="background: #B91C1C; color: #FFFFFF;">Rojo<span>#B91C1C</span></div>
+        <div class="palette-swatch" style="background: #15803D; color: #FFFFFF;">Verde<span>#15803D</span></div>
+        <div class="palette-swatch" style="background: #8C857D; color: #FFFFFF;">Muted<span>#8C857D</span></div>
+        <div class="palette-swatch" style="background: #E8E2DA; color: #292524;">Border<span>#E8E2DA</span></div>
+    </div>
+
+    <!-- Palette 3: Fresh & Clean -->
+    <div class="palette-label" style="margin-top: 32px;">Paleta 3 — Fresca y limpia</div>
+    <p class="palette-desc">Colores mas claros y frescos. Verde manzana, amarillo limon, rojo coral. Moderna y accesible.</p>
+    <div class="palette-row">
+        <div class="palette-swatch" style="background: #FFFFFF; color: #18181B;">Background<span>#FFFFFF</span></div>
+        <div class="palette-swatch" style="background: #18181B; color: #FAFAFA;">Dark<span>#18181B</span></div>
+        <div class="palette-swatch" style="background: #EAB308; color: #18181B;">Mango<span>#EAB308</span></div>
+        <div class="palette-swatch" style="background: #EF4444; color: #FFFFFF;">Rojo<span>#EF4444</span></div>
+        <div class="palette-swatch" style="background: #22C55E; color: #FFFFFF;">Verde<span>#22C55E</span></div>
+        <div class="palette-swatch" style="background: #A1A1AA; color: #FFFFFF;">Muted<span>#A1A1AA</span></div>
+        <div class="palette-swatch" style="background: #E4E4E7; color: #18181B;">Border<span>#E4E4E7</span></div>
+    </div>
+
+    <!-- Palette 4: Sunset Mango -->
+    <div class="palette-label" style="margin-top: 32px;">Paleta 4 — Atardecer mango</div>
+    <p class="palette-desc">Naranja como color principal (entre rojo y amarillo). Verde natural. Calidez sin perder seriedad.</p>
+    <div class="palette-row">
+        <div class="palette-swatch" style="background: #FAFAF9; color: #1C1917;">Background<span>#FAFAF9</span></div>
+        <div class="palette-swatch" style="background: #1C1917; color: #FAFAF9;">Dark<span>#1C1917</span></div>
+        <div class="palette-swatch" style="background: #EA580C; color: #FFFFFF;">Mango<span>#EA580C</span></div>
+        <div class="palette-swatch" style="background: #DC2626; color: #FFFFFF;">Rojo<span>#DC2626</span></div>
+        <div class="palette-swatch" style="background: #059669; color: #FFFFFF;">Verde<span>#059669</span></div>
+        <div class="palette-swatch" style="background: #A8A29E; color: #FFFFFF;">Muted<span>#A8A29E</span></div>
+        <div class="palette-swatch" style="background: #E7E5E4; color: #1C1917;">Border<span>#E7E5E4</span></div>
+    </div>
+
+</div>
+
+
+</body>
+</html>

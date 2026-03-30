@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>mangos — Logo Proposals</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', system-ui, sans-serif;
+            background: #F5F3EF;
+            color: #1C1917;
+            padding: 48px;
+        }
+        h1 {
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 4px;
+            text-transform: uppercase;
+            color: #E8870E;
+            margin-bottom: 12px;
+        }
+        .subtitle {
+            font-size: 14px;
+            font-weight: 300;
+            color: #78716C;
+            margin-bottom: 48px;
+        }
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+            max-width: 1100px;
+        }
+        .card {
+            padding: 48px 32px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 280px;
+            position: relative;
+        }
+        .card-light { background: #FFFFFF; border: 1px solid #E7E5E4; }
+        .card-dark { background: #1C1917; }
+        .card-label {
+            position: absolute;
+            top: 12px;
+            left: 16px;
+            font-size: 9px;
+            font-weight: 600;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            opacity: 0.35;
+        }
+        .card-light .card-label { color: #1C1917; }
+        .card-dark .card-label { color: #FAFAF9; }
+        .card-desc {
+            font-size: 11px;
+            font-weight: 400;
+            color: #A8A29E;
+            margin-top: 16px;
+            text-align: center;
+            line-height: 1.5;
+        }
+
+        .section { margin-bottom: 64px; }
+        .section-title {
+            font-size: 20px;
+            font-weight: 600;
+            margin-bottom: 24px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid #E7E5E4;
+        }
+    </style>
+</head>
+<body>
+
+<h1>mangos — propuestas de logo</h1>
+<p class="subtitle">Concepto A: Mango outline minimalista con hoja. Variaciones de forma, proporcion y estilo.</p>
+
+
+<!-- ═══════════════════════════════════════════ -->
+<!-- PROPOSAL 1: TALL & SLIM                   -->
+<!-- ═══════════════════════════════════════════ -->
+<div class="section">
+    <div class="section-title">1 — Alargado y elegante</div>
+    <div class="grid">
+        <div class="card card-light">
+            <span class="card-label">Claro</span>
+            <svg width="140" height="180" viewBox="0 0 140 180">
+                <!-- Mango body: tall teardrop -->
+                <path d="M 70 30 C 105 30, 120 70, 120 100 C 120 140, 95 160, 70 160 C 45 160, 20 140, 20 100 C 20 70, 35 30, 70 30 Z"
+                      fill="none" stroke="#1C1917" stroke-width="2.5"/>
+                <!-- Stem + leaf -->
+                <path d="M 70 30 C 70 20, 72 12, 78 8"
+                      fill="none" stroke="#1C1917" stroke-width="2" stroke-linecap="round"/>
+                <path d="M 72 18 C 80 10, 95 8, 105 14"
+                      fill="none" stroke="#1C1917" stroke-width="2" stroke-linecap="round"/>
+            </svg>
+            <p class="card-desc">Cuerpo alargado, hoja curva simple</p>
+        </div>
+        <div class="card card-dark">
+            <span class="card-label">Oscuro</span>
+            <svg width="140" height="180" viewBox="0 0 140 180">
+                <path d="M 70 30 C 105 30, 120 70, 120 100 C 120 140, 95 160, 70 160 C 45 160, 20 140, 20 100 C 20 70, 35 30, 70 30 Z"
+                      fill="none" stroke="#FAFAF9" stroke-width="2.5"/>
+                <path d="M 70 30 C 70 20, 72 12, 78 8"
+                      fill="none" stroke="#FAFAF9" stroke-width="2" stroke-linecap="round"/>
+                <path d="M 72 18 C 80 10, 95 8, 105 14"
+                      fill="none" stroke="#FAFAF9" stroke-width="2" stroke-linecap="round"/>
+            </svg>
+        </div>
+        <div class="card card-light">
+            <span class="card-label">Con texto</span>
+            <svg width="200" height="180" viewBox="0 0 300 180">
+                <path d="M 70 30 C 105 30, 120 70, 120 100 C 120 140, 95 160, 70 160 C 45 160, 20 140, 20 100 C 20 70, 35 30, 70 30 Z"
+                      fill="none" stroke="#1C1917" stroke-width="2.5"/>
+                <path d="M 70 30 C 70 20, 72 12, 78 8"
+                      fill="none" stroke="#1C1917" stroke-width="2" stroke-linecap="round"/>
+                <path d="M 72 18 C 80 10, 95 8, 105 14"
+                      fill="none" stroke="#1C1917" stroke-width="2" stroke-linecap="round"/>
+                <text x="210" y="102" text-anchor="middle"
+                      font-family="Inter, sans-serif" font-weight="600" font-size="28"
+                      fill="#1C1917" letter-spacing="6">mangos</text>
+            </svg>
+        </div>
+    </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════ -->
+<!-- PROPOSAL 2: ROUND & PLUMP                 -->
+<!-- ═══════════════════════════════════════════ -->
+<div class="section">
+    <div class="section-title">2 — Redondeado y organico</div>
+    <div class="grid">
+        <div class="card card-light">
+            <span class="card-label">Claro</span>
+            <svg width="150" height="150" viewBox="0 0 150 150">
+                <!-- Mango body: rounder, wider -->
+                <path d="M 75 25 C 115 25, 135 55, 135 80 C 135 115, 110 135, 75 135 C 40 135, 15 115, 15 80 C 15 55, 35 25, 75 25 Z"
+                      fill="none" stroke="#1C1917" stroke-width="2.5"/>
+                <!-- Stem -->
+                <path d="M 75 25 C 75 16, 77 10, 82 6"
+                      fill="none" stroke="#1C1917" stroke-width="2" stroke-linecap="round"/>
+                <!-- Leaf: rounder -->
+                <path d="M 78 14 C 88 4, 105 2, 115 10 C 105 8, 90 10, 80 18"
+                      fill="none" stroke="#1C1917" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            <p class="card-desc">Mas redondo, hoja con volumen</p>
+        </div>
+        <div class="card card-dark">
+            <span class="card-label">Oscuro</span>
+            <svg width="150" height="150" viewBox="0 0 150 150">
+                <path d="M 75 25 C 115 25, 135 55, 135 80 C 135 115, 110 135, 75 135 C 40 135, 15 115, 15 80 C 15 55, 35 25, 75 25 Z"
+                      fill="none" stroke="#FAFAF9" stroke-width="2.5"/>
+                <path d="M 75 25 C 75 16, 77 10, 82 6"
+                      fill="none" stroke="#FAFAF9" stroke-width="2" stroke-linecap="round"/>
+                <path d="M 78 14 C 88 4, 105 2, 115 10 C 105 8, 90 10, 80 18"
+                      fill="none" stroke="#FAFAF9" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+        </div>
+        <div class="card card-light">
+            <span class="card-label">Con texto</span>
+            <svg width="220" height="150" viewBox="0 0 320 150">
+                <path d="M 75 25 C 115 25, 135 55, 135 80 C 135 115, 110 135, 75 135 C 40 135, 15 115, 15 80 C 15 55, 35 25, 75 25 Z"
+                      fill="none" stroke="#1C1917" stroke-width="2.5"/>
+                <path d="M 75 25 C 75 16, 77 10, 82 6"
+                      fill="none" stroke="#1C1917" stroke-width="2" stroke-linecap="round"/>
+                <path d="M 78 14 C 88 4, 105 2, 115 10 C 105 8, 90 10, 80 18"
+                      fill="none" stroke="#1C1917" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <text x="230" y="86" text-anchor="middle"
+                      font-family="Inter, sans-serif" font-weight="600" font-size="28"
+                      fill="#1C1917" letter-spacing="6">mangos</text>
+            </svg>
+        </div>
+    </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════ -->
+<!-- PROPOSAL 3: ASYMMETRIC TILT               -->
+<!-- ═══════════════════════════════════════════ -->
+<div class="section">
+    <div class="section-title">3 — Asimetrico, inclinado</div>
+    <div class="grid">
+        <div class="card card-light">
+            <span class="card-label">Claro</span>
+            <svg width="150" height="160" viewBox="0 0 150 160">
+                <!-- Mango body: tilted, asymmetric -->
+                <path d="M 65 28 C 100 20, 125 50, 128 82 C 131 120, 105 148, 72 148 C 40 148, 18 120, 22 82 C 25 52, 38 32, 65 28 Z"
+                      fill="none" stroke="#1C1917" stroke-width="2.5"/>
+                <!-- Stem angled -->
+                <path d="M 65 28 C 60 18, 58 10, 55 5"
+                      fill="none" stroke="#1C1917" stroke-width="2" stroke-linecap="round"/>
+                <!-- Leaf pointing left-up -->
+                <path d="M 58 15 C 45 5, 30 4, 20 10"
+                      fill="none" stroke="#1C1917" stroke-width="2" stroke-linecap="round"/>
+            </svg>
+            <p class="card-desc">Inclinacion natural, hoja hacia la izquierda</p>
+        </div>
+        <div class="card card-dark">
+            <span class="card-label">Oscuro</span>
+            <svg width="150" height="160" viewBox="0 0 150 160">
+                <path d="M 65 28 C 100 20, 125 50, 128 82 C 131 120, 105 148, 72 148 C 40 148, 18 120, 22 82 C 25 52, 38 32, 65 28 Z"
+                      fill="none" stroke="#FAFAF9" stroke-width="2.5"/>
+                <path d="M 65 28 C 60 18, 58 10, 55 5"
+                      fill="none" stroke="#FAFAF9" stroke-width="2" stroke-linecap="round"/>
+                <path d="M 58 15 C 45 5, 30 4, 20 10"
+                      fill="none" stroke="#FAFAF9" stroke-width="2" stroke-linecap="round"/>
+            </svg>
+        </div>
+        <div class="card card-light">
+            <span class="card-label">Con texto</span>
+            <svg width="220" height="160" viewBox="0 0 320 160">
+                <path d="M 65 28 C 100 20, 125 50, 128 82 C 131 120, 105 148, 72 148 C 40 148, 18 120, 22 82 C 25 52, 38 32, 65 28 Z"
+                      fill="none" stroke="#1C1917" stroke-width="2.5"/>
+                <path d="M 65 28 C 60 18, 58 10, 55 5"
+                      fill="none" stroke="#1C1917" stroke-width="2" stroke-linecap="round"/>
+                <path d="M 58 15 C 45 5, 30 4, 20 10"
+                      fill="none" stroke="#1C1917" stroke-width="2" stroke-linecap="round"/>
+                <text x="225" y="95" text-anchor="middle"
+                      font-family="Inter, sans-serif" font-weight="600" font-size="28"
+                      fill="#1C1917" letter-spacing="6">mangos</text>
+            </svg>
+        </div>
+    </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════ -->
+<!-- PROPOSAL 4: ULTRA MINIMAL                 -->
+<!-- ═══════════════════════════════════════════ -->
+<div class="section">
+    <div class="section-title">4 — Ultra minimalista</div>
+    <div class="grid">
+        <div class="card card-light">
+            <span class="card-label">Claro</span>
+            <svg width="120" height="150" viewBox="0 0 120 150">
+                <!-- Single continuous stroke mango + leaf -->
+                <path d="M 80 12 C 90 6, 100 8, 100 16
+                         C 100 16, 85 14, 68 26
+                         C 100 22, 110 55, 108 85
+                         C 106 120, 85 140, 60 140
+                         C 35 140, 14 120, 12 85
+                         C 10 55, 30 22, 60 26
+                         C 48 14, 38 12, 42 6"
+                      fill="none" stroke="#1C1917" stroke-width="2.5"
+                      stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            <p class="card-desc">Trazo continuo, mango + hoja en una linea</p>
+        </div>
+        <div class="card card-dark">
+            <span class="card-label">Oscuro</span>
+            <svg width="120" height="150" viewBox="0 0 120 150">
+                <path d="M 80 12 C 90 6, 100 8, 100 16
+                         C 100 16, 85 14, 68 26
+                         C 100 22, 110 55, 108 85
+                         C 106 120, 85 140, 60 140
+                         C 35 140, 14 120, 12 85
+                         C 10 55, 30 22, 60 26
+                         C 48 14, 38 12, 42 6"
+                      fill="none" stroke="#FAFAF9" stroke-width="2.5"
+                      stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+        </div>
+        <div class="card card-light">
+            <span class="card-label">Con texto</span>
+            <svg width="220" height="150" viewBox="0 0 300 150">
+                <path d="M 80 12 C 90 6, 100 8, 100 16
+                         C 100 16, 85 14, 68 26
+                         C 100 22, 110 55, 108 85
+                         C 106 120, 85 140, 60 140
+                         C 35 140, 14 120, 12 85
+                         C 10 55, 30 22, 60 26
+                         C 48 14, 38 12, 42 6"
+                      fill="none" stroke="#1C1917" stroke-width="2.5"
+                      stroke-linecap="round" stroke-linejoin="round"/>
+                <text x="200" y="88" text-anchor="middle"
+                      font-family="Inter, sans-serif" font-weight="600" font-size="28"
+                      fill="#1C1917" letter-spacing="6">mangos</text>
+            </svg>
+        </div>
+    </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════ -->
+<!-- PROPOSAL 5: THICK STROKE                  -->
+<!-- ═══════════════════════════════════════════ -->
+<div class="section">
+    <div class="section-title">5 — Trazo grueso, bold</div>
+    <div class="grid">
+        <div class="card card-light">
+            <span class="card-label">Claro</span>
+            <svg width="130" height="155" viewBox="0 0 130 155">
+                <!-- Thick mango -->
+                <path d="M 65 30 C 98 30, 115 60, 115 85 C 115 120, 95 142, 65 142 C 35 142, 15 120, 15 85 C 15 60, 32 30, 65 30 Z"
+                      fill="none" stroke="#1C1917" stroke-width="4.5"/>
+                <!-- Thick stem -->
+                <path d="M 65 30 L 65 16"
+                      fill="none" stroke="#1C1917" stroke-width="4" stroke-linecap="round"/>
+                <!-- Thick leaf -->
+                <path d="M 65 20 C 78 8, 96 6, 108 12"
+                      fill="none" stroke="#1C1917" stroke-width="3.5" stroke-linecap="round"/>
+            </svg>
+            <p class="card-desc">Peso visual fuerte, presencia bold</p>
+        </div>
+        <div class="card card-dark">
+            <span class="card-label">Oscuro</span>
+            <svg width="130" height="155" viewBox="0 0 130 155">
+                <path d="M 65 30 C 98 30, 115 60, 115 85 C 115 120, 95 142, 65 142 C 35 142, 15 120, 15 85 C 15 60, 32 30, 65 30 Z"
+                      fill="none" stroke="#FAFAF9" stroke-width="4.5"/>
+                <path d="M 65 30 L 65 16"
+                      fill="none" stroke="#FAFAF9" stroke-width="4" stroke-linecap="round"/>
+                <path d="M 65 20 C 78 8, 96 6, 108 12"
+                      fill="none" stroke="#FAFAF9" stroke-width="3.5" stroke-linecap="round"/>
+            </svg>
+        </div>
+        <div class="card card-light">
+            <span class="card-label">Con texto</span>
+            <svg width="220" height="155" viewBox="0 0 310 155">
+                <path d="M 65 30 C 98 30, 115 60, 115 85 C 115 120, 95 142, 65 142 C 35 142, 15 120, 15 85 C 15 60, 32 30, 65 30 Z"
+                      fill="none" stroke="#1C1917" stroke-width="4.5"/>
+                <path d="M 65 30 L 65 16"
+                      fill="none" stroke="#1C1917" stroke-width="4" stroke-linecap="round"/>
+                <path d="M 65 20 C 78 8, 96 6, 108 12"
+                      fill="none" stroke="#1C1917" stroke-width="3.5" stroke-linecap="round"/>
+                <text x="215" y="92" text-anchor="middle"
+                      font-family="Inter, sans-serif" font-weight="700" font-size="30"
+                      fill="#1C1917" letter-spacing="5">mangos</text>
+            </svg>
+        </div>
+    </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════ -->
+<!-- PROPOSAL 6: MANGO + PESO SIGN             -->
+<!-- ═══════════════════════════════════════════ -->
+<div class="section">
+    <div class="section-title">6 — Mango con $ integrado</div>
+    <div class="grid">
+        <div class="card card-light">
+            <span class="card-label">Claro</span>
+            <svg width="140" height="170" viewBox="0 0 140 170">
+                <!-- Mango body -->
+                <path d="M 70 32 C 105 32, 120 62, 120 90 C 120 125, 98 148, 70 148 C 42 148, 20 125, 20 90 C 20 62, 35 32, 70 32 Z"
+                      fill="none" stroke="#1C1917" stroke-width="2.5"/>
+                <!-- $ sign inside -->
+                <path d="M 70 60 L 70 125" fill="none" stroke="#1C1917" stroke-width="2" stroke-linecap="round"/>
+                <path d="M 85 72 C 85 65, 78 60, 70 60 C 62 60, 55 65, 55 72 C 55 79, 62 84, 70 84 C 78 84, 85 89, 85 96 C 85 103, 78 108, 70 108 C 62 108, 55 103, 55 96"
+                      fill="none" stroke="#1C1917" stroke-width="2" stroke-linecap="round"/>
+                <!-- Stem + leaf -->
+                <path d="M 70 32 C 70 22, 72 14, 78 8"
+                      fill="none" stroke="#1C1917" stroke-width="2" stroke-linecap="round"/>
+                <path d="M 73 18 C 83 8, 100 6, 112 12"
+                      fill="none" stroke="#1C1917" stroke-width="2" stroke-linecap="round"/>
+            </svg>
+            <p class="card-desc">Mango con signo peso adentro</p>
+        </div>
+        <div class="card card-dark">
+            <span class="card-label">Oscuro</span>
+            <svg width="140" height="170" viewBox="0 0 140 170">
+                <path d="M 70 32 C 105 32, 120 62, 120 90 C 120 125, 98 148, 70 148 C 42 148, 20 125, 20 90 C 20 62, 35 32, 70 32 Z"
+                      fill="none" stroke="#FAFAF9" stroke-width="2.5"/>
+                <path d="M 70 60 L 70 125" fill="none" stroke="#FAFAF9" stroke-width="2" stroke-linecap="round"/>
+                <path d="M 85 72 C 85 65, 78 60, 70 60 C 62 60, 55 65, 55 72 C 55 79, 62 84, 70 84 C 78 84, 85 89, 85 96 C 85 103, 78 108, 70 108 C 62 108, 55 103, 55 96"
+                      fill="none" stroke="#FAFAF9" stroke-width="2" stroke-linecap="round"/>
+                <path d="M 70 32 C 70 22, 72 14, 78 8"
+                      fill="none" stroke="#FAFAF9" stroke-width="2" stroke-linecap="round"/>
+                <path d="M 73 18 C 83 8, 100 6, 112 12"
+                      fill="none" stroke="#FAFAF9" stroke-width="2" stroke-linecap="round"/>
+            </svg>
+        </div>
+        <div class="card card-light">
+            <span class="card-label">Con texto</span>
+            <svg width="230" height="170" viewBox="0 0 330 170">
+                <path d="M 70 32 C 105 32, 120 62, 120 90 C 120 125, 98 148, 70 148 C 42 148, 20 125, 20 90 C 20 62, 35 32, 70 32 Z"
+                      fill="none" stroke="#1C1917" stroke-width="2.5"/>
+                <path d="M 70 60 L 70 125" fill="none" stroke="#1C1917" stroke-width="2" stroke-linecap="round"/>
+                <path d="M 85 72 C 85 65, 78 60, 70 60 C 62 60, 55 65, 55 72 C 55 79, 62 84, 70 84 C 78 84, 85 89, 85 96 C 85 103, 78 108, 70 108 C 62 108, 55 103, 55 96"
+                      fill="none" stroke="#1C1917" stroke-width="2" stroke-linecap="round"/>
+                <path d="M 70 32 C 70 22, 72 14, 78 8"
+                      fill="none" stroke="#1C1917" stroke-width="2" stroke-linecap="round"/>
+                <path d="M 73 18 C 83 8, 100 6, 112 12"
+                      fill="none" stroke="#1C1917" stroke-width="2" stroke-linecap="round"/>
+                <text x="230" y="98" text-anchor="middle"
+                      font-family="Inter, sans-serif" font-weight="600" font-size="28"
+                      fill="#1C1917" letter-spacing="6">mangos</text>
+            </svg>
+        </div>
+    </div>
+</div>
+
+
+</body>
+</html>

@@ -1,0 +1,11 @@
+CREATE TABLE users (
+    id VARCHAR(36) NOT NULL PRIMARY KEY,
+    email VARCHAR(255) NOT NULL,
+    name VARCHAR(100) NOT NULL,
+    avatar_url VARCHAR(500),
+    google_id VARCHAR(100) NOT NULL,
+    created_ts TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_ts TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    UNIQUE KEY uk_google_id (google_id),
+    UNIQUE KEY uk_email (email)
+);

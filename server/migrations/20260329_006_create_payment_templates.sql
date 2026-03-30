@@ -1,0 +1,12 @@
+CREATE TABLE payment_templates (
+    id VARCHAR(36) NOT NULL PRIMARY KEY,
+    user_id VARCHAR(36) NOT NULL,
+    name VARCHAR(200) NOT NULL,
+    category_id VARCHAR(36),
+    description VARCHAR(500) DEFAULT '',
+    usage_count INT UNSIGNED NOT NULL DEFAULT 0,
+    created_ts TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_ts TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (category_id) REFERENCES expense_categories(id) ON DELETE SET NULL
+);

@@ -34,5 +34,16 @@ service-account.json
 **/scripts/update-privileges-to-users*.js
 **/scripts/export-prod-to-develop.js
 
+# PHP config with credentials
+server/config.php
+server/api/config.php
+server/.google-certs-cache.json
+server/vendor/
+app/includes/config.php
+
+# App compiled assets
+app/assets/css/output.css
+app/node_modules/
+
 # VSCode
 .vscode
