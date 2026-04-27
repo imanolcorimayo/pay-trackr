@@ -20,17 +20,28 @@ window.api = {
     }
 
     // Build URL with query params
-    let url = `/api${endpoint}`;
+    let url = `${window.MANGOS_API_URL}${endpoint}`;
     if (options.params) {
       const qs = new URLSearchParams(options.params).toString();
       url += `?${qs}`;
     }
 
-    const response = await fetch(url, fetchOpts);
+    let response;
+    try {
+      response = await fetch(url, fetchOpts);
+    } catch (err) {
+      console.error('API network error:', err);
+      return [];
+    }
 
     if (response.status === 401) {
       window.mangosAuth.signOut();
       return null;
+    }
+
+    if (!response.ok) {
+      console.error('API error:', response.status, await response.text());
+      return [];
     }
 
     return response.json();

@@ -15,7 +15,7 @@ use Firebase\JWT\Key;
 
 define('FIREBASE_PROJECT_ID', 'pay-tracker-7a5a6');
 define('GOOGLE_CERTS_URL', 'https://www.googleapis.com/robot/v1/metadata/x509/securetoken@system.gserviceaccount.com');
-define('CERTS_CACHE_FILE', __DIR__ . '/../.google-certs-cache.json');
+define('CERTS_CACHE_FILE', sys_get_temp_dir() . '/mangos-google-certs-cache.json');
 define('CERTS_CACHE_TTL', 3600);
 
 /**

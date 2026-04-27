@@ -8,7 +8,15 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="<?= asset('/assets/css/output.css') ?>">
-    <script>window.MANGOS_CONFIG = <?= json_encode($config['firebase']) ?>;</script>
+    <script>
+        window.MANGOS_CONFIG = <?= json_encode($config['firebase']) ?>;
+        <?php
+            // Derive API host from current host: mangos.X → mangos-api.X
+            $apiHost = preg_replace('/^([^.]+)/', '$1-api', $_SERVER['HTTP_HOST'] ?? '');
+            $scheme  = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+        ?>
+        window.MANGOS_API_URL = <?= json_encode($scheme . '://' . $apiHost) ?>;
+    </script>
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
     <script src="<?= asset('/assets/js/auth.js') ?>"></script>
