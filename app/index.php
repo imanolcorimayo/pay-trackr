@@ -5,6 +5,7 @@
  * Dev server: php -S localhost:3000 index.php
  */
 
+require __DIR__ . '/includes/helpers.php';
 $config = require __DIR__ . '/includes/config.php';
 
 // Serve static assets directly in dev server
