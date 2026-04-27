@@ -1,4 +1,4 @@
-CREATE TABLE fcm_tokens (
+CREATE TABLE fcm_token (
     id VARCHAR(36) NOT NULL PRIMARY KEY,
     user_id VARCHAR(36) NOT NULL,
     token TEXT NOT NULL,
@@ -6,7 +6,7 @@ CREATE TABLE fcm_tokens (
     notifications_enabled TINYINT(1) NOT NULL DEFAULT 1,
     created_ts TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_ts TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES `user`(id) ON DELETE CASCADE,
     INDEX idx_user_id (user_id),
     INDEX idx_device_id (device_id)
 );

@@ -6,6 +6,17 @@
       "**/.*",
       "**/node_modules/**",
       "**/scripts/**"
+    ],
+    "headers": [
+      {
+        "source": "**",
+        "headers": [
+          {
+            "key": "X-Robots-Tag",
+            "value": "noindex, nofollow"
+          }
+        ]
+      }
     ]
   }
 }

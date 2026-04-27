@@ -1,10 +1,10 @@
-CREATE TABLE default_categories (
+CREATE TABLE default_category (
     id INT AUTO_INCREMENT PRIMARY KEY,
     name VARCHAR(100) NOT NULL,
     color VARCHAR(20) NOT NULL
 );
 
-INSERT INTO default_categories (name, color) VALUES
+INSERT INTO default_category (name, color) VALUES
     ('Vivienda y Alquiler', '#4682B4'),
     ('Servicios', '#0072DF'),
     ('Supermercado', '#1D9A38'),

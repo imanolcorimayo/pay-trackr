@@ -8,8 +8,8 @@ switch (method()) {
             $stmt = $pdo->prepare(
                 "SELECT p.*, pr.name AS recipient_name, pr.cbu AS recipient_cbu,
                         pr.alias AS recipient_alias, pr.bank AS recipient_bank
-                 FROM payments p
-                 LEFT JOIN payment_recipients pr ON pr.payment_id = p.id
+                 FROM payment p
+                 LEFT JOIN payment_recipient pr ON pr.payment_id = p.id
                  WHERE p.id = ? AND p.user_id = ?"
             );
             $stmt->execute([$_GET['id'], $user_id]);
@@ -34,7 +34,7 @@ switch (method()) {
         }
 
         // List with filters
-        $sql = "SELECT * FROM payments WHERE user_id = ?";
+        $sql = "SELECT * FROM payment WHERE user_id = ?";
         $params = [$user_id];
 
         if (!empty($_GET['start_date'])) {
@@ -55,13 +55,17 @@ switch (method()) {
             $sql .= " AND is_paid = ?";
             $params[] = (int) $_GET['is_paid'];
         }
-        if (!empty($_GET['category_id'])) {
-            $sql .= " AND category_id = ?";
-            $params[] = $_GET['category_id'];
+        if (!empty($_GET['expense_category_id'])) {
+            $sql .= " AND expense_category_id = ?";
+            $params[] = $_GET['expense_category_id'];
         }
         if (!empty($_GET['recurrent_id'])) {
             $sql .= " AND recurrent_id = ?";
             $params[] = $_GET['recurrent_id'];
+        }
+        if (!empty($_GET['card_id'])) {
+            $sql .= " AND card_id = ?";
+            $params[] = $_GET['card_id'];
         }
 
         $sql .= " ORDER BY due_ts DESC, created_ts DESC";
@@ -81,10 +85,10 @@ switch (method()) {
         $paid_ts = $is_paid ? date('Y-m-d H:i:s') : null;
 
         $stmt = $pdo->prepare(
-            "INSERT INTO payments (id, user_id, title, description, amount, category_id,
-             is_paid, paid_ts, recurrent_id, payment_type, due_ts, source, status,
+            "INSERT INTO payment (id, user_id, title, description, amount, expense_category_id,
+             is_paid, paid_ts, recurrent_id, card_id, payment_type, due_ts, source, status,
              needs_revision, is_whatsapp, audio_transcription)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
         );
         $stmt->execute([
             $id,
@@ -92,10 +96,11 @@ switch (method()) {
             $data['title'],
             $data['description'] ?? '',
             $data['amount'],
-            $data['category_id'] ?? null,
+            $data['expense_category_id'] ?? null,
             $is_paid,
             $paid_ts,
             $data['recurrent_id'] ?? null,
+            $data['card_id'] ?? null,
             $data['payment_type'] ?? 'one-time',
             $data['due_ts'] ?? null,
             $data['source'] ?? 'manual',
@@ -109,7 +114,7 @@ switch (method()) {
         if (!empty($data['recipient']) && !empty($data['recipient']['name'])) {
             $r = $data['recipient'];
             $stmt = $pdo->prepare(
-                "INSERT INTO payment_recipients (payment_id, name, cbu, alias, bank)
+                "INSERT INTO payment_recipient (payment_id, name, cbu, alias, bank)
                  VALUES (?, ?, ?, ?, ?)"
             );
             $stmt->execute([$id, $r['name'], $r['cbu'] ?? null, $r['alias'] ?? null, $r['bank'] ?? null]);
@@ -122,9 +127,9 @@ switch (method()) {
         if (empty($id)) json_error('id is required');
 
         $data = get_json_body();
-        $allowed = ['title', 'description', 'amount', 'category_id', 'payment_type',
-                     'due_ts', 'source', 'status', 'needs_revision', 'is_whatsapp',
-                     'audio_transcription'];
+        $allowed = ['title', 'description', 'amount', 'expense_category_id', 'card_id',
+                     'payment_type', 'due_ts', 'source', 'status', 'needs_revision',
+                     'is_whatsapp', 'audio_transcription'];
         $fields = [];
         $params = [];
 
@@ -146,25 +151,28 @@ switch (method()) {
             }
         }
 
-        if (empty($fields)) json_error('Nothing to update');
+        $has_recipient = array_key_exists('recipient', $data);
+        if (empty($fields) && !$has_recipient) json_error('Nothing to update');
 
-        $params[] = $id;
-        $params[] = $user_id;
+        if (!empty($fields)) {
+            $params[] = $id;
+            $params[] = $user_id;
 
-        $stmt = $pdo->prepare(
-            "UPDATE payments SET " . implode(', ', $fields) .
-            " WHERE id = ? AND user_id = ?"
-        );
-        $stmt->execute($params);
+            $stmt = $pdo->prepare(
+                "UPDATE payment SET " . implode(', ', $fields) .
+                " WHERE id = ? AND user_id = ?"
+            );
+            $stmt->execute($params);
+        }
 
         // Handle recipient sub-object
-        if (array_key_exists('recipient', $data)) {
+        if ($has_recipient) {
             if ($data['recipient'] === null) {
-                $pdo->prepare("DELETE FROM payment_recipients WHERE payment_id = ?")->execute([$id]);
+                $pdo->prepare("DELETE FROM payment_recipient WHERE payment_id = ?")->execute([$id]);
             } elseif (!empty($data['recipient']['name'])) {
                 $r = $data['recipient'];
                 $stmt = $pdo->prepare(
-                    "REPLACE INTO payment_recipients (payment_id, name, cbu, alias, bank)
+                    "REPLACE INTO payment_recipient (payment_id, name, cbu, alias, bank)
                      VALUES (?, ?, ?, ?, ?)"
                 );
                 $stmt->execute([$id, $r['name'], $r['cbu'] ?? null, $r['alias'] ?? null, $r['bank'] ?? null]);
@@ -177,7 +185,7 @@ switch (method()) {
         $id = $_GET['id'] ?? '';
         if (empty($id)) json_error('id is required');
 
-        $stmt = $pdo->prepare("DELETE FROM payments WHERE id = ? AND user_id = ?");
+        $stmt = $pdo->prepare("DELETE FROM payment WHERE id = ? AND user_id = ?");
         $stmt->execute([$id, $user_id]);
 
         if ($stmt->rowCount() === 0) json_error('Payment not found', 404);

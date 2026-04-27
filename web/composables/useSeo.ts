@@ -9,13 +9,13 @@ const SITE_URL = 'https://paytrackr.wiseutils.com'
 const SITE_NAME = 'PayTrackr'
 const DEFAULT_IMAGE = `${SITE_URL}/img/new-logo.png`
 
-export const useSeo = ({ title, description, path, noindex = false }: SeoOptions) => {
+export const useSeo = ({ title, description, path, noindex = true }: SeoOptions) => {
   const canonicalUrl = `${SITE_URL}${path}`
 
   useHead({
     title,
     link: [{ rel: 'canonical', href: canonicalUrl }],
-    meta: noindex ? [{ name: 'robots', content: 'noindex, nofollow' }] : [],
+    meta: [{ name: 'robots', content: 'noindex, nofollow' }],
   })
 
   useSeoMeta({

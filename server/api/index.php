@@ -3,10 +3,11 @@
  * Single entry point for the API.
  *
  * Routes:
- *   /api/categories   → categories.php
+ *   /api/categories    → categories.php
  *   /api/payments      → payments.php
  *   /api/recurrents    → recurrents.php
  *   /api/templates     → templates.php
+ *   /api/cards         → card.php
  *
  * Usage with PHP built-in server:
  *   php -S localhost:8000 api/index.php
@@ -54,6 +55,10 @@ switch ($route) {
 
     case '/templates':
         require __DIR__ . '/templates.php';
+        break;
+
+    case '/cards':
+        require __DIR__ . '/card.php';
         break;
 
     default:

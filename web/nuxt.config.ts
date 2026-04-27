@@ -141,8 +141,8 @@ export default defineNuxtConfig({
       link: [{ rel: "icon", type: "image/png", href: "/img/icon-192.png" }],
       meta: [
         {
-          name: "google-site-verification",
-          content: "E0U6Yf1iG222FwlRLisvf7JLYZLZQnT8CLJ3QKo4tjQ"
+          name: "robots",
+          content: "noindex, nofollow"
         },
         {
           name: "viewport",

@@ -85,7 +85,7 @@ function require_auth(): string {
     }
 
     // Auto-create user on first login
-    $stmt = $pdo->prepare("SELECT id FROM users WHERE id = ?");
+    $stmt = $pdo->prepare("SELECT id FROM `user` WHERE id = ?");
     $stmt->execute([$uid]);
 
     if (!$stmt->fetch()) {
@@ -94,7 +94,7 @@ function require_auth(): string {
         $avatar = $payload->picture ?? null;
 
         $stmt = $pdo->prepare(
-            "INSERT INTO users (id, email, name, avatar_url, google_id) VALUES (?, ?, ?, ?, ?)"
+            "INSERT INTO `user` (id, email, name, avatar_url, google_id) VALUES (?, ?, ?, ?, ?)"
         );
         $stmt->execute([$uid, $email, $name, $avatar, $uid]);
 
@@ -105,14 +105,14 @@ function require_auth(): string {
 }
 
 /**
- * Copy default categories into expense_categories for a new user.
+ * Copy default categories into expense_category for a new user.
  */
 function seed_categories_for_user(string $user_id): void {
     global $pdo;
 
-    $defaults = $pdo->query("SELECT name, color FROM default_categories")->fetchAll();
+    $defaults = $pdo->query("SELECT name, color FROM default_category")->fetchAll();
     $stmt = $pdo->prepare(
-        "INSERT INTO expense_categories (id, user_id, name, color) VALUES (?, ?, ?, ?)"
+        "INSERT INTO expense_category (id, user_id, name, color) VALUES (?, ?, ?, ?)"
     );
 
     foreach ($defaults as $cat) {

@@ -7,13 +7,13 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/assets/css/output.css">
+    <link rel="stylesheet" href="<?= asset('/assets/css/output.css') ?>">
     <script>window.MANGOS_CONFIG = <?= json_encode($config['firebase']) ?>;</script>
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
-    <script src="/assets/js/auth.js"></script>
-    <script src="/assets/js/api.js"></script>
-    <script src="/assets/js/app.js"></script>
+    <script src="<?= asset('/assets/js/auth.js') ?>"></script>
+    <script src="<?= asset('/assets/js/api.js') ?>"></script>
+    <script src="<?= asset('/assets/js/app.js') ?>"></script>
 </head>
 <body class="min-h-screen">
 
@@ -48,6 +48,8 @@
                 ['/fijos', 'Gastos Fijos', '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>'],
                 ['/pagos', 'Pagos', '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"/>'],
                 ['/categorias', 'Categorias', '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/>'],
+                ['/tarjetas', 'Tarjetas', '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 10h18M7 15h.01M11 15h2M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>'],
+                ['/analisis', 'Analisis', '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>'],
             ];
             foreach ($navItems as [$href, $label, $icon]):
                 $active = ($route === $href) || ($href === '/' && $route === '/dashboard');
@@ -87,7 +89,7 @@
         </header>
 
         <!-- Page content -->
-        <main class="flex-1 p-4 sm:p-6 lg:p-8 max-w-5xl w-full">
+        <main class="flex-1 p-4 sm:p-6 lg:p-8 w-full">
 <?php endif; ?>
 
 <?php if ($isMinimal): ?>

@@ -26,6 +26,16 @@ switch ($route) {
         require __DIR__ . '/pages/categories.php';
         break;
 
+    case '/tarjetas':
+        $pageTitle = 'Tarjetas';
+        require __DIR__ . '/pages/cards.php';
+        break;
+
+    case '/analisis':
+        $pageTitle = 'Analisis';
+        require __DIR__ . '/pages/analytics.php';
+        break;
+
     default:
         http_response_code(404);
         $pageTitle = '404';

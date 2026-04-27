@@ -5,11 +5,11 @@
  *
  * Safe to re-run (uses INSERT IGNORE).
  * Migration order respects FK dependencies:
- *   1. users (extracted from all collections)
- *   2. expense_categories
- *   3. recurrents
- *   4. payments + payment_recipients
- *   5. fcm_tokens
+ *   1. user (extracted from all collections)
+ *   2. expense_category
+ *   3. recurrent
+ *   4. payment + payment_recipient
+ *   5. fcm_token
  */
 
 import 'dotenv/config';
@@ -84,7 +84,7 @@ log(`Found ${userIds.size} unique user(s)`);
 let usersInserted = 0;
 for (const uid of userIds) {
   const [result] = await pool.execute(
-    `INSERT IGNORE INTO users (id, email, name, google_id) VALUES (?, ?, ?, ?)`,
+    `INSERT IGNORE INTO \`user\` (id, email, name, google_id) VALUES (?, ?, ?, ?)`,
     [uid, `${uid}@placeholder.local`, uid, uid]
   );
   if (result.affectedRows > 0) usersInserted++;
@@ -97,7 +97,7 @@ for (const c of categories) {
   if (!c.userId) continue;
 
   const [result] = await pool.execute(
-    `INSERT IGNORE INTO expense_categories (id, user_id, name, color, deleted_ts, created_ts)
+    `INSERT IGNORE INTO expense_category (id, user_id, name, color, deleted_ts, created_ts)
      VALUES (?, ?, ?, ?, ?, ?)`,
     [
       c.id,
@@ -114,19 +114,19 @@ log(`Categories: ${catCount} inserted (${categories.length - catCount} skipped/e
 
 // ── Step 3: Migrate recurrents ───────────────────
 // Build a set of valid category IDs to avoid FK violations
-const [existingCats] = await pool.execute('SELECT id FROM expense_categories');
+const [existingCats] = await pool.execute('SELECT id FROM expense_category');
 const validCatIds = new Set(existingCats.map(r => r.id));
 
 let recCount = 0;
 for (const r of recurrents) {
   if (!r.userId) continue;
 
-  const categoryId = r.categoryId && validCatIds.has(r.categoryId) ? r.categoryId : null;
+  const expenseCategoryId = r.categoryId && validCatIds.has(r.categoryId) ? r.categoryId : null;
 
   const [result] = await pool.execute(
-    `INSERT IGNORE INTO recurrents (id, user_id, title, description, amount, start_date,
-     due_date_day, end_date, time_period, category_id, is_credit_card, credit_card_id, created_ts)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    `INSERT IGNORE INTO recurrent (id, user_id, title, description, amount, start_date,
+     due_date_day, end_date, time_period, expense_category_id, created_ts)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       r.id,
       r.userId,
@@ -137,9 +137,7 @@ for (const r of recurrents) {
       parseInt(r.dueDateDay, 10) || 1,
       r.endDate || null,
       r.timePeriod || 'monthly',
-      categoryId,
-      r.isCreditCard ? 1 : 0,
-      r.creditCardId || null,
+      expenseCategoryId,
       toISO(r.createdAt),
     ]
   );
@@ -149,7 +147,7 @@ log(`Recurrents: ${recCount} inserted (${recurrents.length - recCount} skipped/e
 
 // ── Step 4: Migrate payments + recipients ────────
 // Build set of valid recurrent IDs to avoid FK violations
-const [existingRecs] = await pool.execute('SELECT id FROM recurrents');
+const [existingRecs] = await pool.execute('SELECT id FROM recurrent');
 const validRecIds = new Set(existingRecs.map(r => r.id));
 
 let payCount = 0;
@@ -158,7 +156,7 @@ let recipientCount = 0;
 for (const p of payments) {
   if (!p.userId) continue;
 
-  const categoryId = p.categoryId && validCatIds.has(p.categoryId) ? p.categoryId : null;
+  const expenseCategoryId = p.categoryId && validCatIds.has(p.categoryId) ? p.categoryId : null;
   const recurrentId = p.recurrentId && validRecIds.has(p.recurrentId) ? p.recurrentId : null;
 
   // Determine valid enum values
@@ -168,7 +166,7 @@ for (const p of payments) {
   const status = ['pending', 'reviewed'].includes(p.status) ? p.status : 'reviewed';
 
   const [result] = await pool.execute(
-    `INSERT IGNORE INTO payments (id, user_id, title, description, amount, category_id,
+    `INSERT IGNORE INTO payment (id, user_id, title, description, amount, expense_category_id,
      is_paid, paid_ts, recurrent_id, payment_type, due_ts, source, status,
      needs_revision, is_whatsapp, audio_transcription, created_ts)
      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
@@ -178,12 +176,14 @@ for (const p of payments) {
       p.title || 'Sin título',
       p.description || '',
       p.amount || 0,
-      categoryId,
+      expenseCategoryId,
       p.isPaid ? 1 : 0,
       toISO(p.paidDate),
       recurrentId,
       paymentType,
-      toISO(p.dueDate),
+      // Fall back to paidDate or createdAt so the API's due_ts-based date
+      // filter doesn't hide one-time entries that never had a due date set.
+      toISO(p.dueDate) || toISO(p.paidDate) || toISO(p.createdAt),
       source,
       status,
       p.needsRevision ? 1 : 0,
@@ -199,7 +199,7 @@ for (const p of payments) {
     // Insert recipient if present
     if (p.recipient && p.recipient.name) {
       const [rResult] = await pool.execute(
-        `INSERT IGNORE INTO payment_recipients (payment_id, name, cbu, alias, bank)
+        `INSERT IGNORE INTO payment_recipient (payment_id, name, cbu, alias, bank)
          VALUES (?, ?, ?, ?, ?)`,
         [
           p.id,
@@ -222,7 +222,7 @@ for (const t of fcmTokens) {
   if (!t.userId || !t.token) continue;
 
   const [result] = await pool.execute(
-    `INSERT IGNORE INTO fcm_tokens (id, user_id, token, device_id, notifications_enabled, created_ts)
+    `INSERT IGNORE INTO fcm_token (id, user_id, token, device_id, notifications_enabled, created_ts)
      VALUES (?, ?, ?, ?, ?, ?)`,
     [
       t.id,
@@ -242,12 +242,12 @@ log('');
 log('=== Migration Complete ===');
 
 const [counts] = await pool.execute(`
-  SELECT 'users' AS tbl, COUNT(*) AS cnt FROM users
-  UNION ALL SELECT 'expense_categories', COUNT(*) FROM expense_categories
-  UNION ALL SELECT 'recurrents', COUNT(*) FROM recurrents
-  UNION ALL SELECT 'payments', COUNT(*) FROM payments
-  UNION ALL SELECT 'payment_recipients', COUNT(*) FROM payment_recipients
-  UNION ALL SELECT 'fcm_tokens', COUNT(*) FROM fcm_tokens
+  SELECT 'user' AS tbl, COUNT(*) AS cnt FROM \`user\`
+  UNION ALL SELECT 'expense_category', COUNT(*) FROM expense_category
+  UNION ALL SELECT 'recurrent', COUNT(*) FROM recurrent
+  UNION ALL SELECT 'payment', COUNT(*) FROM payment
+  UNION ALL SELECT 'payment_recipient', COUNT(*) FROM payment_recipient
+  UNION ALL SELECT 'fcm_token', COUNT(*) FROM fcm_token
 `);
 
 for (const row of counts) {

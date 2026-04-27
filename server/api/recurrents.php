@@ -4,7 +4,7 @@
 switch (method()) {
     case 'GET':
         if (!empty($_GET['id'])) {
-            $stmt = $pdo->prepare("SELECT * FROM recurrents WHERE id = ? AND user_id = ?");
+            $stmt = $pdo->prepare("SELECT * FROM recurrent WHERE id = ? AND user_id = ?");
             $stmt->execute([$_GET['id'], $user_id]);
             $row = $stmt->fetch();
 
@@ -12,7 +12,7 @@ switch (method()) {
             json_response($row);
         }
 
-        $stmt = $pdo->prepare("SELECT * FROM recurrents WHERE user_id = ? ORDER BY title");
+        $stmt = $pdo->prepare("SELECT * FROM recurrent WHERE user_id = ? ORDER BY title");
         $stmt->execute([$user_id]);
         json_response($stmt->fetchAll());
 
@@ -25,9 +25,9 @@ switch (method()) {
         $id = bin2hex(random_bytes(14));
 
         $stmt = $pdo->prepare(
-            "INSERT INTO recurrents (id, user_id, title, description, amount, start_date,
-             due_date_day, end_date, time_period, category_id, is_credit_card, credit_card_id)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+            "INSERT INTO recurrent (id, user_id, title, description, amount, start_date,
+             due_date_day, end_date, time_period, expense_category_id, card_id)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
         );
         $stmt->execute([
             $id,
@@ -39,9 +39,8 @@ switch (method()) {
             (int) $data['due_date_day'],
             $data['end_date'] ?? null,
             $data['time_period'] ?? 'monthly',
-            $data['category_id'] ?? null,
-            !empty($data['is_credit_card']) ? 1 : 0,
-            $data['credit_card_id'] ?? null,
+            $data['expense_category_id'] ?? null,
+            $data['card_id'] ?? null,
         ]);
 
         json_response(['id' => $id], 201);
@@ -52,7 +51,7 @@ switch (method()) {
 
         $data = get_json_body();
         $allowed = ['title', 'description', 'amount', 'start_date', 'due_date_day',
-                     'end_date', 'time_period', 'category_id', 'is_credit_card', 'credit_card_id'];
+                     'end_date', 'time_period', 'expense_category_id', 'card_id'];
         $fields = [];
         $params = [];
 
@@ -69,7 +68,7 @@ switch (method()) {
         $params[] = $user_id;
 
         $stmt = $pdo->prepare(
-            "UPDATE recurrents SET " . implode(', ', $fields) .
+            "UPDATE recurrent SET " . implode(', ', $fields) .
             " WHERE id = ? AND user_id = ?"
         );
         $stmt->execute($params);
@@ -81,18 +80,18 @@ switch (method()) {
         if (empty($id)) json_error('id is required');
 
         // Verify ownership
-        $stmt = $pdo->prepare("SELECT id FROM recurrents WHERE id = ? AND user_id = ?");
+        $stmt = $pdo->prepare("SELECT id FROM recurrent WHERE id = ? AND user_id = ?");
         $stmt->execute([$id, $user_id]);
         if (!$stmt->fetch()) json_error('Recurrent not found', 404);
 
         // Cascade delete: instances first, then template
         $pdo->beginTransaction();
         try {
-            $stmt = $pdo->prepare("DELETE FROM payments WHERE recurrent_id = ? AND user_id = ?");
+            $stmt = $pdo->prepare("DELETE FROM payment WHERE recurrent_id = ? AND user_id = ?");
             $stmt->execute([$id, $user_id]);
             $instances_deleted = $stmt->rowCount();
 
-            $pdo->prepare("DELETE FROM recurrents WHERE id = ? AND user_id = ?")->execute([$id, $user_id]);
+            $pdo->prepare("DELETE FROM recurrent WHERE id = ? AND user_id = ?")->execute([$id, $user_id]);
 
             $pdo->commit();
             json_response(['deleted' => true, 'instances_deleted' => $instances_deleted]);
