@@ -21,7 +21,6 @@ CREATE TABLE payment (
     FOREIGN KEY (user_id) REFERENCES `user`(id) ON DELETE CASCADE,
     FOREIGN KEY (expense_category_id) REFERENCES expense_category(id) ON DELETE SET NULL,
     FOREIGN KEY (recurrent_id) REFERENCES recurrent(id) ON DELETE SET NULL,
-    FOREIGN KEY (card_id) REFERENCES card(id) ON DELETE SET NULL,
     INDEX idx_user_type_due (user_id, payment_type, due_ts),
     INDEX idx_user_created (user_id, created_ts),
     INDEX idx_recurrent (recurrent_id)
