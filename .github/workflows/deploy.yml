@@ -1,0 +1,27 @@
+name: Deploy to DigitalOcean
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'app/**'
+      - 'server/**'
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.DO_HOST }}
+          username: root
+          key: ${{ secrets.DO_SSH_KEY }}
+          script: |
+            set -e
+            cd /var/www/pay-trackr
+            git pull origin main
+            cd server && composer install --no-dev --optimize-autoloader
+            cd ../app && npm ci && npm run build
+            cd .. && php server/migrate.php
+            echo "Deployed at $(date)"
