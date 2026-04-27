@@ -36,6 +36,11 @@ switch ($route) {
         require __DIR__ . '/pages/analytics.php';
         break;
 
+    case '/capturar':
+        $pageTitle = 'Capturar';
+        require __DIR__ . '/pages/capture.php';
+        break;
+
     default:
         http_response_code(404);
         $pageTitle = '404';

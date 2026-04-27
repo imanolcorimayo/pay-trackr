@@ -11,7 +11,7 @@ CREATE TABLE payment (
     card_id VARCHAR(36),
     payment_type ENUM('one-time', 'recurrent') NOT NULL DEFAULT 'one-time',
     due_ts TIMESTAMP NULL DEFAULT NULL,
-    source ENUM('manual', 'whatsapp-text', 'whatsapp-audio', 'whatsapp-image', 'whatsapp-pdf') NOT NULL DEFAULT 'manual',
+    source ENUM('manual', 'whatsapp-text', 'whatsapp-audio', 'whatsapp-image', 'whatsapp-pdf', 'ai-image') NOT NULL DEFAULT 'manual',
     status ENUM('pending', 'reviewed') NOT NULL DEFAULT 'reviewed',
     needs_revision TINYINT(1) NOT NULL DEFAULT 0,
     is_whatsapp TINYINT(1) NOT NULL DEFAULT 0,

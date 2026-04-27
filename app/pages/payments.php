@@ -4,12 +4,21 @@
         <h1 class="text-2xl font-semibold">Pagos</h1>
         <p class="text-sm text-muted mt-1">Todos tus pagos del mes</p>
     </div>
-    <button class="btn btn-primary" onclick="openPaymentModal()">
-        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
-        </svg>
-        Nuevo
-    </button>
+    <div class="flex items-center gap-2">
+        <a href="/capturar" class="btn btn-outline" title="Capturar con IA desde una imagen">
+            <svg class="w-4 h-4 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-6.857 2.286L12 21l-2.286-6.857L3 12l6.857-2.286L12 3z"/>
+            </svg>
+            Capturar
+        </a>
+        <button class="btn btn-primary" onclick="openPaymentModal()">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+            </svg>
+            Nuevo
+        </button>
+    </div>
 </div>
 
 <!-- Filter bar -->

@@ -4,12 +4,21 @@
         <h1 class="text-2xl font-semibold">Gastos Fijos</h1>
         <p class="text-sm text-muted mt-1">Pagos recurrentes que se repiten cada mes</p>
     </div>
-    <button class="btn btn-primary" onclick="openRecurrentModal()">
-        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
-        </svg>
-        Nuevo
-    </button>
+    <div class="flex items-center gap-2">
+        <a href="/capturar" class="btn btn-outline" title="Capturar con IA desde una imagen">
+            <svg class="w-4 h-4 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-6.857 2.286L12 21l-2.286-6.857L3 12l6.857-2.286L12 3z"/>
+            </svg>
+            Capturar
+        </a>
+        <button class="btn btn-primary" onclick="openRecurrentModal()">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+            </svg>
+            Nuevo
+        </button>
+    </div>
 </div>
 
 <!-- Summary card -->
@@ -117,6 +126,14 @@
                 <div>
                     <label for="rec-description" class="block text-sm font-medium mb-1.5">Descripcion</label>
                     <textarea id="rec-description" class="input min-h-[64px]" maxlength="500" rows="2"></textarea>
+                </div>
+
+                <div>
+                    <label for="rec-aliases" class="block text-sm font-medium mb-1.5">
+                        Aliases <span class="text-muted text-xs font-normal">(uno por linea — para que la IA matchee)</span>
+                    </label>
+                    <textarea id="rec-aliases" class="input min-h-[64px]" rows="3"
+                              placeholder="NAVARRO AMADEO ANDRES&#10;Navarro Amadeo"></textarea>
                 </div>
 
                 <p id="rec-form-error" class="hidden text-sm text-danger">&nbsp;</p>
@@ -444,6 +461,7 @@ function openRecurrentModal(r) {
     document.getElementById('rec-start').value = r?.start_date || '';
     document.getElementById('rec-end').value = r?.end_date || '';
     document.getElementById('rec-description').value = r?.description || '';
+    document.getElementById('rec-aliases').value = (r?.aliases || []).join('\n');
 
     document.getElementById('rec-form-error').classList.add('hidden');
     document.getElementById('recurrent-modal').classList.remove('hidden');
@@ -487,6 +505,9 @@ async function submitRecurrentForm(e) {
         return;
     }
 
+    const aliases = document.getElementById('rec-aliases').value
+        .split('\n').map(s => s.trim()).filter(Boolean);
+
     const body = {
         title: document.getElementById('rec-title').value.trim(),
         amount: amountNum,
@@ -497,6 +518,7 @@ async function submitRecurrentForm(e) {
         start_date: document.getElementById('rec-start').value || null,
         end_date: document.getElementById('rec-end').value || null,
         description: document.getElementById('rec-description').value.trim(),
+        aliases,
     };
 
     try {
