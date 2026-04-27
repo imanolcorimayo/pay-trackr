@@ -10,12 +10,7 @@
     <link rel="stylesheet" href="<?= asset('/assets/css/output.css') ?>">
     <script>
         window.MANGOS_CONFIG = <?= json_encode($config['firebase']) ?>;
-        <?php
-            // Derive API host from current host: mangos.X → mangos-api.X
-            $apiHost = preg_replace('/^([^.]+)/', '$1-api', $_SERVER['HTTP_HOST'] ?? '');
-            $scheme  = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
-        ?>
-        window.MANGOS_API_URL = <?= json_encode($scheme . '://' . $apiHost) ?>;
+        window.MANGOS_API_URL = <?= json_encode($config['api_url']) ?>;
     </script>
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
