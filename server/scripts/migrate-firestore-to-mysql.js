@@ -35,11 +35,25 @@ if (!admin.apps.length) {
 const db = admin.firestore();
 
 // ── MySQL Init ───────────────────────────────────
+// Reads DB creds from server/config.php so prod/local stay in sync
+import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
+import { dirname, join } from 'node:path';
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const configPhp = readFileSync(join(__dirname, '..', 'config.php'), 'utf8');
+const dbCfg = {};
+for (const key of ['host', 'name', 'user', 'pass']) {
+  const m = configPhp.match(new RegExp(`'${key}'\\s*=>\\s*'([^']*)'`));
+  if (!m) throw new Error(`Missing db.${key} in server/config.php`);
+  dbCfg[key] = m[1];
+}
+
 const pool = await mysql.createPool({
-  host: 'localhost',
-  database: 'mangos',
-  user: 'imanol',
-  password: '1234',
+  host: dbCfg.host,
+  database: dbCfg.name,
+  user: dbCfg.user,
+  password: dbCfg.pass,
   waitForConnections: true,
 });
 
