@@ -66,3 +66,21 @@ function createToastContainer() {
   document.body.appendChild(container);
   return container;
 }
+
+// ── Keyboard inset tracking ──────────────────────
+// Exposes the on-screen keyboard's height (or any other obscured area below
+// the visual viewport) as a CSS custom property `--keyboard-inset` on <html>.
+// Bottom-sheet modals use this to keep their content above the keyboard on iOS,
+// where the layout viewport doesn't shrink when the keyboard appears.
+(function trackKeyboardInset() {
+  if (!window.visualViewport) return;
+  const root = document.documentElement;
+  function update() {
+    const vv = window.visualViewport;
+    const inset = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
+    root.style.setProperty('--keyboard-inset', inset + 'px');
+  }
+  window.visualViewport.addEventListener('resize', update);
+  window.visualViewport.addEventListener('scroll', update);
+  update();
+})();

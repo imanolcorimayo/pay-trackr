@@ -34,8 +34,10 @@
                     <span class="text-[10px] font-medium leading-none">Pagos</span>
                 </a>
 
-                <!-- Agregar con IA (raised center FAB) -->
-                <a href="/pagos#ai" class="flex items-center justify-center" aria-label="Agregar con IA"
+                <!-- Agregar con IA (raised center FAB).
+                     If already on /pagos, opens the modal in place. Otherwise navigates. -->
+                <a href="/pagos?ai=1" onclick="return mangosOpenAIFab(event)"
+                   class="flex items-center justify-center" aria-label="Agregar con IA"
                    style="touch-action: manipulation;">
                     <span class="-mt-6 w-14 h-14 rounded-full bg-accent text-white flex items-center justify-center shadow-lg active:scale-95 transition-transform ring-4 ring-light">
                         <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -117,6 +119,17 @@
 <?php endif; ?>
 
 <script>
+// Bottom-nav FAB: when already on /pagos, openAIModal is defined — call it
+// directly to avoid a full page reload. Otherwise let the link navigate normally.
+function mangosOpenAIFab(e) {
+    if (typeof window.openAIModal === 'function') {
+        e.preventDefault();
+        window.openAIModal();
+        return false;
+    }
+    return true;
+}
+
 function toggleMore() {
     const overlay = document.getElementById('more-overlay');
     const sheet = document.getElementById('more-sheet');

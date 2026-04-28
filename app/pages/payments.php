@@ -1,5 +1,10 @@
-<!-- Page header -->
-<div class="flex items-center justify-between mb-6">
+<?php
+// When arriving via the bottom-nav FAB from another page, render the AI modal
+// already-open so it appears on first paint (no wait for auth + JS init).
+$openAIOnLoad = !empty($_GET['ai']);
+?>
+<!-- Page header (desktop only — mobile topbar shows the page title; FAB covers AI input) -->
+<div class="hidden lg:flex items-center justify-between mb-6">
     <div>
         <h1 class="text-2xl font-semibold">Pagos</h1>
         <p class="text-sm text-muted mt-1">Todos tus pagos del mes</p>
@@ -28,18 +33,35 @@
     </div>
 </div>
 
+<!-- Mobile action row (Capturar + Nuevo manual; AI lives on the bottom-nav FAB) -->
+<div class="lg:hidden flex items-center justify-end gap-2 mb-3">
+    <a href="/capturar" class="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border border-border text-sm text-dark hover:bg-dark/5 active:scale-95 transition" title="Capturar batch de imagenes">
+        <svg class="w-4 h-4 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-6.857 2.286L12 21l-2.286-6.857L3 12l6.857-2.286L12 3z"/>
+        </svg>
+        <span>Capturar</span>
+    </a>
+    <button type="button" onclick="openPaymentModal()" class="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border border-border text-sm text-dark hover:bg-dark/5 active:scale-95 transition" title="Nuevo pago manual">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+        </svg>
+        <span>Manual</span>
+    </button>
+</div>
+
 <!-- Filter bar -->
 <div class="card mb-4 flex flex-col sm:flex-row sm:items-center gap-3">
-    <!-- Month nav -->
-    <div class="flex items-center gap-2 flex-shrink-0">
-        <button type="button" id="month-prev" class="p-1.5 rounded text-muted hover:text-dark hover:bg-dark/5">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <!-- Month nav (centered on mobile, left-aligned on desktop) -->
+    <div class="flex items-center justify-center sm:justify-start gap-2 flex-shrink-0">
+        <button type="button" id="month-prev" class="p-2 sm:p-1.5 rounded-lg text-muted hover:text-dark hover:bg-dark/5 active:scale-95 transition">
+            <svg class="w-5 h-5 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
             </svg>
         </button>
         <span id="month-label" class="text-sm font-medium min-w-[140px] text-center">--</span>
-        <button type="button" id="month-next" class="p-1.5 rounded text-muted hover:text-dark hover:bg-dark/5">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <button type="button" id="month-next" class="p-2 sm:p-1.5 rounded-lg text-muted hover:text-dark hover:bg-dark/5 active:scale-95 transition">
+            <svg class="w-5 h-5 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
             </svg>
         </button>
@@ -47,11 +69,11 @@
 
     <div class="hidden sm:block w-px h-6 bg-border"></div>
 
-    <!-- Status tabs -->
-    <div class="flex gap-1 text-sm" id="status-tabs">
-        <button type="button" data-status="all" class="px-3 py-1.5 rounded-lg transition-colors hover:bg-dark/5">Todos</button>
-        <button type="button" data-status="unpaid" class="px-3 py-1.5 rounded-lg transition-colors hover:bg-dark/5">Pendientes</button>
-        <button type="button" data-status="paid" class="px-3 py-1.5 rounded-lg transition-colors hover:bg-dark/5">Pagados</button>
+    <!-- Status tabs (equal-width row on mobile, inline tabs on desktop) -->
+    <div class="grid grid-cols-3 sm:flex gap-1 text-sm" id="status-tabs">
+        <button type="button" data-status="all" class="px-3 py-2 sm:py-1.5 rounded-lg transition-colors hover:bg-dark/5">Todos</button>
+        <button type="button" data-status="unpaid" class="px-3 py-2 sm:py-1.5 rounded-lg transition-colors hover:bg-dark/5">Pendientes</button>
+        <button type="button" data-status="paid" class="px-3 py-2 sm:py-1.5 rounded-lg transition-colors hover:bg-dark/5">Pagados</button>
     </div>
 
     <div class="hidden sm:block flex-1"></div>
@@ -62,11 +84,14 @@
     </select>
 </div>
 
-<!-- Summary -->
+<!-- Summary
+     Mobile (<sm): Total full-width hero, Pagados + Pendientes split row, Fijos/Unicos hidden.
+     sm-lg:        Total + Pagados + Pendientes in 3 cols, Fijos/Unicos hidden.
+     lg+:          All 5 cards. -->
 <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 mb-4">
-    <div class="card py-3">
+    <div class="card py-3 col-span-2 sm:col-span-1">
         <p class="text-xs font-semibold tracking-wide uppercase text-muted">Total</p>
-        <p class="text-lg font-bold mt-0.5" id="sum-total">--</p>
+        <p class="text-xl sm:text-lg font-bold mt-0.5" id="sum-total">--</p>
         <p class="text-xs text-muted mt-0.5" id="sum-total-count">&nbsp;</p>
     </div>
     <div class="card py-3">
@@ -79,12 +104,12 @@
         <p class="text-lg font-bold mt-0.5" id="sum-unpaid">--</p>
         <p class="text-xs text-muted mt-0.5" id="sum-unpaid-count">&nbsp;</p>
     </div>
-    <div class="card py-3">
+    <div class="card py-3 hidden lg:block">
         <p class="text-xs font-semibold tracking-wide uppercase text-muted">Fijos</p>
         <p class="text-lg font-bold mt-0.5" id="sum-fijo">--</p>
         <p class="text-xs text-muted mt-0.5" id="sum-fijo-count">&nbsp;</p>
     </div>
-    <div class="card py-3">
+    <div class="card py-3 hidden lg:block">
         <p class="text-xs font-semibold tracking-wide uppercase text-muted">Unicos</p>
         <p class="text-lg font-bold mt-0.5" id="sum-unico">--</p>
         <p class="text-xs text-muted mt-0.5" id="sum-unico-count">&nbsp;</p>
@@ -103,9 +128,16 @@
 </div>
 
 <!-- ─────────────────────────── Form modal ─────────────────────────── -->
-<div id="payment-modal" class="fixed inset-0 z-50 hidden bg-dark/40 overflow-y-auto">
-    <div class="min-h-full flex items-center justify-center p-4">
-        <div class="bg-white rounded-xl border border-border w-full max-w-lg">
+<div id="payment-modal" class="fixed inset-0 z-50 hidden bg-dark/40">
+    <!-- bottom: var(--keyboard-inset) lifts the sheet above the on-screen keyboard on iOS;
+         max-h: 85dvh shrinks the sheet with the visual viewport when the keyboard opens. -->
+    <div class="absolute inset-x-0 bottom-0 sm:inset-0 sm:flex sm:items-center sm:justify-center sm:p-4"
+         style="bottom: var(--keyboard-inset, 0px);">
+        <div class="bg-white rounded-t-2xl sm:rounded-xl border-t sm:border border-border w-full sm:max-w-lg max-h-[85dvh] sm:max-h-[92vh] overflow-y-auto safe-bottom">
+            <!-- Drag handle (mobile only, tap to close) -->
+            <button type="button" onclick="closePaymentModal()" class="w-full pt-2 pb-1 flex justify-center sm:hidden" aria-label="Cerrar">
+                <div class="w-10 h-1 rounded-full bg-border"></div>
+            </button>
             <header class="px-5 py-4 border-b border-border flex items-center justify-between">
                 <h2 id="payment-modal-title" class="text-lg font-semibold">Nuevo pago</h2>
                 <button type="button" onclick="closePaymentModal()" class="text-muted hover:text-dark p-1 -m-1">
@@ -210,7 +242,13 @@
 
                 <p id="pmt-form-error" class="hidden text-sm text-danger">&nbsp;</p>
 
-                <div class="flex justify-end gap-2 pt-2">
+                <div class="flex items-center gap-2 pt-2">
+                    <!-- Delete: only shown when editing an existing payment -->
+                    <button type="button" id="pmt-form-delete" onclick="deleteFromPaymentModal()"
+                            class="hidden text-sm text-danger hover:bg-danger/5 px-3 py-2 rounded-lg transition-colors">
+                        Eliminar
+                    </button>
+                    <div class="flex-1"></div>
                     <button type="button" onclick="closePaymentModal()" class="btn btn-ghost">Cancelar</button>
                     <button type="submit" id="pmt-form-submit" class="btn btn-primary">Guardar</button>
                 </div>
@@ -221,25 +259,37 @@
 
 <!-- ─────────────────────────── Confirm delete ─────────────────────────── -->
 <div id="payment-delete-modal" class="fixed inset-0 z-50 hidden bg-dark/40">
-    <div class="min-h-full flex items-center justify-center p-4">
-        <div class="bg-white rounded-xl border border-border w-full max-w-sm p-5">
-            <h2 class="text-lg font-semibold">Eliminar pago</h2>
-            <p class="text-sm text-muted mt-2">
-                Vas a eliminar <span id="pmt-delete-name" class="font-medium text-dark"></span>.
-                Esta accion no se puede deshacer.
-            </p>
-            <div class="flex justify-end gap-2 mt-5">
-                <button type="button" onclick="closePaymentDelete()" class="btn btn-ghost">Cancelar</button>
-                <button type="button" onclick="confirmPaymentDelete()" id="pmt-delete-submit" class="btn btn-danger">Eliminar</button>
+    <div class="absolute inset-x-0 bottom-0 sm:inset-0 sm:flex sm:items-center sm:justify-center sm:p-4"
+         style="bottom: var(--keyboard-inset, 0px);">
+        <div class="bg-white rounded-t-2xl sm:rounded-xl border-t sm:border border-border w-full sm:max-w-sm safe-bottom">
+            <!-- Drag handle (mobile only, tap to close) -->
+            <button type="button" onclick="closePaymentDelete()" class="w-full pt-2 pb-1 flex justify-center sm:hidden" aria-label="Cerrar">
+                <div class="w-10 h-1 rounded-full bg-border"></div>
+            </button>
+            <div class="p-5">
+                <h2 class="text-lg font-semibold">Eliminar pago</h2>
+                <p class="text-sm text-muted mt-2">
+                    Vas a eliminar <span id="pmt-delete-name" class="font-medium text-dark"></span>.
+                    Esta accion no se puede deshacer.
+                </p>
+                <div class="flex justify-end gap-2 mt-5">
+                    <button type="button" onclick="closePaymentDelete()" class="btn btn-ghost">Cancelar</button>
+                    <button type="button" onclick="confirmPaymentDelete()" id="pmt-delete-submit" class="btn btn-danger">Eliminar</button>
+                </div>
             </div>
         </div>
     </div>
 </div>
 
 <!-- ─────────────────────────── AI input modal ─────────────────────────── -->
-<div id="ai-input-modal" class="fixed inset-0 z-50 hidden bg-dark/40 overflow-y-auto">
-    <div class="min-h-full flex items-center justify-center p-4">
-        <div class="bg-white rounded-xl border border-border w-full max-w-lg">
+<div id="ai-input-modal" class="fixed inset-0 z-50 <?= $openAIOnLoad ? '' : 'hidden ' ?>bg-dark/40">
+    <div class="absolute inset-x-0 bottom-0 sm:inset-0 sm:flex sm:items-center sm:justify-center sm:p-4"
+         style="bottom: var(--keyboard-inset, 0px);">
+        <div class="bg-white rounded-t-2xl sm:rounded-xl border-t sm:border border-border w-full sm:max-w-lg max-h-[85dvh] sm:max-h-[92vh] overflow-y-auto safe-bottom">
+            <!-- Drag handle (mobile only, tap to close) -->
+            <button type="button" onclick="closeAIModal()" class="w-full pt-2 pb-1 flex justify-center sm:hidden" aria-label="Cerrar">
+                <div class="w-10 h-1 rounded-full bg-border"></div>
+            </button>
             <header class="px-5 py-4 border-b border-border flex items-center justify-between">
                 <h2 class="text-lg font-semibold">Agregar con IA</h2>
                 <button type="button" onclick="closeAIModal()" class="text-muted hover:text-dark p-1 -m-1">
@@ -250,12 +300,12 @@
             </header>
 
             <div class="p-5 space-y-4">
-                <!-- Mode tabs -->
+                <!-- Mode tabs (text active by default — JS keeps these classes in sync after init) -->
                 <div class="flex gap-1 p-1 bg-dark/5 rounded-lg">
-                    <button type="button" data-mode="text" class="ai-mode-tab flex-1 text-sm py-2 rounded-md transition-colors">Texto</button>
-                    <button type="button" data-mode="image" class="ai-mode-tab flex-1 text-sm py-2 rounded-md transition-colors">Foto</button>
-                    <button type="button" data-mode="audio" class="ai-mode-tab flex-1 text-sm py-2 rounded-md transition-colors">Audio</button>
-                    <button type="button" data-mode="pdf" class="ai-mode-tab flex-1 text-sm py-2 rounded-md transition-colors">PDF</button>
+                    <button type="button" data-mode="text" class="ai-mode-tab flex-1 text-sm py-2 rounded-md transition-colors bg-white shadow-sm text-dark font-medium">Texto</button>
+                    <button type="button" data-mode="image" class="ai-mode-tab flex-1 text-sm py-2 rounded-md transition-colors text-muted">Foto</button>
+                    <button type="button" data-mode="audio" class="ai-mode-tab flex-1 text-sm py-2 rounded-md transition-colors text-muted">Audio</button>
+                    <button type="button" data-mode="pdf" class="ai-mode-tab flex-1 text-sm py-2 rounded-md transition-colors text-muted">PDF</button>
                 </div>
 
                 <!-- Text mode -->
@@ -396,6 +446,18 @@ function readUrlState() {
     if (p.has('category')) categoryFilter = p.get('category');
 }
 
+// Mobile FAB lands on /pagos?ai=1 (or legacy /pagos#ai) when the user wants the
+// AI input modal. Detect either, strip from URL, and open the modal.
+function openAIFromUrl() {
+    const params = new URLSearchParams(window.location.search);
+    const wantsAI = params.get('ai') === '1' || window.location.hash === '#ai';
+    if (!wantsAI) return;
+    params.delete('ai');
+    const qs = params.toString();
+    history.replaceState(null, '', window.location.pathname + (qs ? '?' + qs : ''));
+    openAIModal();
+}
+
 function writeUrlState() {
     const y = viewMonth.getFullYear();
     const m = String(viewMonth.getMonth() + 1).padStart(2, '0');
@@ -463,6 +525,24 @@ function todayISODate() {
 }
 function categoryById(id) { return categories.find(c => c.id === id); }
 function cardById(id)     { return cards.find(c => c.id === id); }
+
+// Origin label shown in the row's subline. Keeps 'manual' silent so default
+// rows stay clean. Whatsapp variants collapse to a single label since the
+// distinction (text vs audio vs image) isn't useful at the row level.
+function labelForSource(source) {
+    switch (source) {
+        case 'ai-text':  return 'IA texto';
+        case 'ai-image': return 'IA foto';
+        case 'ai-audio': return 'IA audio';
+        case 'ai-pdf':   return 'IA PDF';
+        case 'whatsapp-text':
+        case 'whatsapp-audio':
+        case 'whatsapp-image':
+        case 'whatsapp-pdf':
+            return 'whatsapp';
+        default: return null;
+    }
+}
 
 function hexToRgba(hex, alpha) {
     if (!hex || hex.length < 7) return null;
@@ -621,12 +701,12 @@ function renderPayments() {
 
 function buildPaymentRow(p, isPaid, isOverdue, isLast) {
     const row = document.createElement('div');
-    row.className = `group flex items-center gap-3 py-3 px-1 cursor-pointer hover:bg-dark/5 -mx-1 rounded transition-colors ${isLast ? '' : 'border-b border-border'}`;
+    row.className = `group flex items-center gap-3 py-3.5 sm:py-3 px-1 cursor-pointer hover:bg-dark/5 active:bg-dark/5 -mx-1 rounded transition-colors ${isLast ? '' : 'border-b border-border'}`;
     row.addEventListener('click', () => openPaymentModal(p));
 
     const cat = categoryById(p.expense_category_id);
     const dot = document.createElement('div');
-    dot.className = 'h-2.5 w-2.5 rounded-full flex-shrink-0';
+    dot.className = 'h-3 w-3 sm:h-2.5 sm:w-2.5 rounded-full flex-shrink-0';
     dot.style.backgroundColor = cat?.color || '#E8E2DA';
     dot.title = cat?.name || 'Sin categoria';
     row.appendChild(dot);
@@ -635,7 +715,7 @@ function buildPaymentRow(p, isPaid, isOverdue, isLast) {
     info.className = 'flex-1 min-w-0';
 
     const titleRow = document.createElement('p');
-    titleRow.className = 'text-sm font-medium flex items-center gap-1.5 min-w-0';
+    titleRow.className = 'text-[15px] sm:text-sm font-medium flex items-center gap-1.5 min-w-0';
 
     if (p.payment_type === 'recurrent') {
         const recIcon = svgIcon(ICON_RECURRENT, 'w-3.5 h-3.5 text-muted flex-shrink-0');
@@ -659,10 +739,11 @@ function buildPaymentRow(p, isPaid, isOverdue, isLast) {
     }
     const card = cardById(p.card_id);
     if (card) subParts.push(card.name + (card.last_four ? ` ····${card.last_four}` : ''));
-    if (p.is_whatsapp == 1) subParts.push('whatsapp');
+    const sourceLabel = labelForSource(p.source);
+    if (sourceLabel) subParts.push(sourceLabel);
 
     const sub = document.createElement('p');
-    sub.className = 'text-xs text-muted truncate';
+    sub.className = 'text-xs text-muted truncate mt-0.5';
     sub.textContent = subParts.join(' · ') || ' ';
     info.appendChild(sub);
 
@@ -672,17 +753,18 @@ function buildPaymentRow(p, isPaid, isOverdue, isLast) {
     right.className = 'flex items-center gap-2 flex-shrink-0';
 
     const amount = document.createElement('span');
-    amount.className = 'text-sm font-semibold';
+    amount.className = 'text-[15px] sm:text-sm font-semibold tabular-nums';
     amount.textContent = formatPrice(p.amount);
     right.appendChild(amount);
 
     const badge = document.createElement('button');
     badge.type = 'button';
-    let variant;
-    if (isPaid) { variant = 'badge-success'; badge.textContent = 'Pagado'; }
-    else if (isOverdue) { variant = 'badge-danger'; badge.textContent = 'Vencido'; }
-    else { variant = 'badge-muted'; badge.textContent = 'Pendiente'; }
-    badge.className = `badge ${variant} cursor-pointer hover:opacity-80 active:scale-95 transition disabled:opacity-50 disabled:cursor-wait`;
+    let badgeColor;
+    if (isPaid) { badgeColor = 'bg-success/10 text-success'; badge.textContent = 'Pagado'; }
+    else if (isOverdue) { badgeColor = 'bg-danger/10 text-danger'; badge.textContent = 'Vencido'; }
+    else { badgeColor = 'bg-muted/10 text-muted'; badge.textContent = 'Pendiente'; }
+    // Inline badge styling (instead of .badge component) — bigger tap target on mobile.
+    badge.className = `inline-block font-semibold tracking-wide uppercase rounded cursor-pointer hover:opacity-80 active:scale-95 transition disabled:opacity-50 disabled:cursor-wait whitespace-nowrap text-[10px] px-2.5 py-1 sm:px-2 sm:py-0.5 ${badgeColor}`;
     badge.title = isPaid ? 'Marcar como pendiente' : 'Marcar como pagado';
     badge.addEventListener('click', e => {
         e.stopPropagation();
@@ -690,8 +772,9 @@ function buildPaymentRow(p, isPaid, isOverdue, isLast) {
     });
     right.appendChild(badge);
 
+    // Edit + delete: desktop hover only. Mobile: row tap = edit; delete via the edit modal.
     const actions = document.createElement('div');
-    actions.className = 'flex gap-0.5 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity';
+    actions.className = 'hidden lg:flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity';
     actions.appendChild(iconButton(ICON_EDIT, 'text-muted hover:text-dark', () => openPaymentModal(p)));
     actions.appendChild(iconButton(ICON_TRASH, 'text-muted hover:text-danger', () => openPaymentDelete(p)));
     right.appendChild(actions);
@@ -760,8 +843,19 @@ async function openPaymentModal(p) {
     document.getElementById('pmt-recipient-indicator').textContent = r.name ? `(${r.name})` : '';
 
     document.getElementById('pmt-form-error').classList.add('hidden');
+    // Delete button: only visible when editing a real (saved) payment.
+    document.getElementById('pmt-form-delete').classList.toggle('hidden', !editingId);
     document.getElementById('payment-modal').classList.remove('hidden');
     setTimeout(() => document.getElementById('pmt-title').focus(), 50);
+}
+
+// Triggered from inside the edit modal — delegates to the existing delete confirm flow.
+function deleteFromPaymentModal() {
+    if (!editingId) return;
+    const p = payments.find(x => x.id === editingId);
+    if (!p) return;
+    closePaymentModal();
+    openPaymentDelete(p);
 }
 
 function closePaymentModal() {
@@ -1271,6 +1365,10 @@ mangosAuth.ready.then(user => {
     if (!user) return;
 
     readUrlState();
+    // Auto-open the AI input modal when arriving via the mobile FAB (?ai=1 or #ai).
+    // MUST run before setStatusFilter, which calls writeUrlState() and would otherwise
+    // strip the trigger param/hash before we get a chance to read it.
+    openAIFromUrl();
     setStatusFilter(statusFilter);
 
     document.getElementById('month-prev').addEventListener('click', () => {
@@ -1355,16 +1453,7 @@ mangosAuth.ready.then(user => {
         else if (!document.getElementById('payment-delete-modal').classList.contains('hidden')) closePaymentDelete();
     });
 
-    // Auto-open the AI input modal when arriving via the mobile FAB (#ai) or
-    // when the FAB is tapped while already on /pagos (hashchange, no reload).
-    function openAIFromHash() {
-        if (location.hash !== '#ai') return;
-        // Strip the hash so reload / back-button doesn't re-open the modal.
-        history.replaceState(null, '', location.pathname + location.search);
-        openAIModal();
-    }
-    openAIFromHash();
-    window.addEventListener('hashchange', openAIFromHash);
+    window.addEventListener('hashchange', openAIFromUrl);
 
     loadAll();
 });
