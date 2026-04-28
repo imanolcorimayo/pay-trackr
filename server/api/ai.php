@@ -14,6 +14,8 @@ if ($ai_action === 'parse-payments') {
     handle_parse_payments($pdo, $user_id);
 } elseif ($ai_action === 'commit-payments') {
     handle_commit_payments($pdo, $user_id);
+} elseif ($ai_action === 'parse-single') {
+    handle_parse_single($pdo, $user_id);
 } else {
     json_error('Unknown AI action', 404);
 }
@@ -414,4 +416,244 @@ function handle_commit_payments(PDO $pdo, string $user_id): void {
         $pdo->rollBack();
         json_error('Commit failed: ' . $e->getMessage(), 500);
     }
+}
+
+// ──────────────────────────────────────────────────────────────────
+// PARSE SINGLE
+// One-shot AI input for the "Nuevo pago" form. Accepts text, image,
+// audio or PDF and returns one structured draft to pre-fill the form.
+// ──────────────────────────────────────────────────────────────────
+
+function handle_parse_single(PDO $pdo, string $user_id): void {
+    $body = get_json_body();
+    $mode = $body['mode'] ?? '';
+
+    if (!in_array($mode, ['text', 'image', 'audio', 'pdf'], true)) {
+        json_error('mode must be one of: text, image, audio, pdf');
+    }
+
+    $parts = [];
+    $caption = trim((string)($body['caption'] ?? ''));
+    $user_input = null;
+
+    if ($mode === 'text') {
+        $text = trim((string)($body['text'] ?? ''));
+        if ($text === '') json_error('text is required for mode=text');
+        if (mb_strlen($text) > 5000) json_error('text exceeds 5000 chars', 413);
+        $user_input = $text;
+    } else {
+        $mimeType = $body['mimeType'] ?? '';
+        $data = $body['data'] ?? '';
+        if (!$mimeType || !$data) json_error('mimeType and data are required');
+
+        $size = strlen($data);
+        if ($mode === 'image') {
+            if (!str_starts_with($mimeType, 'image/')) json_error('mimeType must be image/*');
+            if ($size > 6 * 1024 * 1024) json_error('image exceeds 6MB (base64)', 413);
+        } elseif ($mode === 'pdf') {
+            if ($mimeType !== 'application/pdf') json_error('mimeType must be application/pdf');
+            if ($size > 10 * 1024 * 1024) json_error('pdf exceeds 10MB (base64)', 413);
+        } elseif ($mode === 'audio') {
+            if (!str_starts_with($mimeType, 'audio/')) json_error('mimeType must be audio/*');
+            if ($size > 8 * 1024 * 1024) json_error('audio exceeds 8MB (base64)', 413);
+        }
+
+        $parts[] = ['inlineData' => ['mimeType' => $mimeType, 'data' => $data]];
+        $user_input = $caption !== '' ? $caption : null;
+    }
+
+    $api_key = $_ENV['GEMINI_API_KEY'] ?? getenv('GEMINI_API_KEY') ?: '';
+    if (!$api_key) json_error('GEMINI_API_KEY not configured', 500);
+
+    $tz = new DateTimeZone('America/Argentina/Buenos_Aires');
+    $today = (new DateTime('now', $tz))->format('Y-m-d');
+
+    // Recurrents + aliases (for matching against active subscriptions)
+    $stmt = $pdo->prepare(
+        "SELECT r.id, r.title, r.amount, r.expense_category_id,
+                COALESCE(GROUP_CONCAT(ra.alias SEPARATOR '\n'), '') AS aliases
+         FROM recurrent r
+         LEFT JOIN recurrent_alias ra ON ra.recurrent_id = r.id
+         WHERE r.user_id = ?
+         GROUP BY r.id
+         ORDER BY r.title"
+    );
+    $stmt->execute([$user_id]);
+    $recurrents_raw = $stmt->fetchAll();
+    $recurrents = array_map(function($r) {
+        return [
+            'id' => $r['id'],
+            'title' => $r['title'],
+            'amount' => (float)$r['amount'],
+            'aliases' => $r['aliases'] ? array_values(array_filter(explode("\n", $r['aliases']))) : [],
+        ];
+    }, $recurrents_raw);
+
+    // Categories
+    $stmt = $pdo->prepare("SELECT id, name FROM expense_category WHERE user_id = ? ORDER BY name");
+    $stmt->execute([$user_id]);
+    $categories = $stmt->fetchAll();
+
+    $context = [
+        'today' => $today,
+        'recurrents' => $recurrents,
+        'categories' => array_map(fn($c) => $c['name'], $categories),
+    ];
+
+    $parts[] = ['text' => build_single_prompt($context, $mode, $user_input)];
+
+    $start = microtime(true);
+    $handler = new GeminiHandler($api_key);
+    $gem = $handler->generateContent($parts, [
+        'maxOutputTokens' => 4096,
+        'temperature' => 0.2,
+        'responseSchema' => build_single_schema(),
+    ]);
+    $elapsed_ms = (int)((microtime(true) - $start) * 1000);
+
+    if (!empty($gem['error'])) {
+        json_error('Gemini call failed: ' . $gem['error'] . ' (tried: ' . implode(', ', $gem['tried'] ?? []) . ')', 502);
+    }
+
+    $result = $gem['data'];
+    $unreadable = !empty($result['unreadable']);
+    $reason = $result['reason'] ?? null;
+    $draft = $result['draft'] ?? null;
+    $matched_recurrent = null;
+
+    if (is_array($draft)) {
+        // Resolve category name → id (case-insensitive)
+        $cat_by_name = [];
+        foreach ($categories as $c) {
+            $cat_by_name[mb_strtolower($c['name'])] = $c['id'];
+        }
+        $name = $draft['suggested_category_name'] ?? null;
+        $draft['suggested_category_id'] = $name ? ($cat_by_name[mb_strtolower($name)] ?? null) : null;
+
+        // Validate recurrent_match_id and resolve the full row from raw rows (so we keep expense_category_id)
+        if (!empty($draft['recurrent_match_id'])) {
+            $matched_raw = null;
+            foreach ($recurrents_raw as $rr) {
+                if ($rr['id'] === $draft['recurrent_match_id']) { $matched_raw = $rr; break; }
+            }
+            if ($matched_raw) {
+                $matched_recurrent = [
+                    'id' => $matched_raw['id'],
+                    'title' => $matched_raw['title'],
+                    'amount' => (float)$matched_raw['amount'],
+                    'expense_category_id' => $matched_raw['expense_category_id'],
+                ];
+            } else {
+                $draft['recurrent_match_id'] = null;
+                $draft['recurrent_match_confidence'] = 'low';
+            }
+        }
+
+        // Default date to today when missing or malformed
+        if (empty($draft['date']) || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $draft['date'])) {
+            $draft['date'] = $today;
+        }
+
+        // Ensure recipient is always an object (Gemini may omit it)
+        if (!isset($draft['recipient']) || !is_array($draft['recipient'])) {
+            $draft['recipient'] = ['name' => null, 'cbu' => null, 'alias' => null, 'bank' => null];
+        }
+    }
+
+    json_response([
+        'draft' => $draft,
+        'matched_recurrent' => $matched_recurrent,
+        'unreadable' => $unreadable,
+        'reason' => $reason,
+        'meta' => [
+            'mode' => $mode,
+            'processing_ms' => $elapsed_ms,
+            'model_used' => $gem['model_used'] ?? null,
+            'models_tried' => $gem['tried'] ?? [],
+        ],
+    ]);
+}
+
+function build_single_prompt(array $context, string $mode, ?string $user_input): string {
+    $context_json = json_encode($context, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
+    $today = $context['today'];
+
+    $intro = match ($mode) {
+        'text' => "El usuario describio un gasto en texto libre (en español argentino). Texto del usuario:\n\"\"\"\n$user_input\n\"\"\"",
+        'image' => "Adjunto una imagen (foto de ticket, comprobante de transferencia, captura de pago)." . ($user_input ? " El usuario ademas escribio:\n\"\"\"\n$user_input\n\"\"\"" : " El usuario no agrego texto."),
+        'pdf' => "Adjunto un PDF (comprobante o ticket)." . ($user_input ? " El usuario ademas escribio:\n\"\"\"\n$user_input\n\"\"\"" : " El usuario no agrego texto."),
+        'audio' => "Adjunto un audio en español argentino describiendo un gasto. Transcribilo COMPLETO en el campo 'transcription' antes de extraer los datos." . ($user_input ? " El usuario ademas escribio:\n\"\"\"\n$user_input\n\"\"\"" : ""),
+    };
+
+    return <<<PROMPT
+Tu tarea: extraer UN solo GASTO (egreso de dinero) y devolverlo estructurado para precargar el formulario "Nuevo pago" de la app.
+
+$intro
+
+CONTEXTO DEL USUARIO:
+$context_json
+
+REGLAS DE PARSEO:
+- Argentina: el punto separa miles. "\$67.506" = 67506. "\$1.234,56" = 1234.56. Decimales pueden aparecer en superindice o tamaño chico.
+- amount: numero (no string). Si una imagen muestra un ticket con varios items, suma sus subtotales para el total.
+- title: max 80 chars. Si hay destinatario o comercio, usalo (ej: "NAVARRO AMADEO ANDRES", "Coto"). Si es texto libre tipo "cafe con juan", usa eso.
+- date: YYYY-MM-DD. Si no aparece, usa $today. "ayer", "anteayer", nombres de dias se interpretan respecto a $today.
+- description: detalle util adicional (ej. "milanesa + gaseosa", concepto de la transferencia), o null si no hay nada relevante.
+- is_paid: true por defecto (la mayoria de los inputs son gastos ya hechos). Solo false si el texto/audio dice claramente que es un gasto FUTURO ("la semana que viene", "voy a pagar", "tengo que pagar").
+- suggested_category_name: una EXACTA de la lista "categories" o null. NO inventes categorias.
+- recipient: completar SOLO si es una transferencia bancaria con datos del destinatario (CBU/CVU, alias, banco). Para tickets de comercio, compras casuales o gastos en efectivo, todos los campos en null.
+
+DETECCION DE GASTO vs INGRESO (rechazar ingresos):
+- GASTO (extraer): "Transferencia enviada", "Pago", "Compra", "Debito", "Extraccion", monto en negro/rojo, signo "-".
+- INGRESO (rechazar): "Transferencia recibida", "Cobro", "Acreditacion", "Rendimientos", "Devolucion", monto en verde, signo "+".
+- Si el input es claramente un ingreso, devuelve unreadable=true con reason="Es un ingreso, no un gasto".
+
+MATCHING DE RECURRENTES:
+- Si el destinatario o concepto coincide con el "title" o cualquiera de los "aliases" de algun recurrent, devolve recurrent_match_id con su id.
+- recurrent_match_confidence: "high" si coincide casi exacto. "medium" si es similar. "low" si solo coincide parcial o por monto.
+- El monto puede variar ±20%, no exigir match exacto en plata.
+- Si no hay match, recurrent_match_id=null y recurrent_match_confidence="low".
+
+TRANSCRIPCION:
+- transcription: en modo audio, el texto completo de lo que se dice. En cualquier otro modo, null.
+
+CASOS NO PROCESABLES:
+- Si la imagen/PDF no muestra un gasto identificable, o el audio/texto no describe un gasto concreto, devolve unreadable=true con un reason corto.
+- En esos casos, los campos de draft pueden ir en null/0/"" pero la estructura debe estar completa.
+PROMPT;
+}
+
+function build_single_schema(): array {
+    return [
+        'type' => 'OBJECT',
+        'properties' => [
+            'draft' => [
+                'type' => 'OBJECT',
+                'properties' => [
+                    'title' => ['type' => 'STRING', 'nullable' => true],
+                    'amount' => ['type' => 'NUMBER', 'nullable' => true],
+                    'date' => ['type' => 'STRING', 'nullable' => true],
+                    'description' => ['type' => 'STRING', 'nullable' => true],
+                    'is_paid' => ['type' => 'BOOLEAN'],
+                    'suggested_category_name' => ['type' => 'STRING', 'nullable' => true],
+                    'recipient' => [
+                        'type' => 'OBJECT',
+                        'properties' => [
+                            'name'  => ['type' => 'STRING', 'nullable' => true],
+                            'cbu'   => ['type' => 'STRING', 'nullable' => true],
+                            'alias' => ['type' => 'STRING', 'nullable' => true],
+                            'bank'  => ['type' => 'STRING', 'nullable' => true],
+                        ],
+                    ],
+                    'recurrent_match_id' => ['type' => 'STRING', 'nullable' => true],
+                    'recurrent_match_confidence' => ['type' => 'STRING', 'enum' => ['high', 'medium', 'low']],
+                    'transcription' => ['type' => 'STRING', 'nullable' => true],
+                ],
+                'required' => ['is_paid', 'recurrent_match_confidence'],
+            ],
+            'unreadable' => ['type' => 'BOOLEAN'],
+            'reason' => ['type' => 'STRING', 'nullable' => true],
+        ],
+        'required' => ['draft', 'unreadable'],
+    ];
 }

@@ -1,11 +1,20 @@
 # PayTrackr
 
-Personal payment tracking & financial management system. Monorepo with two packages:
+Personal payment tracking & financial management system. Migrated from Firestore to MySQL+PHP (Mangos rebrand). Monorepo:
 
-- **`/web`** - Nuxt 3 (Vue 3) PWA frontend with Firebase, Pinia, Tailwind CSS
-- **`/server`** - Node.js backend: WhatsApp chatbot (Express) + cron notification scripts (FCM)
+## Active
 
-Both packages share the same Firebase project (`pay-tracker-7a5a6`) and Firestore database. See each package's `CLAUDE.md` for domain-specific context.
+- **`/app`** — PHP frontend. Router-based (`router.php`), pages in `pages/*.php`, Tailwind CSS. User-facing web app.
+- **`/server/api`** — PHP REST API (PDO + MySQL). Entry: `server/api/index.php`. Endpoints: `payments`, `recurrents`, `templates`, `categories`, `cards`, `ai/parse-payments`, `ai/commit-payments`.
+- **`/server/handlers/GeminiHandler.php`** — Gemini wrapper used by `ai.php` (model rotation, exhaustion cache, 503 retry).
+- **`/server/middleware/auth.php`** — session auth (provides `$user_id` to API handlers).
+- **`/server/migrations/`** — MySQL schema migrations (run via `server/migrate.php`).
+
+## Deprecated (do not modify, reference only)
+
+- **`/web`** — old Nuxt 3 PWA frontend. Replaced by `/app`.
+- **`/server/webhooks/wp_webhook.js`** — old WhatsApp Business chatbot (Express + Firestore). Will be removed.
+- **`/server/handlers/GeminiHandler.js`** — old JS handler. Replaced by `GeminiHandler.php`.
 
 ## Workflow Orchestration
 

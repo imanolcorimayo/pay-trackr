@@ -10,6 +10,7 @@
  *   /api/cards              → card.php
  *   /api/ai/parse-payments  → ai.php
  *   /api/ai/commit-payments → ai.php
+ *   /api/ai/parse-single    → ai.php
  *
  * Usage with PHP built-in server:
  *   php -S localhost:8000 api/index.php
@@ -42,37 +43,53 @@ $route = '/' . trim($uri, '/');
 $route = preg_replace('#^/api#', '', $route);
 $route = '/' . trim($route, '/');
 
-switch ($route) {
-    case '/categories':
-        require __DIR__ . '/categories.php';
-        break;
+// Wrap dispatch so any uncaught Throwable (PDOException, schema constraint
+// violations, etc.) becomes a structured json_error rather than a raw 500
+// with an empty body — otherwise the client sees no error and the form
+// loses its state.
+try {
+    switch ($route) {
+        case '/categories':
+            require __DIR__ . '/categories.php';
+            break;
 
-    case '/payments':
-        require __DIR__ . '/payments.php';
-        break;
+        case '/payments':
+            require __DIR__ . '/payments.php';
+            break;
 
-    case '/recurrents':
-        require __DIR__ . '/recurrents.php';
-        break;
+        case '/recurrents':
+            require __DIR__ . '/recurrents.php';
+            break;
 
-    case '/templates':
-        require __DIR__ . '/templates.php';
-        break;
+        case '/templates':
+            require __DIR__ . '/templates.php';
+            break;
 
-    case '/cards':
-        require __DIR__ . '/card.php';
-        break;
+        case '/cards':
+            require __DIR__ . '/card.php';
+            break;
 
-    case '/ai/parse-payments':
-        $ai_action = 'parse-payments';
-        require __DIR__ . '/ai.php';
-        break;
+        case '/ai/parse-payments':
+            $ai_action = 'parse-payments';
+            require __DIR__ . '/ai.php';
+            break;
 
-    case '/ai/commit-payments':
-        $ai_action = 'commit-payments';
-        require __DIR__ . '/ai.php';
-        break;
+        case '/ai/commit-payments':
+            $ai_action = 'commit-payments';
+            require __DIR__ . '/ai.php';
+            break;
 
-    default:
-        json_error('Not found', 404);
+        case '/ai/parse-single':
+            $ai_action = 'parse-single';
+            require __DIR__ . '/ai.php';
+            break;
+
+        default:
+            json_error('Not found', 404);
+    }
+} catch (Throwable $e) {
+    error_log('[api] uncaught ' . get_class($e) . ' on ' . $route . ': ' . $e->getMessage() . "\n" . $e->getTraceAsString());
+    if (!headers_sent()) {
+        json_error('Server error: ' . $e->getMessage(), 500);
+    }
 }

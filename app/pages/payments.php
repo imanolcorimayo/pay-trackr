@@ -5,14 +5,21 @@
         <p class="text-sm text-muted mt-1">Todos tus pagos del mes</p>
     </div>
     <div class="flex items-center gap-2">
-        <a href="/capturar" class="btn btn-outline" title="Capturar con IA desde una imagen">
+        <a href="/capturar" class="btn btn-outline" title="Capturar batch de imagenes con IA">
             <svg class="w-4 h-4 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                       d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-6.857 2.286L12 21l-2.286-6.857L3 12l6.857-2.286L12 3z"/>
             </svg>
             Capturar
         </a>
-        <button class="btn btn-primary" onclick="openPaymentModal()">
+        <button class="btn btn-primary" onclick="openAIModal()" title="Agregar un gasto con IA">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>
+            </svg>
+            IA
+        </button>
+        <button class="btn btn-outline" onclick="openPaymentModal()" title="Nuevo pago manual">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
             </svg>
@@ -107,6 +114,21 @@
                     </svg>
                 </button>
             </header>
+
+            <!-- Recurrent match banner (shown when AI matches a recurrent) -->
+            <div id="ai-recurrent-banner" class="hidden mx-5 mt-4 p-3 bg-accent/10 border border-accent/30 rounded-lg text-sm">
+                <p>
+                    Esto coincide con tu recurrente <strong id="ai-rec-banner-title"></strong>.
+                </p>
+                <label id="ai-rec-update-amount-wrap" class="hidden flex items-center gap-2 mt-2 cursor-pointer select-none">
+                    <input type="checkbox" id="ai-rec-update-amount" class="w-4 h-4 rounded border-border text-accent focus:ring-accent/30">
+                    <span>Actualizar el monto del recurrente <span id="ai-rec-amount-diff" class="text-muted"></span></span>
+                </label>
+                <div class="flex flex-wrap gap-2 mt-3">
+                    <button type="button" onclick="markRecurrentPaidFromAI()" class="btn btn-primary py-1.5 px-3 text-xs">Marcar recurrente como pagado</button>
+                    <button type="button" onclick="dismissRecurrentBanner()" class="btn btn-ghost py-1.5 px-3 text-xs">Crear pago nuevo</button>
+                </div>
+            </div>
 
             <form id="payment-form" class="p-5 space-y-4">
                 <input type="hidden" id="pmt-id">
@@ -214,6 +236,93 @@
     </div>
 </div>
 
+<!-- ─────────────────────────── AI input modal ─────────────────────────── -->
+<div id="ai-input-modal" class="fixed inset-0 z-50 hidden bg-dark/40 overflow-y-auto">
+    <div class="min-h-full flex items-center justify-center p-4">
+        <div class="bg-white rounded-xl border border-border w-full max-w-lg">
+            <header class="px-5 py-4 border-b border-border flex items-center justify-between">
+                <h2 class="text-lg font-semibold">Agregar con IA</h2>
+                <button type="button" onclick="closeAIModal()" class="text-muted hover:text-dark p-1 -m-1">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                    </svg>
+                </button>
+            </header>
+
+            <div class="p-5 space-y-4">
+                <!-- Mode tabs -->
+                <div class="flex gap-1 p-1 bg-dark/5 rounded-lg">
+                    <button type="button" data-mode="text" class="ai-mode-tab flex-1 text-sm py-2 rounded-md transition-colors">Texto</button>
+                    <button type="button" data-mode="image" class="ai-mode-tab flex-1 text-sm py-2 rounded-md transition-colors">Foto</button>
+                    <button type="button" data-mode="pdf" class="ai-mode-tab flex-1 text-sm py-2 rounded-md transition-colors">PDF</button>
+                </div>
+
+                <!-- Text mode -->
+                <div id="ai-mode-text" class="ai-mode-pane">
+                    <label for="ai-text" class="block text-sm font-medium mb-1.5">Describi el gasto</label>
+                    <textarea id="ai-text" class="input min-h-[100px]" placeholder="Ej: 1500 super coto ayer; 800 cafe con juan; transferencia 5000 a Maria por alquiler"></textarea>
+                    <p class="text-xs text-muted mt-1.5">Texto libre. La IA extrae monto, titulo, fecha y categoria.</p>
+                </div>
+
+                <!-- Image mode -->
+                <div id="ai-mode-image" class="ai-mode-pane hidden">
+                    <input type="file" id="ai-image-input" accept="image/*" capture="environment" class="hidden">
+                    <div id="ai-image-zone" class="border-2 border-dashed border-border rounded-lg p-6 text-center cursor-pointer hover:border-accent hover:bg-accent/5 transition-colors">
+                        <svg class="w-10 h-10 mx-auto text-muted mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/>
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/>
+                        </svg>
+                        <p class="text-sm font-medium">Sacar foto o elegir imagen</p>
+                        <p class="text-xs text-muted mt-1">JPG, PNG, WebP · max 4MB</p>
+                    </div>
+                    <div id="ai-image-preview" class="hidden mt-3 relative">
+                        <img id="ai-image-thumb" alt="" class="w-full max-h-64 object-contain rounded-lg border border-border bg-dark/5">
+                        <button type="button" onclick="clearAIImage()" class="absolute top-2 right-2 bg-danger text-white rounded-full w-7 h-7 flex items-center justify-center text-sm shadow">×</button>
+                    </div>
+                </div>
+
+                <!-- PDF mode -->
+                <div id="ai-mode-pdf" class="ai-mode-pane hidden">
+                    <input type="file" id="ai-pdf-input" accept="application/pdf" class="hidden">
+                    <div id="ai-pdf-zone" class="border-2 border-dashed border-border rounded-lg p-6 text-center cursor-pointer hover:border-accent hover:bg-accent/5 transition-colors">
+                        <svg class="w-10 h-10 mx-auto text-muted mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                        </svg>
+                        <p class="text-sm font-medium">Subir comprobante PDF</p>
+                        <p class="text-xs text-muted mt-1">max 7MB</p>
+                    </div>
+                    <div id="ai-pdf-preview" class="hidden mt-3 flex items-center gap-2 p-3 border border-border rounded-lg">
+                        <svg class="w-5 h-5 text-muted flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                        </svg>
+                        <span id="ai-pdf-name" class="text-sm truncate flex-1"></span>
+                        <button type="button" onclick="clearAIPdf()" class="text-muted hover:text-danger px-1">×</button>
+                    </div>
+                </div>
+
+                <!-- Caption (image/pdf only) -->
+                <div id="ai-caption-wrap" class="hidden">
+                    <label for="ai-caption" class="block text-xs font-medium mb-1 text-muted">Texto adicional (opcional)</label>
+                    <input type="text" id="ai-caption" class="input" placeholder="Ej: cafe en Coto, ayer">
+                </div>
+
+                <p id="ai-error" class="hidden text-sm text-danger"></p>
+
+                <div class="flex justify-end gap-2 pt-2">
+                    <button type="button" onclick="closeAIModal()" class="btn btn-ghost">Cancelar</button>
+                    <button type="button" id="ai-submit-btn" onclick="submitAIInput()" class="btn btn-primary">
+                        <svg id="ai-submit-spinner" class="hidden w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
+                        </svg>
+                        <span id="ai-submit-label">Analizar</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script>
 const SVG_NS = 'http://www.w3.org/2000/svg';
 const ICON_EDIT = 'M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z';
@@ -225,6 +334,11 @@ let categories = [];
 let cards = [];
 let editingId = null;
 let pendingDeleteId = null;
+
+// AI input state. aiSourceTag is non-null while the payment-modal is pre-filled
+// from /api/ai/parse-single — used to tag the resulting payment with source=ai-*.
+let aiSourceTag = null;
+let aiState = { mode: 'text', image: null, pdf: null, draft: null, matched: null };
 
 // View state — initialized from URL query string, persisted on every change.
 let viewMonth = startOfMonth(new Date());
@@ -351,9 +465,10 @@ async function loadAll() {
         api.get('/cards'),
     ]);
 
-    payments = pays || [];
-    categories = cats || [];
-    cards = crds || [];
+    payments = Array.isArray(pays) ? pays : [];
+    categories = Array.isArray(cats) ? cats : [];
+    cards = Array.isArray(crds) ? crds : [];
+    if (pays && pays.error) toast(`No se pudieron cargar los pagos: ${pays.error}`, 'error');
 
     populateDropdowns();
     document.getElementById('filter-category').value = categoryFilter;
@@ -569,7 +684,10 @@ async function togglePaymentPaid(p, btn) {
 // ── Modal: form ─────────────────────────────────────────────────────
 async function openPaymentModal(p) {
     editingId = p?.id || null;
-    document.getElementById('payment-modal-title').textContent = p ? 'Editar pago' : 'Nuevo pago';
+    // Default to clean AI state. AI flow re-applies banner + source after this returns.
+    aiSourceTag = null;
+    hideRecurrentBanner();
+    document.getElementById('payment-modal-title').textContent = editingId ? 'Editar pago' : 'Nuevo pago';
 
     // For edit, fetch single to get nested recipient
     let full = p;
@@ -610,6 +728,8 @@ async function openPaymentModal(p) {
 function closePaymentModal() {
     document.getElementById('payment-modal').classList.add('hidden');
     editingId = null;
+    aiSourceTag = null;
+    hideRecurrentBanner();
 }
 
 async function submitPaymentForm(e) {
@@ -649,13 +769,18 @@ async function submitPaymentForm(e) {
         description: document.getElementById('pmt-description').value.trim(),
         recipient,
     };
+    if (!editingId && aiSourceTag) body.source = aiSourceTag;
 
     try {
         const result = editingId
             ? await api.put('/payments', body, { id: editingId })
             : await api.post('/payments', body);
 
-        if (!result || result.error) {
+        // Success shape: POST → {id}, PUT → {updated: true}. Anything else
+        // (including [] from a hard 500 with no JSON body) is a failure —
+        // keep the form open with the values intact.
+        const ok = editingId ? result?.updated === true : !!result?.id;
+        if (!ok) {
             errorEl.textContent = result?.error || 'Error al guardar';
             errorEl.classList.remove('hidden');
             submitBtn.disabled = false;
@@ -720,6 +845,250 @@ function setStatusFilter(status) {
     renderPayments();
 }
 
+// ── AI input modal ──────────────────────────────────────────────────
+function fileToBase64(file) {
+    return new Promise((resolve, reject) => {
+        const r = new FileReader();
+        r.onload = () => {
+            const dataUrl = r.result;
+            const base64 = dataUrl.split(',', 2)[1] || '';
+            resolve({ dataUrl, base64 });
+        };
+        r.onerror = reject;
+        r.readAsDataURL(file);
+    });
+}
+
+function openAIModal() {
+    resetAIModal();
+    document.getElementById('ai-input-modal').classList.remove('hidden');
+    setTimeout(() => document.getElementById('ai-text').focus(), 50);
+}
+
+function closeAIModal() {
+    document.getElementById('ai-input-modal').classList.add('hidden');
+    resetAIModal();
+}
+
+function resetAIModal() {
+    aiState = { mode: 'text', image: null, pdf: null, draft: null, matched: null };
+    document.getElementById('ai-text').value = '';
+    document.getElementById('ai-image-input').value = '';
+    document.getElementById('ai-pdf-input').value = '';
+    document.getElementById('ai-image-preview').classList.add('hidden');
+    document.getElementById('ai-pdf-preview').classList.add('hidden');
+    document.getElementById('ai-caption').value = '';
+    document.getElementById('ai-error').classList.add('hidden');
+    setAILoading(false);
+    setAIMode('text');
+}
+
+function setAIMode(mode) {
+    aiState.mode = mode;
+    document.querySelectorAll('.ai-mode-tab').forEach(t => {
+        const active = t.dataset.mode === mode;
+        t.classList.toggle('bg-white', active);
+        t.classList.toggle('shadow-sm', active);
+        t.classList.toggle('text-dark', active);
+        t.classList.toggle('font-medium', active);
+        t.classList.toggle('text-muted', !active);
+    });
+    document.querySelectorAll('.ai-mode-pane').forEach(p => p.classList.add('hidden'));
+    document.getElementById(`ai-mode-${mode}`).classList.remove('hidden');
+    document.getElementById('ai-caption-wrap').classList.toggle('hidden', mode === 'text');
+}
+
+async function handleAIImageFile(file) {
+    if (!file.type.startsWith('image/')) { toast('El archivo no es una imagen', 'error'); return; }
+    if (file.size > 4 * 1024 * 1024) { toast('La imagen supera los 4MB', 'error'); return; }
+    try {
+        const { dataUrl, base64 } = await fileToBase64(file);
+        aiState.image = { mimeType: file.type, base64 };
+        document.getElementById('ai-image-thumb').src = dataUrl;
+        document.getElementById('ai-image-preview').classList.remove('hidden');
+    } catch (e) {
+        console.error(e);
+        toast('No se pudo leer la imagen', 'error');
+    }
+}
+
+function clearAIImage() {
+    aiState.image = null;
+    document.getElementById('ai-image-input').value = '';
+    document.getElementById('ai-image-preview').classList.add('hidden');
+}
+
+async function handleAIPdfFile(file) {
+    if (file.type !== 'application/pdf') { toast('El archivo no es un PDF', 'error'); return; }
+    if (file.size > 7 * 1024 * 1024) { toast('El PDF supera los 7MB', 'error'); return; }
+    try {
+        const { base64 } = await fileToBase64(file);
+        aiState.pdf = { mimeType: 'application/pdf', base64, name: file.name };
+        document.getElementById('ai-pdf-name').textContent = file.name;
+        document.getElementById('ai-pdf-preview').classList.remove('hidden');
+    } catch (e) {
+        console.error(e);
+        toast('No se pudo leer el PDF', 'error');
+    }
+}
+
+function clearAIPdf() {
+    aiState.pdf = null;
+    document.getElementById('ai-pdf-input').value = '';
+    document.getElementById('ai-pdf-preview').classList.add('hidden');
+}
+
+function setAILoading(loading) {
+    document.getElementById('ai-submit-btn').disabled = loading;
+    document.getElementById('ai-submit-spinner').classList.toggle('hidden', !loading);
+    document.getElementById('ai-submit-label').textContent = loading ? 'Analizando...' : 'Analizar';
+}
+
+async function submitAIInput() {
+    const errEl = document.getElementById('ai-error');
+    errEl.classList.add('hidden');
+
+    const payload = { mode: aiState.mode };
+    const caption = document.getElementById('ai-caption').value.trim();
+
+    if (aiState.mode === 'text') {
+        const text = document.getElementById('ai-text').value.trim();
+        if (!text) { showAIError('Escribi una descripcion del gasto'); return; }
+        payload.text = text;
+    } else if (aiState.mode === 'image') {
+        if (!aiState.image) { showAIError('Adjunta una imagen'); return; }
+        payload.mimeType = aiState.image.mimeType;
+        payload.data = aiState.image.base64;
+        if (caption) payload.caption = caption;
+    } else if (aiState.mode === 'pdf') {
+        if (!aiState.pdf) { showAIError('Adjunta un PDF'); return; }
+        payload.mimeType = aiState.pdf.mimeType;
+        payload.data = aiState.pdf.base64;
+        if (caption) payload.caption = caption;
+    }
+
+    setAILoading(true);
+
+    let result;
+    try {
+        result = await api.post('/ai/parse-single', payload);
+    } catch (e) {
+        console.error(e);
+        setAILoading(false);
+        showAIError('Error de red');
+        return;
+    }
+    setAILoading(false);
+
+    // api.js returns [] on HTTP error, the success shape is an object with `draft`.
+    if (!result || Array.isArray(result) || result.error) {
+        showAIError(result?.error || 'No se pudo analizar el input');
+        return;
+    }
+    if (result.unreadable) {
+        showAIError(result.reason || 'No se detecto un gasto. Probá con otra imagen o reformulando el texto.');
+        return;
+    }
+    if (!result.draft) {
+        showAIError('No se obtuvo un resultado');
+        return;
+    }
+
+    aiState.draft = result.draft;
+    aiState.matched = result.matched_recurrent || null;
+    closeAIModal();
+    await openPaymentModalFromAI(result.draft, result.matched_recurrent || null);
+}
+
+function showAIError(msg) {
+    const el = document.getElementById('ai-error');
+    el.textContent = msg;
+    el.classList.remove('hidden');
+}
+
+async function openPaymentModalFromAI(draft, matched) {
+    const synthetic = {
+        title: draft.title || '',
+        amount: draft.amount,
+        due_ts: draft.date ? `${draft.date} 12:00:00` : null,
+        expense_category_id: draft.suggested_category_id || null,
+        card_id: null,
+        is_paid: draft.is_paid ? 1 : 0,
+        description: draft.description || '',
+        recipient: (draft.recipient && draft.recipient.name) ? draft.recipient : null,
+    };
+    const mode = aiState.mode;
+    await openPaymentModal(synthetic);  // clears aiSourceTag + banner
+    aiSourceTag = `ai-${mode}`;
+    aiState.draft = draft;
+    aiState.matched = matched;
+    if (matched && draft.recurrent_match_id && draft.recurrent_match_confidence !== 'low') {
+        showRecurrentBanner(matched, draft);
+    }
+}
+
+function showRecurrentBanner(matched, draft) {
+    document.getElementById('ai-rec-banner-title').textContent = matched.title;
+    const draftAmount = Number(draft.amount);
+    const recAmount = Number(matched.amount);
+    const diffOk = isFinite(draftAmount) && draftAmount > 0;
+    const diff = diffOk ? Math.abs(draftAmount - recAmount) : 0;
+    const wrap = document.getElementById('ai-rec-update-amount-wrap');
+    const cb = document.getElementById('ai-rec-update-amount');
+    if (diffOk && diff > 0.01) {
+        wrap.classList.remove('hidden');
+        document.getElementById('ai-rec-amount-diff').textContent = `(${formatPrice(recAmount)} → ${formatPrice(draftAmount)})`;
+        cb.checked = true;
+    } else {
+        wrap.classList.add('hidden');
+        cb.checked = false;
+    }
+    document.getElementById('ai-recurrent-banner').classList.remove('hidden');
+}
+
+function hideRecurrentBanner() {
+    const el = document.getElementById('ai-recurrent-banner');
+    if (el) el.classList.add('hidden');
+}
+
+function dismissRecurrentBanner() {
+    aiState.matched = null;
+    hideRecurrentBanner();
+}
+
+async function markRecurrentPaidFromAI() {
+    const matched = aiState.matched;
+    const draft = aiState.draft;
+    if (!matched || !draft) return;
+
+    const updateAmount = document.getElementById('ai-rec-update-amount').checked;
+    const paidTs = draft.date ? `${draft.date} 12:00:00` : null;
+
+    const row = {
+        action: 'mark_recurrent_paid',
+        recurrent_id: matched.id,
+        paid_ts: paidTs,
+    };
+    if (isFinite(Number(draft.amount)) && Number(draft.amount) > 0) {
+        row.amount = Number(draft.amount);
+    }
+    if (updateAmount) row.update_recurrent_amount = true;
+
+    try {
+        const result = await api.post('/ai/commit-payments', { rows: [row] });
+        if (!result || Array.isArray(result) || result.error) {
+            toast(result?.error || 'No se pudo marcar el recurrente', 'error');
+            return;
+        }
+        toast('Recurrente marcado como pagado', 'success');
+        closePaymentModal();
+        await loadAll();
+    } catch (e) {
+        console.error(e);
+        toast('Error de red', 'error');
+    }
+}
+
 // ── Init ────────────────────────────────────────────────────────────
 mangosAuth.ready.then(user => {
     if (!user) return;
@@ -752,11 +1121,68 @@ mangosAuth.ready.then(user => {
     document.getElementById('payment-form').addEventListener('submit', submitPaymentForm);
     document.getElementById('pmt-category').addEventListener('change', updateCategorySwatch);
 
+    // AI modal: tab switching
+    document.querySelectorAll('.ai-mode-tab').forEach(t => {
+        t.addEventListener('click', () => setAIMode(t.dataset.mode));
+    });
+
+    // AI modal: image input
+    document.getElementById('ai-image-input').addEventListener('change', async e => {
+        const f = e.target.files?.[0];
+        if (f) await handleAIImageFile(f);
+    });
+    const imgZone = document.getElementById('ai-image-zone');
+    imgZone.addEventListener('click', () => document.getElementById('ai-image-input').click());
+    imgZone.addEventListener('dragover', e => { e.preventDefault(); imgZone.classList.add('border-accent', 'bg-accent/5'); });
+    imgZone.addEventListener('dragleave', () => imgZone.classList.remove('border-accent', 'bg-accent/5'));
+    imgZone.addEventListener('drop', async e => {
+        e.preventDefault();
+        imgZone.classList.remove('border-accent', 'bg-accent/5');
+        const f = e.dataTransfer.files?.[0];
+        if (f) await handleAIImageFile(f);
+    });
+
+    // AI modal: PDF input
+    document.getElementById('ai-pdf-input').addEventListener('change', async e => {
+        const f = e.target.files?.[0];
+        if (f) await handleAIPdfFile(f);
+    });
+    const pdfZone = document.getElementById('ai-pdf-zone');
+    pdfZone.addEventListener('click', () => document.getElementById('ai-pdf-input').click());
+    pdfZone.addEventListener('dragover', e => { e.preventDefault(); pdfZone.classList.add('border-accent', 'bg-accent/5'); });
+    pdfZone.addEventListener('dragleave', () => pdfZone.classList.remove('border-accent', 'bg-accent/5'));
+    pdfZone.addEventListener('drop', async e => {
+        e.preventDefault();
+        pdfZone.classList.remove('border-accent', 'bg-accent/5');
+        const f = e.dataTransfer.files?.[0];
+        if (f) await handleAIPdfFile(f);
+    });
+
+    // Ctrl/Cmd+Enter inside the AI text mode submits.
+    document.getElementById('ai-text').addEventListener('keydown', e => {
+        if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+            e.preventDefault();
+            submitAIInput();
+        }
+    });
+
     document.addEventListener('keydown', e => {
         if (e.key !== 'Escape') return;
-        if (!document.getElementById('payment-modal').classList.contains('hidden')) closePaymentModal();
+        if (!document.getElementById('ai-input-modal').classList.contains('hidden')) closeAIModal();
+        else if (!document.getElementById('payment-modal').classList.contains('hidden')) closePaymentModal();
         else if (!document.getElementById('payment-delete-modal').classList.contains('hidden')) closePaymentDelete();
     });
+
+    // Auto-open the AI input modal when arriving via the mobile FAB (#ai) or
+    // when the FAB is tapped while already on /pagos (hashchange, no reload).
+    function openAIFromHash() {
+        if (location.hash !== '#ai') return;
+        // Strip the hash so reload / back-button doesn't re-open the modal.
+        history.replaceState(null, '', location.pathname + location.search);
+        openAIModal();
+    }
+    openAIFromHash();
+    window.addEventListener('hashchange', openAIFromHash);
 
     loadAll();
 });

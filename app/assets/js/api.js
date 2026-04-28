@@ -31,7 +31,7 @@ window.api = {
       response = await fetch(url, fetchOpts);
     } catch (err) {
       console.error('API network error:', err);
-      return [];
+      return { error: 'Sin conexion' };
     }
 
     if (response.status === 401) {
@@ -40,8 +40,13 @@ window.api = {
     }
 
     if (!response.ok) {
-      console.error('API error:', response.status, await response.text());
-      return [];
+      // Try to surface the structured JSON error body if there is one;
+      // otherwise synthesize one so callers can detect the failure.
+      let body = null;
+      try { body = await response.json(); } catch (_) {}
+      console.error('API error:', response.status, body);
+      if (body && typeof body === 'object' && body.error) return body;
+      return { error: `HTTP ${response.status}` };
     }
 
     return response.json();

@@ -1,85 +1,49 @@
-# PayTrackr - Server
+# PayTrackr — Server
 
-Node.js backend services for PayTrackr: WhatsApp chatbot integration and scheduled notification scripts.
+PHP REST API backed by MySQL. Migrated from the previous Node.js + Firestore stack.
 
-## Technical Stack
+## Active: `/api` (PHP REST API)
 
-- **Runtime**: Node.js (ES Modules)
-- **Web Framework**: Express.js
-- **Database**: Firebase Admin SDK (Firestore)
-- **Messaging**: Firebase Cloud Messaging (FCM) for push notifications
-- **External APIs**: WhatsApp Business API (Meta Graph API), Gemini AI (Google)
-- **Config**: dotenv for environment variables
+- **Stack**: PHP 8.x, PDO + MySQL, dotenv, cURL (for Gemini)
+- **Entry**: `api/index.php` — single front controller. CORS, then `require_auth()`, then route by URL path.
+- **Auth**: session-based via `middleware/auth.php`. `$user_id` is injected into every handler.
+- **DB config**: `api/config.php` (loaded from env / config file).
+- **Endpoints**:
+  - `GET/POST/PUT/DELETE /api/payments` → `api/payments.php` (joins `payment_recipient` for transfer details)
+  - `… /api/recurrents` → `api/recurrents.php` (with `recurrent_alias` join)
+  - `… /api/templates` → `api/templates.php`
+  - `… /api/categories` → `api/categories.php`
+  - `… /api/cards` → `api/card.php`
+  - `POST /api/ai/parse-payments` → `api/ai.php` (image → AI-extracted draft payments)
+  - `POST /api/ai/commit-payments` → `api/ai.php` (persist drafts after user review)
 
-## Architecture Overview
+## AI: `handlers/GeminiHandler.php`
 
-Two independent services sharing the same Firebase project:
+Reusable Gemini wrapper. Model rotation: `gemini-2.5-flash` → `gemini-3.1-flash-lite-preview` → `gemini-2.5-flash-lite` → `gemini-2.5-pro`. Per-request timeout 45s, total budget 110s. Daily-exhaustion cache at `sys_get_temp_dir()/mangos-gemini-exhausted.json`. Vision-capable; accepts `inlineData` parts.
 
-### 1. WhatsApp Webhook Server (`webhooks/wp_webhook.js`)
-- Express server receiving WhatsApp Business API webhooks
-- Handles account linking via verification codes
-- Parses natural language expense messages (e.g., `$500 Super #supermercado`)
-- Commands: `VINCULAR`, `DESVINCULAR`, `AYUDA`, `CATEGORIAS`, `RESUMEN`, `FIJOS`, `ANALISIS`
-- Writes directly to `payment2` collection (same as web app)
-- AI-powered financial analysis via Gemini API
+`api/ai.php` (parse-payments) builds context per request: current-month payments, recurrents + their aliases, and category names — all passed into the prompt so the model can reconcile uploads against existing data instead of duplicating.
 
-### 2. Notification Scripts (`scripts/`)
-- `send-reminders.js` - Cron-driven payment reminders via FCM push notifications
-  - Morning mode: notifies for payments due today + in 3 days
-  - Evening mode: notifies for payments due today only
-- `send-weekly-summary.js` - Weekly digest with per-user stats + AI insight via Gemini
+## Migrations
 
-### 3. Handlers (`handlers/`)
-- `GeminiHandler.js` - Reusable Gemini AI API wrapper (used by webhook + weekly summary)
+- `migrate.php` — runner. Applies SQL files from `migrations/` in order, tracks applied state in DB.
+- `migrations/*.sql` — schema definitions (`payment`, `payment_recipient`, `recurrent`, `recurrent_alias`, `expense_category`, `payment_template`, `card`, `users`, `fcm_tokens`, `weekly_summaries`).
 
-## Firestore Collections Used
+## Deprecated (reference only, not deployed)
 
-- `payment2` - Reads/writes one-time payments (shared with web)
-- `recurrent` - Reads recurring payment templates (shared with web)
-- `whatsappLinks` - Account linking state (pending codes + linked accounts)
-- `fcmTokens` - Push notification tokens per user
-- `expenseCategories` - User category definitions
+- `webhooks/wp_webhook.js` — old WhatsApp Business chatbot (Node/Express + Firestore). Will be removed once the AI input flow on `/app` covers the same use cases.
+- `handlers/GeminiHandler.js` — old JS Gemini wrapper. Replaced by the PHP version.
+- `scripts/send-reminders.js`, `scripts/send-weekly-summary.js`, `scripts/test-notifications.js` — Node cron scripts for FCM push. Tied to the deprecated Nuxt PWA (`/web`). In transition.
+- `scripts/migrate-firestore-to-mysql.js` — one-shot Firestore→MySQL data migration tool. Kept for re-runs during the cutover.
 
-## Key Patterns
-
-### Firebase Admin Initialization
-- Uses base64-encoded service account from `FIREBASE_SERVICE_ACCOUNT` env var
-- Falls back to default credentials if not provided
-- Project ID: `pay-tracker-7a5a6`
-
-### WhatsApp Message Parsing
-- Format: `$<amount> <title> #<category> d:<description>`
-- Amount supports Argentine format (`1.234,56` -> `1234.56`)
-- Category matching: exact -> starts-with -> contains -> fallback to "Otros"
-- Phone number normalization for Argentine numbers (removes `9` after country code)
-
-### Timezone
-- All date operations use `America/Argentina/Buenos_Aires`
-
-## Environment Variables
+## Environment
 
 ```
-FIREBASE_PROJECT_ID        # Firebase project (default: pay-tracker-7a5a6)
-FIREBASE_SERVICE_ACCOUNT   # Base64-encoded service account JSON
-WP_VERIFY_TOKEN            # WhatsApp webhook verification token
-IDENTIFIER_WP_NUMBER       # WhatsApp phone number ID
-ACCESS_TOKEN_WP_BUSINESS   # WhatsApp Business API access token
-GEMINI_API_KEY             # Google Gemini API key for AI analysis
-PORT                       # Express server port (default: 4000)
+DB credentials       # via api/config.php (DB_HOST, DB_NAME, DB_USER, DB_PASS)
+GEMINI_API_KEY       # required for /api/ai/* endpoints
 ```
 
-## Running
+## Language & Locale
 
-```bash
-npm run dev                    # Webhook server with --watch
-npm run start                  # Webhook server (production)
-npm run reminders:morning      # Morning reminder cron
-npm run reminders:evening      # Evening reminder cron
-npm run weekly-summary         # Weekly summary cron
-```
-
-## Language & Formatting
-
-- All user-facing messages are in **Spanish (Argentine)**
-- Currency: ARS formatted with `Intl.NumberFormat('es-AR', ...)`
-- Same locale rules as the web app (see `/web/CLAUDE.md`)
+- Spanish (Argentine) for all user-facing strings.
+- Currency: ARS, formatted with `es-AR` locale.
+- Timezone: `America/Argentina/Buenos_Aires` (used in `api/ai.php` for "today" / month boundaries).
