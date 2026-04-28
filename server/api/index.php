@@ -18,6 +18,13 @@
  * Nginx: rewrite all /api/* requests to api/index.php
  */
 
+// ── Timezone ─────────────────────────────────────
+// All API timestamps live in Argentina time. Without this, PHP's date() falls
+// back to the host's tz (UTC on the droplet) and paid_ts lands on the wrong
+// day for late-evening saves. The MySQL session tz is pinned alongside in
+// config.php so NOW()/CURDATE() match.
+date_default_timezone_set('America/Argentina/Buenos_Aires');
+
 // ── Config (DB + helpers) ────────────────────────
 require __DIR__ . '/config.php';
 

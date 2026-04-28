@@ -36,7 +36,6 @@ service-account.json
 
 # PHP config with credentials
 server/config.php
-server/api/config.php
 server/vendor/
 app/includes/config.php
 

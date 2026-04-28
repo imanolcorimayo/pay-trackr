@@ -133,7 +133,8 @@ switch (method()) {
         $fields = [];
         $params = [];
 
-        // Special handling for is_paid toggle
+        // Special handling for is_paid toggle. NOW() is AR-anchored via the
+        // session timezone we set in config.php's PDO init command.
         if (isset($data['is_paid'])) {
             if ($data['is_paid']) {
                 $fields[] = "is_paid = 1";
