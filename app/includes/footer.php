@@ -114,6 +114,33 @@
                 </button>
             </nav>
         </div>
+        <!-- Install prompt (mobile only, populated by app.js when installable) -->
+        <div id="install-prompt"
+             class="hidden lg:hidden fixed left-3 right-3 z-40 bg-white border border-border rounded-2xl shadow-lg p-4"
+             style="bottom: calc(5rem + env(safe-area-inset-bottom));">
+            <button type="button" onclick="dismissInstallPrompt()" aria-label="Cerrar"
+                    class="absolute top-2 right-2 text-muted hover:text-dark p-1.5 rounded-lg active:scale-95 transition">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                </svg>
+            </button>
+            <div class="flex items-start gap-3 pr-6">
+                <div class="w-11 h-11 rounded-xl bg-accent/10 flex items-center justify-center flex-shrink-0">
+                    <svg class="w-6 h-8 text-accent" viewBox="0 0 140 190" fill="none">
+                        <path d="M 70 30 C 108 30, 122 70, 122 100 C 122 138, 106 160, 85 172 C 74 178, 62 170, 52 158 C 35 138, 18 118, 18 95 C 18 65, 35 30, 70 30 Z"
+                              stroke="currentColor" stroke-width="6"/>
+                    </svg>
+                </div>
+                <div class="flex-1 min-w-0">
+                    <p class="text-sm font-semibold leading-tight">Instalá mangos</p>
+                    <p id="install-prompt-text" class="text-xs text-muted mt-1 leading-relaxed">
+                        Tenelo siempre a mano en tu pantalla de inicio.
+                    </p>
+                    <div id="install-prompt-actions" class="mt-3"></div>
+                </div>
+            </div>
+        </div>
+
     </div><!-- end main column -->
 </div><!-- end app shell -->
 <?php endif; ?>

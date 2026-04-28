@@ -8,9 +8,11 @@
  *   /api/recurrents         → recurrents.php
  *   /api/templates          → templates.php
  *   /api/cards              → card.php
- *   /api/ai/parse-payments  → ai.php
- *   /api/ai/commit-payments → ai.php
- *   /api/ai/parse-single    → ai.php
+ *   /api/ai/parse-payments    → ai.php
+ *   /api/ai/commit-payments   → ai.php
+ *   /api/ai/parse-single      → ai.php
+ *   /api/ai/discard-artifact  → ai.php
+ *   /api/payments/artifact    → payments.php (private proxy)
  *
  * Usage with PHP built-in server:
  *   php -S localhost:8000 api/index.php
@@ -89,6 +91,16 @@ try {
         case '/ai/parse-single':
             $ai_action = 'parse-single';
             require __DIR__ . '/ai.php';
+            break;
+
+        case '/ai/discard-artifact':
+            $ai_action = 'discard-artifact';
+            require __DIR__ . '/ai.php';
+            break;
+
+        case '/payments/artifact':
+            $payments_action = 'artifact';
+            require __DIR__ . '/payments.php';
             break;
 
         default:

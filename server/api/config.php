@@ -27,6 +27,10 @@ load_env(__DIR__ . '/../.env');
 // ── DB ───────────────────────────────────────────
 $shared = require __DIR__ . '/../config.php';
 $db_conf = $shared['db'];
+// Expose the full config to handlers that need other sections (e.g. 'spaces').
+// Endpoints reach it via `global $shared;` since require executes in the
+// includer's scope and the variable becomes part of the request's global state.
+$GLOBALS['mangos_config'] = $shared;
 
 $pdo = new PDO(
     "mysql:host={$db_conf['host']};dbname={$db_conf['name']};charset=utf8mb4",

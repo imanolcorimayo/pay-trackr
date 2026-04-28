@@ -1,5 +1,10 @@
 <?php
-// $pdo and $user_id provided by index.php
+// $pdo, $user_id, and (when present) $payments_action provided by index.php
+
+if (($payments_action ?? null) === 'artifact') {
+    handle_payment_artifact($pdo, $user_id);
+    return;
+}
 
 switch (method()) {
     case 'GET':
@@ -87,8 +92,8 @@ switch (method()) {
         $stmt = $pdo->prepare(
             "INSERT INTO payment (id, user_id, title, description, amount, expense_category_id,
              is_paid, paid_ts, recurrent_id, card_id, payment_type, due_ts, source, status,
-             needs_revision, is_whatsapp, audio_transcription)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+             needs_revision, is_whatsapp, audio_transcription, ai_artifact_path, ai_artifact_mime)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
         );
         $stmt->execute([
             $id,
@@ -108,6 +113,8 @@ switch (method()) {
             !empty($data['needs_revision']) ? 1 : 0,
             !empty($data['is_whatsapp']) ? 1 : 0,
             $data['audio_transcription'] ?? null,
+            $data['ai_artifact_path'] ?? null,
+            $data['ai_artifact_mime'] ?? null,
         ]);
 
         // Optional recipient
@@ -129,7 +136,7 @@ switch (method()) {
         $data = get_json_body();
         $allowed = ['title', 'description', 'amount', 'expense_category_id', 'card_id',
                      'payment_type', 'due_ts', 'source', 'status', 'needs_revision',
-                     'is_whatsapp', 'audio_transcription'];
+                     'is_whatsapp', 'audio_transcription', 'ai_artifact_path', 'ai_artifact_mime'];
         $fields = [];
         $params = [];
 
@@ -186,13 +193,59 @@ switch (method()) {
         $id = $_GET['id'] ?? '';
         if (empty($id)) json_error('id is required');
 
+        // Look up the artifact path before deleting, so we can clean up Spaces.
+        $stmt = $pdo->prepare("SELECT ai_artifact_path FROM payment WHERE id = ? AND user_id = ?");
+        $stmt->execute([$id, $user_id]);
+        $artifact_path = $stmt->fetchColumn() ?: null;
+
         $stmt = $pdo->prepare("DELETE FROM payment WHERE id = ? AND user_id = ?");
         $stmt->execute([$id, $user_id]);
 
         if ($stmt->rowCount() === 0) json_error('Payment not found', 404);
 
+        if ($artifact_path) {
+            $spaces_conf = $GLOBALS['mangos_config']['spaces'] ?? null;
+            if ($spaces_conf && !empty($spaces_conf['key']) && $spaces_conf['key'] !== 'CHANGE_ME') {
+                require_once __DIR__ . '/../handlers/SpacesHandler.php';
+                try { (new SpacesHandler($spaces_conf))->delete($artifact_path); }
+                catch (\Throwable $e) { error_log('[payments] artifact delete failed: ' . $e->getMessage()); }
+            }
+        }
+
         json_response(['deleted' => true]);
 
     default:
         json_error('Method not allowed', 405);
+}
+
+/**
+ * Private proxy: streams the AI artifact stored on DO Spaces back to the
+ * authenticated owner. Reached as GET /api/payments/artifact?id=<payment_id>.
+ * Buckets are private (ACL=private) and DO's CDN public URL returns 403, so
+ * this proxy is the only legitimate way for the browser to fetch the file.
+ */
+function handle_payment_artifact(PDO $pdo, string $user_id): void {
+    if (method() !== 'GET') json_error('Method not allowed', 405);
+    $id = $_GET['id'] ?? '';
+    if (empty($id)) json_error('id is required');
+
+    $stmt = $pdo->prepare(
+        "SELECT ai_artifact_path, ai_artifact_mime FROM payment WHERE id = ? AND user_id = ?"
+    );
+    $stmt->execute([$id, $user_id]);
+    $row = $stmt->fetch();
+
+    if (!$row) json_error('Payment not found', 404);
+    if (empty($row['ai_artifact_path'])) json_error('No artifact for this payment', 404);
+
+    $spaces_conf = $GLOBALS['mangos_config']['spaces'] ?? null;
+    if (!$spaces_conf || empty($spaces_conf['key']) || $spaces_conf['key'] === 'CHANGE_ME') {
+        json_error('Spaces not configured', 503);
+    }
+
+    require_once __DIR__ . '/../handlers/SpacesHandler.php';
+    $spaces = new SpacesHandler($spaces_conf);
+    // Sets headers + writes body, or sets 404 and returns false.
+    $spaces->streamToOutput($row['ai_artifact_path'], $row['ai_artifact_mime']);
+    exit;
 }

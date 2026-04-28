@@ -10,7 +10,7 @@ $config = require __DIR__ . '/includes/config.php';
 
 // Serve static assets directly in dev server
 $uri = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
-if (preg_match('/\.(css|js|svg|png|jpg|ico|woff2?)$/', $uri)) {
+if (preg_match('/\.(css|js|svg|png|jpg|ico|woff2?|webmanifest|json)$/', $uri)) {
     $file = __DIR__ . $uri;
     if (is_file($file)) return false;
 }

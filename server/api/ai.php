@@ -16,6 +16,8 @@ if ($ai_action === 'parse-payments') {
     handle_commit_payments($pdo, $user_id);
 } elseif ($ai_action === 'parse-single') {
     handle_parse_single($pdo, $user_id);
+} elseif ($ai_action === 'discard-artifact') {
+    handle_discard_artifact($user_id);
 } else {
     json_error('Unknown AI action', 404);
 }
@@ -560,9 +562,19 @@ function handle_parse_single(PDO $pdo, string $user_id): void {
         }
     }
 
+    // Persist the original artifact (image/audio/pdf) to DO Spaces if Gemini
+    // returned anything usable. Text-mode inputs have nothing to store. The
+    // artifact is nice-to-have — failures here are logged but don't block the
+    // response, since the user can still review/save the draft without it.
+    $ai_artifact = null;
+    if ($mode !== 'text' && is_array($draft) && !$unreadable) {
+        $ai_artifact = upload_ai_artifact($user_id, $mode, $body['mimeType'] ?? '', $body['data'] ?? '');
+    }
+
     json_response([
         'draft' => $draft,
         'matched_recurrent' => $matched_recurrent,
+        'ai_artifact' => $ai_artifact,
         'unreadable' => $unreadable,
         'reason' => $reason,
         'meta' => [
@@ -572,6 +584,95 @@ function handle_parse_single(PDO $pdo, string $user_id): void {
             'models_tried' => $gem['tried'] ?? [],
         ],
     ]);
+}
+
+// ──────────────────────────────────────────────────────────────────
+// AI artifact storage (DO Spaces, ACL=private)
+// ──────────────────────────────────────────────────────────────────
+
+function upload_ai_artifact(string $user_id, string $mode, string $mimeType, string $base64): ?array {
+    $spaces_conf = $GLOBALS['mangos_config']['spaces'] ?? null;
+    if (!$spaces_conf || empty($spaces_conf['key']) || $spaces_conf['key'] === 'CHANGE_ME') {
+        // Spaces not configured — silently skip. Useful for dev environments.
+        return null;
+    }
+    if (!$mimeType || !$base64) return null;
+
+    $bytes = base64_decode($base64, true);
+    if ($bytes === false) {
+        error_log('[ai] artifact base64 decode failed');
+        return null;
+    }
+
+    $ext = ai_artifact_extension($mode, $mimeType);
+    $uuid = bin2hex(random_bytes(12));
+
+    require_once __DIR__ . '/../handlers/SpacesHandler.php';
+    try {
+        $spaces = new SpacesHandler($spaces_conf);
+        $key = $spaces->artifactKey($user_id, $uuid, $ext);
+        if (!$spaces->put($key, $bytes, $mimeType)) return null;
+        return ['path' => $key, 'mime' => $mimeType];
+    } catch (\Throwable $e) {
+        error_log('[ai] artifact upload error: ' . $e->getMessage());
+        return null;
+    }
+}
+
+function ai_artifact_extension(string $mode, string $mimeType): string {
+    $map = [
+        'image/jpeg'      => 'jpg',
+        'image/jpg'       => 'jpg',
+        'image/png'       => 'png',
+        'image/webp'      => 'webp',
+        'image/heic'      => 'heic',
+        'image/heif'      => 'heif',
+        'audio/webm'      => 'webm',
+        'audio/ogg'       => 'ogg',
+        'audio/mp4'       => 'm4a',
+        'audio/x-m4a'     => 'm4a',
+        'audio/mpeg'      => 'mp3',
+        'audio/mp3'       => 'mp3',
+        'audio/wav'       => 'wav',
+        'audio/x-wav'     => 'wav',
+        'audio/flac'      => 'flac',
+        'audio/aac'       => 'aac',
+        'application/pdf' => 'pdf',
+    ];
+    $base = strtolower(trim(explode(';', $mimeType, 2)[0]));
+    if (isset($map[$base])) return $map[$base];
+    return match ($mode) {
+        'image' => 'bin', 'audio' => 'audio', 'pdf' => 'pdf', default => 'bin',
+    };
+}
+
+// ──────────────────────────────────────────────────────────────────
+// DISCARD ARTIFACT (called by frontend when AI modal closes without save)
+// ──────────────────────────────────────────────────────────────────
+
+function handle_discard_artifact(string $user_id): void {
+    if (method() !== 'POST' && method() !== 'DELETE') json_error('Method not allowed', 405);
+    $body = get_json_body();
+    $path = $body['path'] ?? ($_GET['path'] ?? '');
+    if (!is_string($path) || $path === '') json_error('path is required');
+
+    $spaces_conf = $GLOBALS['mangos_config']['spaces'] ?? null;
+    if (!$spaces_conf || empty($spaces_conf['key']) || $spaces_conf['key'] === 'CHANGE_ME') {
+        // Nothing to delete; treat as a no-op.
+        json_response(['deleted' => false, 'reason' => 'spaces not configured']);
+    }
+
+    // Authorization: the path MUST live under this user's namespace, otherwise
+    // a discard call could nuke someone else's artifact.
+    $expectedPrefix = rtrim($spaces_conf['prefix'], '/') . '/ai-uploads/' . $user_id . '/';
+    if (!str_starts_with($path, $expectedPrefix)) {
+        json_error('Path outside user namespace', 403);
+    }
+
+    require_once __DIR__ . '/../handlers/SpacesHandler.php';
+    $spaces = new SpacesHandler($spaces_conf);
+    $ok = $spaces->delete($path);
+    json_response(['deleted' => $ok]);
 }
 
 function build_single_prompt(array $context, string $mode, ?string $user_input): string {

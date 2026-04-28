@@ -240,6 +240,18 @@ $openAIOnLoad = !empty($_GET['ai']);
                     </div>
                 </details>
 
+                <!-- Original artifact (image / audio / PDF). Hidden unless the
+                     payment has ai_artifact_path set; populated in openPaymentModal. -->
+                <details id="pmt-artifact-details" class="hidden border border-border rounded-lg">
+                    <summary class="px-4 py-2.5 text-sm font-medium cursor-pointer select-none flex items-center justify-between">
+                        <span>Original <span id="pmt-artifact-kind" class="text-xs text-muted ml-1"></span></span>
+                        <svg class="w-4 h-4 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                        </svg>
+                    </summary>
+                    <div id="pmt-artifact-body" class="px-4 pb-4 pt-3 border-t border-border"></div>
+                </details>
+
                 <p id="pmt-form-error" class="hidden text-sm text-danger">&nbsp;</p>
 
                 <div class="flex items-center gap-2 pt-2">
@@ -424,7 +436,7 @@ let pendingDeleteId = null;
 // AI input state. aiSourceTag is non-null while the payment-modal is pre-filled
 // from /api/ai/parse-single — used to tag the resulting payment with source=ai-*.
 let aiSourceTag = null;
-let aiState = { mode: 'text', image: null, pdf: null, audio: null, draft: null, matched: null };
+let aiState = { mode: 'text', image: null, pdf: null, audio: null, draft: null, matched: null, artifact: null };
 
 // MediaRecorder runtime (only populated while a recording is in progress or just-finished).
 let aiAudio = { recorder: null, stream: null, chunks: [], startTime: 0, mimeType: null, timerInterval: null, autoStopTimeout: null };
@@ -845,8 +857,82 @@ async function openPaymentModal(p) {
     document.getElementById('pmt-form-error').classList.add('hidden');
     // Delete button: only visible when editing a real (saved) payment.
     document.getElementById('pmt-form-delete').classList.toggle('hidden', !editingId);
+    // Original artifact viewer: only when this payment has one persisted.
+    if (full?.id && full.ai_artifact_path) {
+        renderArtifactViewer(full.id, full.ai_artifact_mime || '');
+    } else {
+        hideArtifactViewer();
+    }
     document.getElementById('payment-modal').classList.remove('hidden');
     setTimeout(() => document.getElementById('pmt-title').focus(), 50);
+}
+
+// Render the "Original" details element with an inline preview of the AI input
+// artifact (image / audio / PDF). The actual fetch goes through our private
+// proxy at /api/payments/artifact?id=<id>; the bucket itself is not exposed.
+function renderArtifactViewer(paymentId, mime) {
+    const details = document.getElementById('pmt-artifact-details');
+    const body = document.getElementById('pmt-artifact-body');
+    const kind = document.getElementById('pmt-artifact-kind');
+    const url = `${window.MANGOS_API_URL}/payments/artifact?id=${encodeURIComponent(paymentId)}`;
+
+    body.textContent = '';
+
+    const showFallback = () => {
+        body.textContent = '';
+        const p = document.createElement('p');
+        p.className = 'text-xs text-muted';
+        p.textContent = 'Original ya no disponible.';
+        body.appendChild(p);
+    };
+
+    let label = 'archivo';
+    if (mime.startsWith('image/')) {
+        label = 'imagen';
+        const img = document.createElement('img');
+        img.src = url;
+        img.alt = 'Original';
+        img.className = 'w-full max-h-64 object-contain rounded-lg bg-dark/5';
+        img.addEventListener('error', showFallback);
+        body.appendChild(img);
+    } else if (mime.startsWith('audio/')) {
+        label = 'audio';
+        const audio = document.createElement('audio');
+        audio.controls = true;
+        audio.src = url;
+        audio.className = 'w-full';
+        audio.addEventListener('error', showFallback);
+        body.appendChild(audio);
+    } else if (mime === 'application/pdf') {
+        label = 'PDF';
+        const link = document.createElement('a');
+        link.href = url;
+        link.target = '_blank';
+        link.rel = 'noopener';
+        link.className = 'inline-flex items-center gap-2 text-sm text-accent hover:underline';
+        link.textContent = 'Abrir PDF en pestaña nueva';
+        body.appendChild(link);
+    } else {
+        const link = document.createElement('a');
+        link.href = url;
+        link.target = '_blank';
+        link.rel = 'noopener';
+        link.className = 'text-sm text-accent hover:underline';
+        link.textContent = 'Descargar archivo original';
+        body.appendChild(link);
+    }
+    kind.textContent = `(${label})`;
+    details.classList.remove('hidden');
+    details.open = false;
+}
+
+function hideArtifactViewer() {
+    const details = document.getElementById('pmt-artifact-details');
+    if (!details) return;
+    details.classList.add('hidden');
+    details.open = false;
+    document.getElementById('pmt-artifact-body').textContent = '';
+    document.getElementById('pmt-artifact-kind').textContent = '';
 }
 
 // Triggered from inside the edit modal — delegates to the existing delete confirm flow.
@@ -859,10 +945,19 @@ function deleteFromPaymentModal() {
 }
 
 function closePaymentModal() {
+    // If we still have an unsaved AI artifact when closing, the user dismissed
+    // the prefilled form — fire-and-forget a discard so we don't leak orphans.
+    // Successful saves null `aiState.artifact` before reaching this function.
+    if (aiState.artifact && aiState.artifact.path) {
+        const path = aiState.artifact.path;
+        aiState.artifact = null;
+        api.post('/ai/discard-artifact', { path }).catch(err => console.warn('discard failed', err));
+    }
     document.getElementById('payment-modal').classList.add('hidden');
     editingId = null;
     aiSourceTag = null;
     hideRecurrentBanner();
+    hideArtifactViewer();
 }
 
 async function submitPaymentForm(e) {
@@ -903,6 +998,10 @@ async function submitPaymentForm(e) {
         recipient,
     };
     if (!editingId && aiSourceTag) body.source = aiSourceTag;
+    if (!editingId && aiState.artifact) {
+        body.ai_artifact_path = aiState.artifact.path;
+        body.ai_artifact_mime = aiState.artifact.mime;
+    }
 
     try {
         const result = editingId
@@ -921,6 +1020,9 @@ async function submitPaymentForm(e) {
         }
 
         toast(editingId ? 'Pago actualizado' : 'Pago creado', 'success');
+        // Payment now owns the artifact; null it so closePaymentModal's
+        // discard guard doesn't try to delete it from Spaces.
+        aiState.artifact = null;
         closePaymentModal();
         await loadAll();
     } catch (err) {
@@ -1267,6 +1369,7 @@ async function submitAIInput() {
 
     aiState.draft = result.draft;
     aiState.matched = result.matched_recurrent || null;
+    aiState.artifact = result.ai_artifact || null;
     closeAIModal();
     await openPaymentModalFromAI(result.draft, result.matched_recurrent || null);
 }
