@@ -254,6 +254,7 @@
                 <div class="flex gap-1 p-1 bg-dark/5 rounded-lg">
                     <button type="button" data-mode="text" class="ai-mode-tab flex-1 text-sm py-2 rounded-md transition-colors">Texto</button>
                     <button type="button" data-mode="image" class="ai-mode-tab flex-1 text-sm py-2 rounded-md transition-colors">Foto</button>
+                    <button type="button" data-mode="audio" class="ai-mode-tab flex-1 text-sm py-2 rounded-md transition-colors">Audio</button>
                     <button type="button" data-mode="pdf" class="ai-mode-tab flex-1 text-sm py-2 rounded-md transition-colors">PDF</button>
                 </div>
 
@@ -266,7 +267,7 @@
 
                 <!-- Image mode -->
                 <div id="ai-mode-image" class="ai-mode-pane hidden">
-                    <input type="file" id="ai-image-input" accept="image/*" capture="environment" class="hidden">
+                    <input type="file" id="ai-image-input" accept="image/*" class="hidden">
                     <div id="ai-image-zone" class="border-2 border-dashed border-border rounded-lg p-6 text-center cursor-pointer hover:border-accent hover:bg-accent/5 transition-colors">
                         <svg class="w-10 h-10 mx-auto text-muted mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/>
@@ -278,6 +279,41 @@
                     <div id="ai-image-preview" class="hidden mt-3 relative">
                         <img id="ai-image-thumb" alt="" class="w-full max-h-64 object-contain rounded-lg border border-border bg-dark/5">
                         <button type="button" onclick="clearAIImage()" class="absolute top-2 right-2 bg-danger text-white rounded-full w-7 h-7 flex items-center justify-center text-sm shadow">×</button>
+                    </div>
+                </div>
+
+                <!-- Audio mode -->
+                <div id="ai-mode-audio" class="ai-mode-pane hidden">
+                    <!-- Idle -->
+                    <div id="ai-audio-idle" class="border-2 border-dashed border-border rounded-lg p-6 text-center">
+                        <button type="button" id="ai-audio-start"
+                                class="w-16 h-16 mx-auto rounded-full bg-accent text-white flex items-center justify-center shadow hover:bg-accent/90 active:scale-95 transition">
+                            <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-14 0m7 7v4m-4 0h8m-4-8a3 3 0 01-3-3V6a3 3 0 116 0v5a3 3 0 01-3 3z"/>
+                            </svg>
+                        </button>
+                        <p class="text-sm font-medium mt-3">Grabar audio</p>
+                        <p class="text-xs text-muted mt-1">Decí monto, lugar, fecha. Max 60s.</p>
+                    </div>
+                    <!-- Recording -->
+                    <div id="ai-audio-recording" class="hidden border-2 border-danger/40 bg-danger/5 rounded-lg p-6 text-center">
+                        <div class="w-16 h-16 mx-auto rounded-full bg-danger text-white flex items-center justify-center animate-pulse">
+                            <span class="w-5 h-5 rounded-sm bg-white"></span>
+                        </div>
+                        <p class="text-sm font-medium text-danger mt-3">Grabando...</p>
+                        <p id="ai-audio-timer" class="text-2xl font-mono text-danger mt-1">0:00</p>
+                        <button type="button" id="ai-audio-stop" class="btn btn-outline mt-3 py-1.5 px-4 text-sm">Detener</button>
+                    </div>
+                    <!-- Recorded -->
+                    <div id="ai-audio-recorded" class="hidden border border-border rounded-lg p-4">
+                        <div class="flex items-center gap-3 mb-2">
+                            <svg class="w-5 h-5 text-success flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                            </svg>
+                            <span class="text-sm font-medium">Grabado · <span id="ai-audio-duration">0:00</span></span>
+                            <button type="button" id="ai-audio-redo" class="ml-auto text-xs text-muted hover:text-dark">Re-grabar</button>
+                        </div>
+                        <audio id="ai-audio-playback" controls class="w-full"></audio>
                     </div>
                 </div>
 
@@ -338,7 +374,10 @@ let pendingDeleteId = null;
 // AI input state. aiSourceTag is non-null while the payment-modal is pre-filled
 // from /api/ai/parse-single — used to tag the resulting payment with source=ai-*.
 let aiSourceTag = null;
-let aiState = { mode: 'text', image: null, pdf: null, draft: null, matched: null };
+let aiState = { mode: 'text', image: null, pdf: null, audio: null, draft: null, matched: null };
+
+// MediaRecorder runtime (only populated while a recording is in progress or just-finished).
+let aiAudio = { recorder: null, stream: null, chunks: [], startTime: 0, mimeType: null, timerInterval: null, autoStopTimeout: null };
 
 // View state — initialized from URL query string, persisted on every change.
 let viewMonth = startOfMonth(new Date());
@@ -871,7 +910,8 @@ function closeAIModal() {
 }
 
 function resetAIModal() {
-    aiState = { mode: 'text', image: null, pdf: null, draft: null, matched: null };
+    cancelAudioRecording();
+    aiState = { mode: 'text', image: null, pdf: null, audio: null, draft: null, matched: null };
     document.getElementById('ai-text').value = '';
     document.getElementById('ai-image-input').value = '';
     document.getElementById('ai-pdf-input').value = '';
@@ -879,11 +919,16 @@ function resetAIModal() {
     document.getElementById('ai-pdf-preview').classList.add('hidden');
     document.getElementById('ai-caption').value = '';
     document.getElementById('ai-error').classList.add('hidden');
+    showAudioState('idle');
     setAILoading(false);
     setAIMode('text');
 }
 
 function setAIMode(mode) {
+    // Stop any in-flight recording when leaving the audio tab.
+    if (aiState.mode === 'audio' && mode !== 'audio' && aiAudio.recorder?.state === 'recording') {
+        cancelAudioRecording();
+    }
     aiState.mode = mode;
     document.querySelectorAll('.ai-mode-tab').forEach(t => {
         const active = t.dataset.mode === mode;
@@ -938,6 +983,133 @@ function clearAIPdf() {
     document.getElementById('ai-pdf-preview').classList.add('hidden');
 }
 
+// Audio: prefer Gemini-supported containers (OGG, MP4) before falling back to
+// WebM. MediaRecorder support varies — Chrome/Firefox usually do OGG/Opus,
+// Safari does MP4/AAC, both Chromium variants do WebM/Opus.
+function pickAudioMimeType() {
+    if (typeof MediaRecorder === 'undefined') return '';
+    const candidates = ['audio/ogg;codecs=opus', 'audio/mp4', 'audio/webm;codecs=opus', 'audio/webm'];
+    for (const m of candidates) {
+        if (MediaRecorder.isTypeSupported(m)) return m;
+    }
+    return '';
+}
+
+function showAudioState(state) {
+    document.getElementById('ai-audio-idle').classList.toggle('hidden', state !== 'idle');
+    document.getElementById('ai-audio-recording').classList.toggle('hidden', state !== 'recording');
+    document.getElementById('ai-audio-recorded').classList.toggle('hidden', state !== 'recorded');
+}
+
+function formatAudioDuration(seconds) {
+    const m = Math.floor(seconds / 60);
+    const s = seconds % 60;
+    return `${m}:${String(s).padStart(2, '0')}`;
+}
+
+async function startAudioRecording() {
+    if (!navigator.mediaDevices?.getUserMedia) {
+        toast('Tu navegador no soporta grabacion de audio', 'error');
+        return;
+    }
+    let stream;
+    try {
+        stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    } catch (e) {
+        if (e.name === 'NotAllowedError' || e.name === 'PermissionDeniedError') {
+            toast('Permitir el acceso al microfono para grabar', 'error');
+        } else {
+            console.error(e);
+            toast('No se pudo acceder al microfono', 'error');
+        }
+        return;
+    }
+
+    const mimeType = pickAudioMimeType();
+    let recorder;
+    try {
+        recorder = mimeType ? new MediaRecorder(stream, { mimeType }) : new MediaRecorder(stream);
+    } catch (e) {
+        console.error(e);
+        stream.getTracks().forEach(t => t.stop());
+        toast('No se pudo iniciar la grabacion', 'error');
+        return;
+    }
+
+    aiAudio.recorder = recorder;
+    aiAudio.stream = stream;
+    aiAudio.chunks = [];
+    aiAudio.mimeType = recorder.mimeType || mimeType || 'audio/webm';
+    aiAudio.startTime = Date.now();
+
+    recorder.addEventListener('dataavailable', e => {
+        if (e.data && e.data.size > 0) aiAudio.chunks.push(e.data);
+    });
+    recorder.addEventListener('stop', onAudioRecordingStop);
+    recorder.start();
+
+    showAudioState('recording');
+    aiAudio.timerInterval = setInterval(updateAudioTimer, 250);
+    updateAudioTimer();
+    // Hard cap at 60s — beyond that the base64 payload starts crossing 8MB.
+    aiAudio.autoStopTimeout = setTimeout(() => {
+        if (aiAudio.recorder?.state === 'recording') stopAudioRecording();
+    }, 60_000);
+}
+
+function stopAudioRecording() {
+    if (aiAudio.recorder?.state === 'recording') aiAudio.recorder.stop();
+    if (aiAudio.stream) {
+        aiAudio.stream.getTracks().forEach(t => t.stop());
+        aiAudio.stream = null;
+    }
+    if (aiAudio.timerInterval) { clearInterval(aiAudio.timerInterval); aiAudio.timerInterval = null; }
+    if (aiAudio.autoStopTimeout) { clearTimeout(aiAudio.autoStopTimeout); aiAudio.autoStopTimeout = null; }
+}
+
+function cancelAudioRecording() {
+    stopAudioRecording();
+    aiAudio.chunks = [];
+    aiAudio.recorder = null;
+    aiState.audio = null;
+    const playback = document.getElementById('ai-audio-playback');
+    if (playback) {
+        try { playback.pause(); } catch (_) {}
+        playback.src = '';
+    }
+    showAudioState('idle');
+}
+
+function onAudioRecordingStop() {
+    const blob = new Blob(aiAudio.chunks, { type: aiAudio.mimeType });
+    const durationSec = Math.max(1, Math.round((Date.now() - aiAudio.startTime) / 1000));
+
+    const reader = new FileReader();
+    reader.onload = () => {
+        const dataUrl = reader.result;
+        const base64 = dataUrl.split(',', 2)[1] || '';
+        if (base64.length > 8 * 1024 * 1024) {
+            toast('El audio supera los 8MB. Probá con uno mas corto.', 'error');
+            cancelAudioRecording();
+            return;
+        }
+        aiState.audio = { mimeType: aiAudio.mimeType, base64, durationSec };
+        document.getElementById('ai-audio-playback').src = dataUrl;
+        document.getElementById('ai-audio-duration').textContent = formatAudioDuration(durationSec);
+        showAudioState('recorded');
+    };
+    reader.onerror = () => {
+        toast('No se pudo leer el audio grabado', 'error');
+        cancelAudioRecording();
+    };
+    reader.readAsDataURL(blob);
+}
+
+function updateAudioTimer() {
+    const elapsed = Math.floor((Date.now() - aiAudio.startTime) / 1000);
+    document.getElementById('ai-audio-timer').textContent = formatAudioDuration(elapsed);
+}
+
 function setAILoading(loading) {
     document.getElementById('ai-submit-btn').disabled = loading;
     document.getElementById('ai-submit-spinner').classList.toggle('hidden', !loading);
@@ -964,6 +1136,11 @@ async function submitAIInput() {
         if (!aiState.pdf) { showAIError('Adjunta un PDF'); return; }
         payload.mimeType = aiState.pdf.mimeType;
         payload.data = aiState.pdf.base64;
+        if (caption) payload.caption = caption;
+    } else if (aiState.mode === 'audio') {
+        if (!aiState.audio) { showAIError('Grabá un audio antes de analizar'); return; }
+        payload.mimeType = aiState.audio.mimeType;
+        payload.data = aiState.audio.base64;
         if (caption) payload.caption = caption;
     }
 
@@ -1157,6 +1334,11 @@ mangosAuth.ready.then(user => {
         const f = e.dataTransfer.files?.[0];
         if (f) await handleAIPdfFile(f);
     });
+
+    // AI modal: audio recording controls
+    document.getElementById('ai-audio-start').addEventListener('click', startAudioRecording);
+    document.getElementById('ai-audio-stop').addEventListener('click', stopAudioRecording);
+    document.getElementById('ai-audio-redo').addEventListener('click', cancelAudioRecording);
 
     // Ctrl/Cmd+Enter inside the AI text mode submits.
     document.getElementById('ai-text').addEventListener('keydown', e => {
