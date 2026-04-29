@@ -79,6 +79,18 @@
                     </div>
                 </div>
 
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label for="account-opening-balance" class="block text-sm font-medium mb-1.5">Saldo inicial</label>
+                        <input type="text" id="account-opening-balance" class="input" placeholder="0,00" inputmode="decimal">
+                    </div>
+                    <div>
+                        <label for="account-opening-date" class="block text-sm font-medium mb-1.5">A partir de</label>
+                        <input type="date" id="account-opening-date" class="input">
+                    </div>
+                </div>
+                <p class="text-xs text-muted -mt-2">El saldo actual se calcula como saldo inicial + movimientos pagados desde esa fecha.</p>
+
                 <div>
                     <label for="account-color" class="block text-sm font-medium mb-1.5">Color</label>
                     <input type="color" id="account-color" class="h-10 w-full rounded-lg border border-border cursor-pointer" value="#D97706">
@@ -231,7 +243,49 @@ function buildAccountEl(a) {
     name.textContent = a.name;
     wrap.appendChild(name);
 
+    const balanceWrap = document.createElement('div');
+    balanceWrap.className = 'mt-3 pt-3 border-t border-border';
+    const balLabel = document.createElement('p');
+    balLabel.className = 'text-[10px] font-semibold tracking-wide uppercase text-muted';
+    balLabel.textContent = 'Saldo actual';
+    balanceWrap.appendChild(balLabel);
+
+    const balVal = document.createElement('p');
+    const balNum = Number(a.current_balance ?? 0);
+    const isNeg = balNum < 0;
+    balVal.className = `text-xl font-bold tabular-nums mt-0.5 ${isNeg ? 'text-danger' : 'text-dark'}`;
+    balVal.textContent = (a.currency !== 'ARS' ? a.currency + ' ' : '') + formatPrice(Math.abs(balNum));
+    if (isNeg) balVal.textContent = '−' + balVal.textContent;
+    balanceWrap.appendChild(balVal);
+
+    if (a.opening_balance_date) {
+        const since = document.createElement('p');
+        since.className = 'text-[11px] text-muted mt-0.5';
+        since.textContent = `Desde ${a.opening_balance_date}`;
+        balanceWrap.appendChild(since);
+    } else {
+        const hint = document.createElement('p');
+        hint.className = 'text-[11px] text-muted italic mt-0.5';
+        hint.textContent = 'Configura saldo inicial para fijar punto de partida';
+        balanceWrap.appendChild(hint);
+    }
+    wrap.appendChild(balanceWrap);
+
     return wrap;
+}
+
+function parseBalanceInput(input) {
+    if (input == null || input === '') return 0;
+    const s = String(input).trim().replace(/\./g, '').replace(',', '.');
+    const n = parseFloat(s);
+    return isFinite(n) ? n : 0;
+}
+
+function formatBalanceForInput(amount) {
+    if (amount == null) return '';
+    const n = Number(amount);
+    if (!isFinite(n) || n === 0) return '';
+    return n.toFixed(2).replace('.', ',');
 }
 
 function openAccountModal(account) {
@@ -242,6 +296,8 @@ function openAccountModal(account) {
     document.getElementById('account-name').value = account?.name || '';
     document.getElementById('account-color').value = account?.color || '#D97706';
     document.getElementById('account-default').checked = Number(account?.is_default || 0) === 1;
+    document.getElementById('account-opening-balance').value = formatBalanceForInput(account?.opening_balance);
+    document.getElementById('account-opening-date').value = account?.opening_balance_date || '';
 
     document.querySelectorAll('input[name="account-type"]').forEach(r => {
         r.checked = (r.value === (account?.type || 'bank'));
@@ -276,12 +332,16 @@ async function submitAccountForm(e) {
         return;
     }
 
+    const openingDate = document.getElementById('account-opening-date').value || null;
+    const openingRaw = document.getElementById('account-opening-balance').value;
     const body = {
         name: document.getElementById('account-name').value.trim(),
         type,
         currency,
         color: document.getElementById('account-color').value || null,
         is_default: document.getElementById('account-default').checked ? 1 : 0,
+        opening_balance: parseBalanceInput(openingRaw),
+        opening_balance_date: openingDate,
     };
 
     try {

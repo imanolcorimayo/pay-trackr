@@ -109,6 +109,36 @@ else
     printf '  [FAIL] expected 2 accounts after delete, got %s\n' "$count"
 fi
 
+# Opening balance behavior
+req POST /api/accounts '{"name":"Bal acct","type":"bank","currency":"ARS","opening_balance":100000,"opening_balance_date":"2026-04-01"}'
+assert_status 201 "POST account with opening balance"
+bal_acct=$(json_field id)
+req GET "/api/accounts?id=$bal_acct"
+assert_json opening_balance "100000.00" "opening_balance stored"
+assert_json opening_balance_date "2026-04-01" "opening_balance_date stored"
+assert_json current_balance "100000" "current_balance equals opening when no movements"
+
+# Add a paid expense after the opening date — balance should drop.
+req POST /api/transactions "{\"title\":\"Test exp\",\"amount\":15000,\"account_id\":\"$bal_acct\",\"is_paid\":true}"
+bal_tx=$(json_field id)
+req GET "/api/accounts?id=$bal_acct"
+assert_json current_balance "85000" "current_balance after one paid expense"
+
+# Unpaid expense should NOT affect balance.
+req POST /api/transactions "{\"title\":\"Pending\",\"amount\":50000,\"account_id\":\"$bal_acct\",\"is_paid\":false}"
+pending_tx=$(json_field id)
+req GET "/api/accounts?id=$bal_acct"
+assert_json current_balance "85000" "unpaid expense does not affect balance"
+
+# Reject malformed date
+req PUT "/api/accounts?id=$bal_acct" '{"opening_balance_date":"not-a-date"}'
+assert_status 400 "PUT rejects malformed opening_balance_date"
+
+# Cleanup
+req DELETE "/api/transactions?id=$bal_tx" >/dev/null
+req DELETE "/api/transactions?id=$pending_tx" >/dev/null
+req DELETE "/api/accounts?id=$bal_acct" >/dev/null
+
 # Refuse to delete the last account (delete cash, then try to delete the original seeded "Sin cuenta")
 req DELETE "/api/accounts?id=$cash_id"
 assert_status 200 "DELETE cash account"

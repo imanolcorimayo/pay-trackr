@@ -81,6 +81,20 @@ else
     printf '  [FAIL] transaction.transaction_type column missing\n'
 fi
 
+# account.opening_balance and account.opening_balance_date columns exist (added in 018)
+for col in opening_balance opening_balance_date; do
+    found=$(mysql_exec "SELECT COUNT(*) FROM information_schema.columns WHERE table_schema='$DB_NAME' AND table_name='account' AND column_name='$col';")
+    TESTS_RUN=$((TESTS_RUN + 1))
+    if [ "$found" = "1" ]; then
+        TESTS_PASSED=$((TESTS_PASSED + 1))
+        printf '  [ OK ] account.%s column present\n' "$col"
+    else
+        TESTS_FAILED=$((TESTS_FAILED + 1))
+        FAILURES+=("account.$col column missing")
+        printf '  [FAIL] account.%s column missing\n' "$col"
+    fi
+done
+
 # transaction.account_id and transaction.currency columns exist (added in 017)
 for col in account_id currency; do
     found=$(mysql_exec "SELECT COUNT(*) FROM information_schema.columns WHERE table_schema='$DB_NAME' AND table_name='transaction' AND column_name='$col';")

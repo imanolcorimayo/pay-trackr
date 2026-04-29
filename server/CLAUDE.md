@@ -22,6 +22,8 @@ PHP REST API backed by MySQL. Migrated from the previous Node.js + Firestore sta
 
 **Account & currency**: every `transaction` and `recurrent` carries `account_id` (FK → `account`, the wallet/source-of-money) and `currency` (`ENUM('ARS','USD','USDT')`, default `'ARS'`). `account_id` defaults to the user's `is_default` account (seeded as "Sin cuenta" on first login via `seed_default_account_for_user`); `currency` defaults to that account's currency. Pass `?account_id=` or `?currency=` to filter list endpoints. Dashboard/analytics aggregate ARS-only until Phase 3 brings FX rates.
 
+**Account balance**: each `account` has `opening_balance` + `opening_balance_date`. `GET /api/accounts` returns a computed `current_balance = opening_balance + SUM(amount)` over **paid** transactions on/after that date (NULL date = include all). Pending rows do not move the balance. Logic lives in `compute_account_balance()` in `accounts.php`.
+
 ## AI: `handlers/GeminiHandler.php`
 
 Reusable Gemini wrapper. Model rotation: `gemini-2.5-flash` → `gemini-3.1-flash-lite-preview` → `gemini-2.5-flash-lite` → `gemini-2.5-pro`. Per-request timeout 45s, total budget 110s. Daily-exhaustion cache at `sys_get_temp_dir()/mangos-gemini-exhausted.json`. Vision-capable; accepts `inlineData` parts.

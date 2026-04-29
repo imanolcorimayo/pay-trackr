@@ -24,6 +24,7 @@ switch (method()) {
             $stmt->execute([$_GET['id'], $user_id]);
             $row = $stmt->fetch();
             if (!$row) json_error('Account not found', 404);
+            $row['current_balance'] = compute_account_balance($pdo, $user_id, $row);
             json_response($row);
         }
 
@@ -31,7 +32,12 @@ switch (method()) {
             "SELECT * FROM account WHERE user_id = ? AND deleted_ts IS NULL ORDER BY is_default DESC, name"
         );
         $stmt->execute([$user_id]);
-        json_response($stmt->fetchAll());
+        $rows = $stmt->fetchAll();
+        foreach ($rows as &$r) {
+            $r['current_balance'] = compute_account_balance($pdo, $user_id, $r);
+        }
+        unset($r);
+        json_response($rows);
 
     case 'POST':
         $data = get_json_body();
@@ -46,6 +52,12 @@ switch (method()) {
             json_error('currency must be one of: ' . implode(', ', $allowed_currencies));
         }
 
+        $opening_balance = isset($data['opening_balance']) ? (float)$data['opening_balance'] : 0;
+        $opening_balance_date = $data['opening_balance_date'] ?? null;
+        if ($opening_balance_date !== null && !preg_match('/^\d{4}-\d{2}-\d{2}$/', $opening_balance_date)) {
+            json_error('opening_balance_date must be YYYY-MM-DD');
+        }
+
         $is_default = !empty($data['is_default']) ? 1 : 0;
         $id = bin2hex(random_bytes(14));
 
@@ -54,8 +66,8 @@ switch (method()) {
             if ($is_default) clear_default_account($pdo, $user_id);
 
             $stmt = $pdo->prepare(
-                "INSERT INTO account (id, user_id, name, type, currency, color, is_default)
-                 VALUES (?, ?, ?, ?, ?, ?, ?)"
+                "INSERT INTO account (id, user_id, name, type, currency, color, is_default, opening_balance, opening_balance_date)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
             );
             $stmt->execute([
                 $id,
@@ -65,6 +77,8 @@ switch (method()) {
                 $currency,
                 $data['color'] ?? null,
                 $is_default,
+                $opening_balance,
+                $opening_balance_date,
             ]);
             $pdo->commit();
         } catch (Throwable $e) {
@@ -86,14 +100,25 @@ switch (method()) {
             json_error('currency must be one of: ' . implode(', ', $allowed_currencies));
         }
 
-        $allowed = ['name', 'type', 'currency', 'color', 'is_default'];
+        if (isset($data['opening_balance_date']) && $data['opening_balance_date'] !== null
+            && !preg_match('/^\d{4}-\d{2}-\d{2}$/', $data['opening_balance_date'])) {
+            json_error('opening_balance_date must be YYYY-MM-DD');
+        }
+
+        $allowed = ['name', 'type', 'currency', 'color', 'is_default', 'opening_balance', 'opening_balance_date'];
         $fields = [];
         $params = [];
 
         foreach ($allowed as $col) {
             if (array_key_exists($col, $data)) {
                 $fields[] = "$col = ?";
-                $params[] = $col === 'is_default' ? (!empty($data[$col]) ? 1 : 0) : $data[$col];
+                if ($col === 'is_default') {
+                    $params[] = !empty($data[$col]) ? 1 : 0;
+                } elseif ($col === 'opening_balance') {
+                    $params[] = (float)$data[$col];
+                } else {
+                    $params[] = $data[$col];
+                }
             }
         }
 
@@ -164,4 +189,27 @@ switch (method()) {
 
     default:
         json_error('Method not allowed', 405);
+}
+
+/**
+ * current_balance = opening_balance + SUM of paid transactions on/after the
+ * opening_balance_date for this account. If the date is NULL, every paid
+ * transaction is counted (handy for users who haven't set an anchor yet).
+ *
+ * Pending (unpaid) transactions are excluded — only money that has actually
+ * moved counts. paid_ts is the cutoff field; we fall back to due_ts when a row
+ * was marked paid without an explicit timestamp.
+ */
+function compute_account_balance(PDO $pdo, string $user_id, array $account): float {
+    $sql = "SELECT COALESCE(SUM(amount), 0) FROM `transaction`
+            WHERE user_id = ? AND account_id = ? AND is_paid = 1";
+    $params = [$user_id, $account['id']];
+    if (!empty($account['opening_balance_date'])) {
+        $sql .= " AND DATE(COALESCE(paid_ts, due_ts)) >= ?";
+        $params[] = $account['opening_balance_date'];
+    }
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute($params);
+    $movements = (float) $stmt->fetchColumn();
+    return round((float)$account['opening_balance'] + $movements, 2);
 }
