@@ -35,12 +35,16 @@ switch (method()) {
 
         $id = bin2hex(random_bytes(14));
 
+        [$account_id, $currency] = resolve_account_and_currency(
+            $pdo, $user_id, $data['account_id'] ?? null, $data['currency'] ?? null
+        );
+
         $pdo->beginTransaction();
         try {
             $stmt = $pdo->prepare(
-                "INSERT INTO recurrent (id, user_id, title, description, amount, start_date,
-                 due_date_day, end_date, time_period, expense_category_id, card_id)
-                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+                "INSERT INTO recurrent (id, user_id, title, description, amount, currency, start_date,
+                 due_date_day, end_date, time_period, expense_category_id, card_id, account_id)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
             );
             $stmt->execute([
                 $id,
@@ -48,12 +52,14 @@ switch (method()) {
                 $data['title'],
                 $data['description'] ?? '',
                 -abs((float)$data['amount']),
+                $currency,
                 $data['start_date'] ?? null,
                 (int) $data['due_date_day'],
                 $data['end_date'] ?? null,
                 $data['time_period'] ?? 'monthly',
                 $data['expense_category_id'] ?? null,
                 $data['card_id'] ?? null,
+                $account_id,
             ]);
 
             replace_aliases($pdo, $id, $data['aliases'] ?? []);
@@ -71,9 +77,14 @@ switch (method()) {
 
         $data = get_json_body();
         $allowed = ['title', 'description', 'start_date', 'due_date_day',
-                     'end_date', 'time_period', 'expense_category_id', 'card_id'];
+                     'end_date', 'time_period', 'expense_category_id', 'card_id',
+                     'account_id', 'currency'];
         $fields = [];
         $params = [];
+
+        if (isset($data['currency']) && !in_array($data['currency'], ['ARS','USD','USDT'], true)) {
+            json_error('currency must be one of: ARS, USD, USDT');
+        }
 
         // Amount needs sign normalization (negative for expense).
         if (array_key_exists('amount', $data)) {

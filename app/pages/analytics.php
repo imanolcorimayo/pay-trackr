@@ -2,7 +2,7 @@
 <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
     <div>
         <h1 class="text-2xl font-semibold">Analisis</h1>
-        <p class="text-sm text-muted mt-1">Como gastas tu plata</p>
+        <p class="text-sm text-muted mt-1">Como gastas tu plata <span class="italic">— sólo ARS por ahora</span></p>
     </div>
     <select id="period-select" class="input sm:max-w-[220px]">
         <option value="3m">Ultimos 3 meses</option>
@@ -147,6 +147,8 @@ async function loadAll() {
         params.end_date = isoDate(range.end);
     }
 
+    // Phase 2: analytics is ARS-only; multi-currency arrives in Phase 3.
+    params.currency = 'ARS';
     const [pays, cats] = await Promise.all([
         api.get('/transactions', params),
         api.get('/categories'),

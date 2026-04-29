@@ -106,6 +106,21 @@
 
                 <div class="grid grid-cols-2 gap-3">
                     <div>
+                        <label for="rec-account" class="block text-sm font-medium mb-1.5">Cuenta</label>
+                        <select id="rec-account" class="input"></select>
+                    </div>
+                    <div>
+                        <label for="rec-currency" class="block text-sm font-medium mb-1.5">Moneda</label>
+                        <select id="rec-currency" class="input">
+                            <option value="ARS">ARS</option>
+                            <option value="USD">USD</option>
+                            <option value="USDT">USDT</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
                         <label for="rec-period" class="block text-sm font-medium mb-1.5">Frecuencia</label>
                         <select id="rec-period" class="input">
                             <option value="monthly">Mensual</option>
@@ -174,6 +189,7 @@ const PERIOD_LABEL = { monthly: 'Mensual', yearly: 'Anual', weekly: 'Semanal', b
 let recurrents = [];
 let categories = [];
 let cards = [];
+let accounts = [];
 let monthlyPayments = [];   // transactions for current month, used for paid status
 let editingId = null;
 let pendingDeleteId = null;
@@ -218,6 +234,14 @@ function cardById(id) {
     return cards.find(c => c.id === id);
 }
 
+function accountById(id) {
+    return accounts.find(a => a.id === id);
+}
+
+function defaultAccount() {
+    return accounts.find(a => Number(a.is_default) === 1) || accounts[0] || null;
+}
+
 // ── Loading & rendering ─────────────────────────────────────────────
 async function loadAll() {
     const now = new Date();
@@ -227,16 +251,18 @@ async function loadAll() {
     const lastDay = new Date(year, month + 1, 0).getDate();
     const endDate = `${year}-${String(month + 1).padStart(2, '0')}-${lastDay}`;
 
-    const [recs, cats, crds, pays] = await Promise.all([
+    const [recs, cats, crds, accs, pays] = await Promise.all([
         api.get('/recurrents'),
         api.get('/categories'),
         api.get('/cards'),
+        api.get('/accounts'),
         api.get('/transactions', { start_date: startDate, end_date: endDate }),
     ]);
 
     recurrents = recs || [];
     categories = cats || [];
     cards = crds || [];
+    accounts = accs || [];
     monthlyPayments = pays || [];
 
     populateDropdowns();
@@ -269,6 +295,15 @@ function populateDropdowns() {
         opt.value = c.id;
         opt.textContent = c.name + (c.last_four ? ` ····${c.last_four}` : '');
         cardSel.appendChild(opt);
+    });
+
+    const acctSel = document.getElementById('rec-account');
+    acctSel.textContent = '';
+    accounts.forEach(a => {
+        const opt = document.createElement('option');
+        opt.value = a.id;
+        opt.textContent = a.name + ' (' + a.currency + ')';
+        acctSel.appendChild(opt);
     });
 }
 
@@ -365,7 +400,8 @@ function buildRecurrentRow(r, isPaid, isOverdue, isLast) {
 
     const amountEl = document.createElement('span');
     amountEl.className = 'text-sm font-semibold';
-    amountEl.textContent = formatPrice(Math.abs(r.amount));
+    const curPrefix = (r.currency && r.currency !== 'ARS') ? r.currency + ' ' : '';
+    amountEl.textContent = curPrefix + formatPrice(Math.abs(r.amount));
     right.appendChild(amountEl);
 
     const badge = document.createElement('button');
@@ -423,6 +459,8 @@ async function toggleRecurrentPaid(r, btn) {
                 amount: r.amount,
                 expense_category_id: r.expense_category_id || null,
                 card_id: r.card_id || null,
+                account_id: r.account_id || null,
+                currency: r.currency || 'ARS',
                 recurrent_id: r.id,
                 transaction_type: 'recurrent',
                 due_ts,
@@ -457,6 +495,9 @@ function openRecurrentModal(r) {
     document.getElementById('rec-due-day').value = r?.due_date_day || '';
     document.getElementById('rec-category').value = r?.expense_category_id || '';
     document.getElementById('rec-card').value = r?.card_id || '';
+    const defAcct = defaultAccount();
+    document.getElementById('rec-account').value = r?.account_id || (defAcct?.id || '');
+    document.getElementById('rec-currency').value = r?.currency || (defAcct?.currency || 'ARS');
     document.getElementById('rec-period').value = r?.time_period || 'monthly';
     document.getElementById('rec-start').value = r?.start_date || '';
     document.getElementById('rec-end').value = r?.end_date || '';
@@ -514,6 +555,8 @@ async function submitRecurrentForm(e) {
         due_date_day: dueDay,
         expense_category_id: document.getElementById('rec-category').value || null,
         card_id: document.getElementById('rec-card').value || null,
+        account_id: document.getElementById('rec-account').value || null,
+        currency: document.getElementById('rec-currency').value || 'ARS',
         time_period: document.getElementById('rec-period').value || 'monthly',
         start_date: document.getElementById('rec-start').value || null,
         end_date: document.getElementById('rec-end').value || null,
@@ -586,6 +629,10 @@ mangosAuth.ready.then(user => {
     if (!user) return;
     loadAll();
     document.getElementById('recurrent-form').addEventListener('submit', submitRecurrentForm);
+    document.getElementById('rec-account').addEventListener('change', e => {
+        const a = accountById(e.target.value);
+        if (a) document.getElementById('rec-currency').value = a.currency;
+    });
     document.addEventListener('keydown', e => {
         if (e.key !== 'Escape') return;
         if (!document.getElementById('recurrent-modal').classList.contains('hidden')) closeRecurrentModal();

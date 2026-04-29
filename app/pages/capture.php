@@ -88,6 +88,8 @@ let drafts = [];
 let categories = [];
 let recurrents = [];
 let cards = [];
+let accounts = [];
+function defaultAccount() { return accounts.find(a => Number(a.is_default) === 1) || accounts[0] || null; }
 
 // ── Helpers ─────────────────────────────────────────────
 function parseAmount(input) {
@@ -273,18 +275,24 @@ async function analyze() {
         return;
     }
 
-    drafts = (result.drafts || []).map(d => ({
-        ...d,
-        amount: Math.abs(Number(d.amount) || 0),
-        date: d.date || '',
-        title: d.title || '',
-        description: d.description || '',
-        suggested_category_id: d.suggested_category_id || null,
-        card_id: null,
-        action: defaultActionFor(d),
-        update_recurrent_amount: shouldUpdateRecurrentAmount(d),
-        showOptions: false,
-    }));
+    drafts = (result.drafts || []).map(d => {
+        const detectedCur = d.detected_currency || 'ARS';
+        const matchByCurrency = accounts.find(a => a.currency === detectedCur);
+        return {
+            ...d,
+            amount: Math.abs(Number(d.amount) || 0),
+            date: d.date || '',
+            title: d.title || '',
+            description: d.description || '',
+            suggested_category_id: d.suggested_category_id || null,
+            card_id: null,
+            account_id: matchByCurrency?.id || defaultAccount()?.id || null,
+            currency: detectedCur,
+            action: defaultActionFor(d),
+            update_recurrent_amount: shouldUpdateRecurrentAmount(d),
+            showOptions: false,
+        };
+    });
 
     persistDrafts(result.unreadable_screenshot_idxs || []);
     renderReview(result.unreadable_screenshot_idxs || []);
@@ -584,6 +592,50 @@ function buildDraftRow(d, idx) {
         cardWrap.appendChild(cardSel);
         more.appendChild(cardWrap);
 
+        // Cuenta
+        const acctWrap = document.createElement('div');
+        acctWrap.className = 'col-span-12 sm:col-span-6';
+        const acctLab = document.createElement('label');
+        acctLab.className = 'block text-[11px] font-medium text-muted mb-0.5';
+        acctLab.textContent = 'Cuenta';
+        acctWrap.appendChild(acctLab);
+        const acctSel = document.createElement('select');
+        acctSel.className = 'input-sm';
+        accounts.forEach(a => {
+            const o = document.createElement('option');
+            o.value = a.id;
+            o.textContent = a.name + ' (' + a.currency + ')';
+            if (a.id === d.account_id) o.selected = true;
+            acctSel.appendChild(o);
+        });
+        acctSel.addEventListener('change', () => {
+            d.account_id = acctSel.value || null;
+            const a = accounts.find(x => x.id === d.account_id);
+            if (a) { d.currency = a.currency; curSel.value = a.currency; }
+        });
+        acctWrap.appendChild(acctSel);
+        more.appendChild(acctWrap);
+
+        // Moneda
+        const curWrap = document.createElement('div');
+        curWrap.className = 'col-span-12 sm:col-span-6';
+        const curLab = document.createElement('label');
+        curLab.className = 'block text-[11px] font-medium text-muted mb-0.5';
+        curLab.textContent = 'Moneda';
+        curWrap.appendChild(curLab);
+        const curSel = document.createElement('select');
+        curSel.className = 'input-sm';
+        ['ARS', 'USD', 'USDT'].forEach(code => {
+            const o = document.createElement('option');
+            o.value = code;
+            o.textContent = code;
+            if (code === (d.currency || 'ARS')) o.selected = true;
+            curSel.appendChild(o);
+        });
+        curSel.addEventListener('change', () => { d.currency = curSel.value; });
+        curWrap.appendChild(curSel);
+        more.appendChild(curWrap);
+
         // Descripcion
         const descWrap = document.createElement('div');
         descWrap.className = 'col-span-12';
@@ -665,6 +717,8 @@ async function commit() {
             amount: Number(d.amount) || 0,
             expense_category_id: d.suggested_category_id,
             card_id: d.card_id,
+            account_id: d.account_id,
+            currency: d.currency || 'ARS',
             transaction_type: 'one-time',
             is_paid: true,
             paid_ts,
@@ -711,14 +765,16 @@ function discard() {
 mangosAuth.ready.then(async user => {
     if (!user) return;
 
-    const [cs, rs, cards_] = await Promise.all([
+    const [cs, rs, cards_, accs] = await Promise.all([
         api.get('/categories'),
         api.get('/recurrents'),
         api.get('/cards'),
+        api.get('/accounts'),
     ]);
     categories = cs || [];
     recurrents = rs || [];
     cards = cards_ || [];
+    accounts = accs || [];
 
     setupDropZone();
     document.getElementById('analyze-btn').addEventListener('click', analyze);

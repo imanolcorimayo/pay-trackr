@@ -99,6 +99,14 @@ function handle_parse_transactions(PDO $pdo, string $user_id): void {
     $stmt->execute([$user_id]);
     $categories = $stmt->fetchAll();
 
+    // Accounts (for currency detection — Gemini sees the user's wallets and
+    // their currencies, which helps it pick `detected_currency` correctly).
+    $stmt = $pdo->prepare(
+        "SELECT id, name, currency FROM account WHERE user_id = ? AND deleted_ts IS NULL ORDER BY is_default DESC, name"
+    );
+    $stmt->execute([$user_id]);
+    $accounts = $stmt->fetchAll();
+
     $context = [
         'today' => $today,
         'existing_transactions_this_month' => array_map(fn($p) => [
@@ -110,6 +118,7 @@ function handle_parse_transactions(PDO $pdo, string $user_id): void {
         ], $existing),
         'recurrents' => $recurrents,
         'categories' => array_map(fn($c) => $c['name'], $categories),
+        'accounts' => array_map(fn($a) => ['name' => $a['name'], 'currency' => $a['currency']], $accounts),
     ];
 
     $parts = [];
@@ -225,6 +234,9 @@ REGLAS DE PARSEO:
 - date: YYYY-MM-DD. Buscala en el encabezado de la seccion de la fila.
 - suggested_category_name: una EXACTA de la lista "categories" o null.
 
+MONEDA:
+- detected_currency: una de "ARS", "USD", "USDT". Detecta la moneda del gasto a partir de signos visuales o textuales: "USD", "U\$D", "u\$s", "dolares", "USDT", "tether" → no-ARS. Default a "ARS" si no hay señal explicita. La lista "accounts" muestra las cuentas del usuario con su moneda; si una captura coincide con una cuenta no-ARS, usa esa moneda.
+
 DEDUPLICACION Y MATCHING:
 - existing_transaction_id: si este gasto ya esta en "existing_transactions_this_month" (titulo similar + monto cercano + fecha cercana), poner el id; si no, null.
 - recurrent_match_id: si el destinatario o concepto coincide con el "title" O CUALQUIERA de los "aliases" de un recurrent, poner el id de ese recurrent. EJEMPLO: si un recurrent tiene title "Clases de running" y aliases ["NAVARRO AMADEO ANDRES"], y la transaccion es "Transferencia enviada NAVARRO AMADEO ANDRES", DEBE matchear ese recurrent_id. El monto puede variar ±20% (no exigir match exacto en plata).
@@ -261,8 +273,9 @@ function build_schema(): array {
                         'recurrent_match_id' => ['type' => 'STRING', 'nullable' => true],
                         'recurrent_match_confidence' => ['type' => 'STRING', 'enum' => ['high', 'medium', 'low']],
                         'duplicate_in_batch_idx' => ['type' => 'INTEGER', 'nullable' => true],
+                        'detected_currency' => ['type' => 'STRING', 'enum' => ['ARS', 'USD', 'USDT']],
                     ],
-                    'required' => ['screenshot_idx', 'title', 'amount', 'date', 'recurrent_match_confidence'],
+                    'required' => ['screenshot_idx', 'title', 'amount', 'date', 'recurrent_match_confidence', 'detected_currency'],
                 ],
             ],
             'unreadable_screenshot_idxs' => [
@@ -309,19 +322,25 @@ function handle_commit_transactions(PDO $pdo, string $user_id): void {
                 $is_paid = !empty($row['is_paid']) ? 1 : 0;
                 $paid_ts = $is_paid ? ($row['paid_ts'] ?? date('Y-m-d H:i:s')) : null;
 
+                [$account_id, $currency] = resolve_account_and_currency(
+                    $pdo, $user_id, $row['account_id'] ?? null, $row['currency'] ?? null
+                );
+
                 $stmt = $pdo->prepare(
-                    "INSERT INTO `transaction` (id, user_id, title, description, amount, expense_category_id,
-                     is_paid, paid_ts, recurrent_id, card_id, transaction_type, due_ts, source, status)
-                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, NULL, ?, ?, ?, 'ai-image', 'reviewed')"
+                    "INSERT INTO `transaction` (id, user_id, title, description, amount, currency, expense_category_id,
+                     is_paid, paid_ts, recurrent_id, card_id, account_id, transaction_type, due_ts, source, status)
+                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, ?, ?, ?, ?, 'ai-image', 'reviewed')"
                 );
                 $stmt->execute([
                     $id, $user_id,
                     $row['title'],
                     $row['description'] ?? '',
                     -abs((float)$row['amount']),
+                    $currency,
                     $row['expense_category_id'] ?? null,
                     $is_paid, $paid_ts,
                     $row['card_id'] ?? null,
+                    $account_id,
                     $row['transaction_type'] ?? 'one-time',
                     $row['due_ts'] ?? null,
                 ]);
@@ -380,19 +399,21 @@ function handle_commit_transactions(PDO $pdo, string $user_id): void {
                     $insert_amount = $signed_amount ?? (float)$r['amount'];
 
                     $stmt = $pdo->prepare(
-                        "INSERT INTO `transaction` (id, user_id, title, description, amount, expense_category_id,
-                         is_paid, paid_ts, recurrent_id, card_id, transaction_type, due_ts, source, status)
-                         VALUES (?, ?, ?, ?, ?, ?, 1, ?, ?, ?, 'recurrent', ?, 'ai-image', 'reviewed')"
+                        "INSERT INTO `transaction` (id, user_id, title, description, amount, currency, expense_category_id,
+                         is_paid, paid_ts, recurrent_id, card_id, account_id, transaction_type, due_ts, source, status)
+                         VALUES (?, ?, ?, ?, ?, ?, ?, 1, ?, ?, ?, ?, 'recurrent', ?, 'ai-image', 'reviewed')"
                     );
                     $stmt->execute([
                         $id, $user_id,
                         $r['title'],
                         $r['description'] ?? '',
                         $insert_amount,
+                        $r['currency'] ?? 'ARS',
                         $r['expense_category_id'],
                         $paid_ts,
                         $rid,
                         $r['card_id'],
+                        $r['account_id'] ?? null,
                         $due_ts,
                     ]);
                     $transaction_ids[] = $id;
@@ -502,10 +523,18 @@ function handle_parse_single(PDO $pdo, string $user_id): void {
     $stmt->execute([$user_id]);
     $categories = $stmt->fetchAll();
 
+    // Accounts (for currency detection)
+    $stmt = $pdo->prepare(
+        "SELECT id, name, currency FROM account WHERE user_id = ? AND deleted_ts IS NULL ORDER BY is_default DESC, name"
+    );
+    $stmt->execute([$user_id]);
+    $accounts = $stmt->fetchAll();
+
     $context = [
         'today' => $today,
         'recurrents' => $recurrents,
         'categories' => array_map(fn($c) => $c['name'], $categories),
+        'accounts' => array_map(fn($a) => ['name' => $a['name'], 'currency' => $a['currency']], $accounts),
     ];
 
     $parts[] = ['text' => build_single_prompt($context, $mode, $user_input)];
@@ -715,6 +744,9 @@ DETECCION DE GASTO vs INGRESO (rechazar ingresos):
 - INGRESO (rechazar): "Transferencia recibida", "Cobro", "Acreditacion", "Rendimientos", "Devolucion", monto en verde, signo "+".
 - Si el input es claramente un ingreso, devuelve unreadable=true con reason="Es un ingreso, no un gasto".
 
+MONEDA:
+- detected_currency: una de "ARS", "USD", "USDT". Detecta la moneda a partir de signos textuales/visuales ("USD", "U\$D", "u\$s", "dolares", "USDT", "tether"). Default a "ARS" si no hay indicio explicito.
+
 MATCHING DE RECURRENTES:
 - Si el destinatario o concepto coincide con el "title" o cualquiera de los "aliases" de algun recurrent, devolve recurrent_match_id con su id.
 - recurrent_match_confidence: "high" si coincide casi exacto. "medium" si es similar. "low" si solo coincide parcial o por monto.
@@ -754,9 +786,10 @@ function build_single_schema(): array {
                     ],
                     'recurrent_match_id' => ['type' => 'STRING', 'nullable' => true],
                     'recurrent_match_confidence' => ['type' => 'STRING', 'enum' => ['high', 'medium', 'low']],
+                    'detected_currency' => ['type' => 'STRING', 'enum' => ['ARS', 'USD', 'USDT']],
                     'transcription' => ['type' => 'STRING', 'nullable' => true],
                 ],
-                'required' => ['is_paid', 'recurrent_match_confidence'],
+                'required' => ['is_paid', 'recurrent_match_confidence', 'detected_currency'],
             ],
             'unreadable' => ['type' => 'BOOLEAN'],
             'reason' => ['type' => 'STRING', 'nullable' => true],

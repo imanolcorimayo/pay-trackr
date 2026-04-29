@@ -4,6 +4,9 @@
 <div class="mb-5">
     <h1 class="text-2xl font-semibold">Dashboard</h1>
     <p class="text-sm text-muted mt-1" id="dashboard-period">--</p>
+    <p id="fx-footnote" class="hidden text-xs text-muted mt-1.5 italic">
+        Sólo ARS — multimoneda llega en próxima fase
+    </p>
 </div>
 
 <div class="grid grid-cols-1 lg:grid-cols-12 gap-5">
@@ -316,13 +319,21 @@ async function loadAll() {
     const sparkStart = startOfMonth(year, month - 5);
     const sparkEnd = new Date(year, month + 1, 0);
 
-    const [payments, recurrents, categories] = await Promise.all([
+    const [allPayments, allRecurrents, categories] = await Promise.all([
         api.get('/transactions', { start_date: isoDay(sparkStart), end_date: isoDay(sparkEnd) }),
         api.get('/recurrents'),
         api.get('/categories'),
     ]);
 
-    if (!payments || !recurrents) return;
+    if (!allPayments || !allRecurrents) return;
+    // Phase 2: dashboard aggregations are ARS-only. Multi-currency support
+    // arrives in Phase 3 alongside FX rates. Non-ARS rows still live on
+    // /movimientos but don't appear in totals/charts here.
+    const payments = allPayments.filter(p => (p.currency || 'ARS') === 'ARS');
+    const recurrents = allRecurrents.filter(r => (r.currency || 'ARS') === 'ARS');
+    const hasNonArs = allPayments.length !== payments.length || allRecurrents.length !== recurrents.length;
+    const fxFootnote = document.getElementById('fx-footnote');
+    if (fxFootnote) fxFootnote.classList.toggle('hidden', !hasNonArs);
     const cats = categories || [];
     const categoriesById = {};
     cats.forEach(c => { categoriesById[c.id] = c; });

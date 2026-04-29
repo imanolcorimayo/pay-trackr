@@ -14,10 +14,13 @@ PHP REST API backed by MySQL. Migrated from the previous Node.js + Firestore sta
   - `… /api/templates` → `api/templates.php`
   - `… /api/categories` → `api/categories.php`
   - `… /api/cards` → `api/card.php`
+  - `… /api/accounts` → `api/accounts.php`
   - `POST /api/ai/parse-transactions` → `api/ai.php` (image → AI-extracted draft transactions)
   - `POST /api/ai/commit-transactions` → `api/ai.php` (persist drafts after user review)
 
 **Sign convention**: `transaction.amount` and `recurrent.amount` are stored **signed** — expenses are negative. Write endpoints normalize input via `-abs()`. Read endpoints return signed values; the frontend `Math.abs()`es for display.
+
+**Account & currency**: every `transaction` and `recurrent` carries `account_id` (FK → `account`, the wallet/source-of-money) and `currency` (`ENUM('ARS','USD','USDT')`, default `'ARS'`). `account_id` defaults to the user's `is_default` account (seeded as "Sin cuenta" on first login via `seed_default_account_for_user`); `currency` defaults to that account's currency. Pass `?account_id=` or `?currency=` to filter list endpoints. Dashboard/analytics aggregate ARS-only until Phase 3 brings FX rates.
 
 ## AI: `handlers/GeminiHandler.php`
 
@@ -28,7 +31,7 @@ Reusable Gemini wrapper. Model rotation: `gemini-2.5-flash` → `gemini-3.1-flas
 ## Migrations
 
 - `migrate.php` — runner. Applies SQL files from `migrations/` in order, tracks applied state in DB.
-- `migrations/*.sql` — schema definitions (`transaction`, `transaction_recipient`, `recurrent`, `recurrent_alias`, `expense_category`, `transaction_template`, `card`, `user`, `fcm_token`, `weekly_summary`).
+- `migrations/*.sql` — schema definitions (`transaction`, `transaction_recipient`, `recurrent`, `recurrent_alias`, `expense_category`, `transaction_template`, `card`, `account`, `user`, `fcm_token`, `weekly_summary`).
 
 ## Deprecated (reference only, not deployed)
 

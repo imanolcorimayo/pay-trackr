@@ -67,3 +67,38 @@ function get_json_body(): array {
 function method(): string {
     return $_SERVER['REQUEST_METHOD'];
 }
+
+/**
+ * Resolve account_id + currency for a new transaction or recurrent.
+ *
+ * - If account_id is supplied, validate it belongs to the user (else 400).
+ * - Otherwise fall back to the user's default account (the seeded "Sin cuenta"
+ *   if they haven't created one).
+ * - If currency is supplied, return it as-is. Otherwise inherit the resolved
+ *   account's currency.
+ *
+ * Returns [string $account_id, string $currency].
+ */
+function resolve_account_and_currency(PDO $pdo, string $user_id, ?string $account_id, ?string $currency): array {
+    if ($account_id) {
+        $stmt = $pdo->prepare("SELECT id, currency FROM account WHERE id = ? AND user_id = ? AND deleted_ts IS NULL");
+        $stmt->execute([$account_id, $user_id]);
+        $row = $stmt->fetch();
+        if (!$row) json_error('account_id not found', 400);
+    } else {
+        $stmt = $pdo->prepare(
+            "SELECT id, currency FROM account
+             WHERE user_id = ? AND deleted_ts IS NULL
+             ORDER BY is_default DESC, created_ts ASC LIMIT 1"
+        );
+        $stmt->execute([$user_id]);
+        $row = $stmt->fetch();
+        if (!$row) json_error('No account exists for this user', 500);
+    }
+
+    $resolved_currency = $currency ?: $row['currency'];
+    if (!in_array($resolved_currency, ['ARS', 'USD', 'USDT'], true)) {
+        json_error('currency must be one of: ARS, USD, USDT');
+    }
+    return [$row['id'], $resolved_currency];
+}

@@ -99,6 +99,7 @@ function require_auth(): string {
         $stmt->execute([$uid, $email, $name, $avatar, $uid]);
 
         seed_categories_for_user($uid);
+        seed_default_account_for_user($uid);
     }
 
     return $uid;
@@ -119,4 +120,20 @@ function seed_categories_for_user(string $user_id): void {
         $id = bin2hex(random_bytes(14));
         $stmt->execute([$id, $user_id, $cat['name'], $cat['color']]);
     }
+}
+
+/**
+ * Seed a default "Sin cuenta" account for a new user. Guarantees every user
+ * has at least one account so transaction creation never has to handle the
+ * "no account exists" case.
+ */
+function seed_default_account_for_user(string $user_id): void {
+    global $pdo;
+
+    $id = bin2hex(random_bytes(14));
+    $stmt = $pdo->prepare(
+        "INSERT INTO account (id, user_id, name, type, currency, is_default)
+         VALUES (?, ?, 'Sin cuenta', 'other', 'ARS', 1)"
+    );
+    $stmt->execute([$id, $user_id]);
 }

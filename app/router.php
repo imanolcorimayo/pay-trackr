@@ -31,6 +31,11 @@ switch ($route) {
         require __DIR__ . '/pages/cards.php';
         break;
 
+    case '/cuentas':
+        $pageTitle = 'Cuentas';
+        require __DIR__ . '/pages/cuentas.php';
+        break;
+
     case '/analisis':
         $pageTitle = 'Analisis';
         require __DIR__ . '/pages/analytics.php';

@@ -199,6 +199,21 @@ $openAIOnLoad = !empty($_GET['ai']);
                     </div>
                 </div>
 
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label for="pmt-account" class="block text-sm font-medium mb-1.5">Cuenta</label>
+                        <select id="pmt-account" class="input"></select>
+                    </div>
+                    <div>
+                        <label for="pmt-currency" class="block text-sm font-medium mb-1.5">Moneda</label>
+                        <select id="pmt-currency" class="input">
+                            <option value="ARS">ARS</option>
+                            <option value="USD">USD</option>
+                            <option value="USDT">USDT</option>
+                        </select>
+                    </div>
+                </div>
+
                 <label class="flex items-center gap-2 cursor-pointer select-none">
                     <input type="checkbox" id="pmt-is-paid" class="w-4 h-4 rounded border-border text-accent focus:ring-accent/30">
                     <span class="text-sm">Marcar como pagado</span>
@@ -430,6 +445,7 @@ const ICON_RECURRENT = 'M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11
 let payments = [];
 let categories = [];
 let cards = [];
+let accounts = [];
 let editingId = null;
 let pendingDeleteId = null;
 
@@ -537,6 +553,9 @@ function todayISODate() {
 }
 function categoryById(id) { return categories.find(c => c.id === id); }
 function cardById(id)     { return cards.find(c => c.id === id); }
+function accountById(id)  { return accounts.find(a => a.id === id); }
+function defaultAccount() { return accounts.find(a => Number(a.is_default) === 1) || accounts[0] || null; }
+function fmtCurrencyBadge(currency) { return currency && currency !== 'ARS' ? currency : null; }
 
 // Origin label shown in the row's subline. Keeps 'manual' silent so default
 // rows stay clean. Whatsapp variants collapse to a single label since the
@@ -590,15 +609,17 @@ async function loadAll() {
     document.getElementById('month-label').textContent = monthLabel(viewMonth);
     const range = fmtDateRange(viewMonth);
 
-    const [pays, cats, crds] = await Promise.all([
+    const [pays, cats, crds, accs] = await Promise.all([
         api.get('/transactions', { start_date: range.start, end_date: range.end }),
         api.get('/categories'),
         api.get('/cards'),
+        api.get('/accounts'),
     ]);
 
     payments = Array.isArray(pays) ? pays : [];
     categories = Array.isArray(cats) ? cats : [];
     cards = Array.isArray(crds) ? crds : [];
+    accounts = Array.isArray(accs) ? accs : [];
     if (pays && pays.error) toast(`No se pudieron cargar los movimientos: ${pays.error}`, 'error');
 
     populateDropdowns();
@@ -624,6 +645,10 @@ function populateDropdowns() {
     cardSel.textContent = '';
     cardSel.appendChild(makeOption('', 'Sin tarjeta'));
     cards.forEach(c => cardSel.appendChild(makeOption(c.id, c.name + (c.last_four ? ` ····${c.last_four}` : ''))));
+
+    const acctSel = document.getElementById('pmt-account');
+    acctSel.textContent = '';
+    accounts.forEach(a => acctSel.appendChild(makeOption(a.id, a.name + ' (' + a.currency + ')')));
 
     // Filter bar (preserve current selection)
     const filterSel = document.getElementById('filter-category');
@@ -751,6 +776,8 @@ function buildPaymentRow(p, isPaid, isOverdue, isLast) {
     }
     const card = cardById(p.card_id);
     if (card) subParts.push(card.name + (card.last_four ? ` ····${card.last_four}` : ''));
+    const acct = accountById(p.account_id);
+    if (acct && acct.is_default != 1) subParts.push(acct.name);
     const sourceLabel = labelForSource(p.source);
     if (sourceLabel) subParts.push(sourceLabel);
 
@@ -766,7 +793,8 @@ function buildPaymentRow(p, isPaid, isOverdue, isLast) {
 
     const amount = document.createElement('span');
     amount.className = 'text-[15px] sm:text-sm font-semibold tabular-nums';
-    amount.textContent = formatPrice(Math.abs(p.amount));
+    const curBadge = fmtCurrencyBadge(p.currency);
+    amount.textContent = (curBadge ? curBadge + ' ' : '') + formatPrice(Math.abs(p.amount));
     right.appendChild(amount);
 
     const badge = document.createElement('button');
@@ -839,6 +867,9 @@ async function openPaymentModal(p) {
         ? (full.expense_category_id || '')
         : mostCommonCategoryId();
     document.getElementById('pmt-card').value = full?.card_id || '';
+    const defAcct = defaultAccount();
+    document.getElementById('pmt-account').value = full?.account_id || (defAcct?.id || '');
+    document.getElementById('pmt-currency').value = full?.currency || (defAcct?.currency || 'ARS');
     // New payments: default checked (most logging happens after paying); edits: actual state.
     document.getElementById('pmt-is-paid').checked = full ? full.is_paid == 1 : true;
     document.getElementById('pmt-description').value = full?.description || '';
@@ -993,6 +1024,8 @@ async function submitPaymentForm(e) {
         due_ts: dueDate ? `${dueDate} 12:00:00` : null,
         expense_category_id: document.getElementById('pmt-category').value || null,
         card_id: document.getElementById('pmt-card').value || null,
+        account_id: document.getElementById('pmt-account').value || null,
+        currency: document.getElementById('pmt-currency').value || 'ARS',
         is_paid: document.getElementById('pmt-is-paid').checked,
         description: document.getElementById('pmt-description').value.trim(),
         recipient,
@@ -1381,12 +1414,17 @@ function showAIError(msg) {
 }
 
 async function openPaymentModalFromAI(draft, matched) {
+    const detectedCur = draft.detected_currency || 'ARS';
+    // If AI detected a non-ARS currency, prefer matching it to a same-currency account.
+    const matchByCurrency = accounts.find(a => a.currency === detectedCur);
     const synthetic = {
         title: draft.title || '',
         amount: draft.amount,
         due_ts: draft.date ? `${draft.date} 12:00:00` : null,
         expense_category_id: draft.suggested_category_id || null,
         card_id: null,
+        account_id: matchByCurrency?.id || defaultAccount()?.id || null,
+        currency: detectedCur,
         is_paid: draft.is_paid ? 1 : 0,
         description: draft.description || '',
         recipient: (draft.recipient && draft.recipient.name) ? draft.recipient : null,
@@ -1498,6 +1536,10 @@ mangosAuth.ready.then(user => {
 
     document.getElementById('payment-form').addEventListener('submit', submitPaymentForm);
     document.getElementById('pmt-category').addEventListener('change', updateCategorySwatch);
+    document.getElementById('pmt-account').addEventListener('change', e => {
+        const a = accountById(e.target.value);
+        if (a) document.getElementById('pmt-currency').value = a.currency;
+    });
 
     // AI modal: tab switching
     document.querySelectorAll('.ai-mode-tab').forEach(t => {

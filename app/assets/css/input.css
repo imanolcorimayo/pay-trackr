@@ -4,7 +4,7 @@
 
 @layer base {
   html, body {
-    @apply overflow-x-hidden;
+    @apply overflow-x-clip;
   }
   body {
     @apply bg-light text-dark font-sans antialiased;

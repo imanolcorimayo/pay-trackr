@@ -12,7 +12,7 @@ cat_id=$(json_field id)
 req POST /api/cards '{"name":"Test tx card","type":"credit"}'
 card_id=$(json_field id)
 
-# Minimal transaction (no category)
+# Minimal transaction (no category, no account → fall back to default)
 req POST /api/transactions '{"title":"Coffee","amount":4500}'
 assert_status 201 "POST /api/transactions minimal"
 tx_id=$(json_field id)
@@ -20,6 +20,76 @@ tx_id=$(json_field id)
 # amount stored as signed (negative for expense)
 req GET "/api/transactions?id=$tx_id"
 assert_json amount "-4500.00" "amount stored signed (negative)"
+# Defaults: should land on the seeded "Sin cuenta" with currency=ARS
+default_acct=$(printf '%s' "$last_body" | jq -r '.account_id')
+TESTS_RUN=$((TESTS_RUN + 1))
+if [ -n "$default_acct" ] && [ "$default_acct" != "null" ]; then
+    TESTS_PASSED=$((TESTS_PASSED + 1))
+    printf '  [ OK ] account_id auto-defaulted on POST\n'
+else
+    TESTS_FAILED=$((TESTS_FAILED + 1))
+    FAILURES+=("account_id missing on default POST")
+    printf '  [FAIL] account_id was null on default POST\n'
+fi
+assert_json currency "ARS" "currency defaults to ARS"
+
+# Currency override on POST
+req POST /api/accounts '{"name":"USD acct","type":"bank","currency":"USD"}'
+usd_acct=$(json_field id)
+req POST /api/transactions "{\"title\":\"Hotel\",\"amount\":120,\"account_id\":\"$usd_acct\"}"
+assert_status 201 "POST tx attached to USD account"
+hotel_id=$(json_field id)
+req GET "/api/transactions?id=$hotel_id"
+assert_json currency "USD" "currency inherited from account"
+assert_json account_id "$usd_acct" "account_id stored"
+
+# Explicit currency overrides account currency
+req POST /api/transactions "{\"title\":\"Mixed\",\"amount\":500,\"account_id\":\"$usd_acct\",\"currency\":\"USDT\"}"
+assert_status 201 "POST tx with explicit currency override"
+mixed_id=$(json_field id)
+req GET "/api/transactions?id=$mixed_id"
+assert_json currency "USDT" "explicit currency overrides account default"
+
+# Reject unknown account_id
+req POST /api/transactions '{"title":"Bad","amount":100,"account_id":"does-not-exist"}'
+assert_status 400 "POST rejects unknown account_id"
+
+# Reject unknown currency
+req POST /api/transactions '{"title":"Bad","amount":100,"currency":"GBP"}'
+assert_status 400 "POST rejects unknown currency"
+
+# Filter by account_id
+req GET "/api/transactions?account_id=$usd_acct"
+assert_status 200 "GET filtered by account_id"
+acct_count=$(printf '%s' "$last_body" | jq 'length')
+TESTS_RUN=$((TESTS_RUN + 1))
+if [ "$acct_count" = "2" ]; then
+    TESTS_PASSED=$((TESTS_PASSED + 1))
+    printf '  [ OK ] account filter returns 2 txs\n'
+else
+    TESTS_FAILED=$((TESTS_FAILED + 1))
+    FAILURES+=("expected 2 txs by account, got $acct_count")
+    printf '  [FAIL] expected 2 txs by account, got %s\n' "$acct_count"
+fi
+
+# Filter by currency
+req GET "/api/transactions?currency=USDT"
+assert_status 200 "GET filtered by currency=USDT"
+cur_count=$(printf '%s' "$last_body" | jq 'length')
+TESTS_RUN=$((TESTS_RUN + 1))
+if [ "$cur_count" = "1" ]; then
+    TESTS_PASSED=$((TESTS_PASSED + 1))
+    printf '  [ OK ] currency filter returns 1 tx\n'
+else
+    TESTS_FAILED=$((TESTS_FAILED + 1))
+    FAILURES+=("expected 1 tx by currency, got $cur_count")
+    printf '  [FAIL] expected 1 tx by currency, got %s\n' "$cur_count"
+fi
+
+# Cleanup the extras
+req DELETE "/api/transactions?id=$hotel_id" >/dev/null
+req DELETE "/api/transactions?id=$mixed_id" >/dev/null
+req DELETE "/api/accounts?id=$usd_acct" >/dev/null
 
 # Full transaction with category + recipient
 req POST /api/transactions "$(cat <<EOF

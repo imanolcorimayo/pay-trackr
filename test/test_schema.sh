@@ -4,7 +4,7 @@
 echo "== test_schema =="
 
 # Expected tables (singular, transaction-domain naming)
-expected="card default_category expense_category fcm_token migrations recurrent recurrent_alias transaction transaction_recipient transaction_template user weekly_summary"
+expected="account card default_category expense_category fcm_token migrations recurrent recurrent_alias transaction transaction_recipient transaction_template user weekly_summary"
 actual=$(mysql_exec "SHOW TABLES;" | sort | tr '\n' ' ' | sed 's/ $//')
 TESTS_RUN=$((TESTS_RUN + 1))
 if [ "$actual" = "$expected" ]; then
@@ -44,7 +44,7 @@ else
 fi
 
 # Named FKs present (constraint names are preserved across RENAME TABLE)
-for fk_name in fk_recurrent_card fk_payment_card; do
+for fk_name in fk_recurrent_card fk_payment_card fk_transaction_account fk_recurrent_account; do
     fk=$(mysql_exec "SELECT constraint_name FROM information_schema.referential_constraints WHERE constraint_schema='$DB_NAME' AND constraint_name='$fk_name';")
     TESTS_RUN=$((TESTS_RUN + 1))
     if [ "$fk" = "$fk_name" ]; then
@@ -80,6 +80,34 @@ else
     FAILURES+=("transaction.transaction_type column missing")
     printf '  [FAIL] transaction.transaction_type column missing\n'
 fi
+
+# transaction.account_id and transaction.currency columns exist (added in 017)
+for col in account_id currency; do
+    found=$(mysql_exec "SELECT COUNT(*) FROM information_schema.columns WHERE table_schema='$DB_NAME' AND table_name='transaction' AND column_name='$col';")
+    TESTS_RUN=$((TESTS_RUN + 1))
+    if [ "$found" = "1" ]; then
+        TESTS_PASSED=$((TESTS_PASSED + 1))
+        printf '  [ OK ] transaction.%s column present\n' "$col"
+    else
+        TESTS_FAILED=$((TESTS_FAILED + 1))
+        FAILURES+=("transaction.$col column missing")
+        printf '  [FAIL] transaction.%s column missing\n' "$col"
+    fi
+done
+
+# recurrent.account_id and recurrent.currency columns exist (added in 017)
+for col in account_id currency; do
+    found=$(mysql_exec "SELECT COUNT(*) FROM information_schema.columns WHERE table_schema='$DB_NAME' AND table_name='recurrent' AND column_name='$col';")
+    TESTS_RUN=$((TESTS_RUN + 1))
+    if [ "$found" = "1" ]; then
+        TESTS_PASSED=$((TESTS_PASSED + 1))
+        printf '  [ OK ] recurrent.%s column present\n' "$col"
+    else
+        TESTS_FAILED=$((TESTS_FAILED + 1))
+        FAILURES+=("recurrent.$col column missing")
+        printf '  [FAIL] recurrent.%s column missing\n' "$col"
+    fi
+done
 
 # transaction_recipient.transaction_id column exists (renamed from payment_id)
 found=$(mysql_exec "SELECT COUNT(*) FROM information_schema.columns WHERE table_schema='$DB_NAME' AND table_name='transaction_recipient' AND column_name='transaction_id';")

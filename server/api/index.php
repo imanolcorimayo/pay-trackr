@@ -8,6 +8,7 @@
  *   /api/recurrents               → recurrents.php
  *   /api/templates                → templates.php
  *   /api/cards                    → card.php
+ *   /api/accounts                 → accounts.php
  *   /api/ai/parse-transactions    → ai.php
  *   /api/ai/commit-transactions   → ai.php
  *   /api/ai/parse-single          → ai.php
@@ -76,6 +77,10 @@ try {
 
         case '/cards':
             require __DIR__ . '/card.php';
+            break;
+
+        case '/accounts':
+            require __DIR__ . '/accounts.php';
             break;
 
         case '/ai/parse-transactions':

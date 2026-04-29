@@ -77,6 +77,14 @@ switch (method()) {
             $sql .= " AND card_id = ?";
             $params[] = $_GET['card_id'];
         }
+        if (!empty($_GET['account_id'])) {
+            $sql .= " AND account_id = ?";
+            $params[] = $_GET['account_id'];
+        }
+        if (!empty($_GET['currency'])) {
+            $sql .= " AND currency = ?";
+            $params[] = $_GET['currency'];
+        }
 
         $sql .= " ORDER BY due_ts DESC, created_ts DESC";
 
@@ -95,11 +103,15 @@ switch (method()) {
         $paid_ts = $is_paid ? date('Y-m-d H:i:s') : null;
         $signed_amount = -abs((float)$data['amount']);
 
+        [$account_id, $currency] = resolve_account_and_currency(
+            $pdo, $user_id, $data['account_id'] ?? null, $data['currency'] ?? null
+        );
+
         $stmt = $pdo->prepare(
-            "INSERT INTO `transaction` (id, user_id, title, description, amount, expense_category_id,
-             is_paid, paid_ts, recurrent_id, card_id, transaction_type, due_ts, source, status,
+            "INSERT INTO `transaction` (id, user_id, title, description, amount, currency, expense_category_id,
+             is_paid, paid_ts, recurrent_id, card_id, account_id, transaction_type, due_ts, source, status,
              needs_revision, is_whatsapp, audio_transcription, ai_artifact_path, ai_artifact_mime)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
         );
         $stmt->execute([
             $id,
@@ -107,11 +119,13 @@ switch (method()) {
             $data['title'],
             $data['description'] ?? '',
             $signed_amount,
+            $currency,
             $data['expense_category_id'] ?? null,
             $is_paid,
             $paid_ts,
             $data['recurrent_id'] ?? null,
             $data['card_id'] ?? null,
+            $account_id,
             $data['transaction_type'] ?? 'one-time',
             $data['due_ts'] ?? null,
             $data['source'] ?? 'manual',
@@ -140,11 +154,15 @@ switch (method()) {
         if (empty($id)) json_error('id is required');
 
         $data = get_json_body();
-        $allowed = ['title', 'description', 'expense_category_id', 'card_id',
+        $allowed = ['title', 'description', 'expense_category_id', 'card_id', 'account_id', 'currency',
                      'transaction_type', 'due_ts', 'source', 'status', 'needs_revision',
                      'is_whatsapp', 'audio_transcription', 'ai_artifact_path', 'ai_artifact_mime'];
         $fields = [];
         $params = [];
+
+        if (isset($data['currency']) && !in_array($data['currency'], ['ARS','USD','USDT'], true)) {
+            json_error('currency must be one of: ARS, USD, USDT');
+        }
 
         // Amount needs sign normalization (negative for expense).
         if (array_key_exists('amount', $data)) {

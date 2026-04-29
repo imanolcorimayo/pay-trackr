@@ -59,7 +59,7 @@
                 <!-- Más -->
                 <button type="button" onclick="toggleMore()"
                         class="flex flex-col items-center justify-center gap-0.5 transition-colors active:scale-95
-                        <?= in_array($route, ['/categorias','/tarjetas','/analisis']) ? 'text-accent' : 'text-muted' ?>"
+                        <?= in_array($route, ['/categorias','/tarjetas','/cuentas','/analisis']) ? 'text-accent' : 'text-muted' ?>"
                         style="touch-action: manipulation;">
                     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M5 12h.01M12 12h.01M19 12h.01M6 12a1 1 0 11-2 0 1 1 0 012 0zm7 0a1 1 0 11-2 0 1 1 0 012 0zm7 0a1 1 0 11-2 0 1 1 0 012 0z"/>
@@ -93,6 +93,7 @@
                 $moreItems = [
                     ['/categorias', 'Categorias', '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/>'],
                     ['/tarjetas',   'Tarjetas',   '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 10h18M7 15h.01M11 15h2M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>'],
+                    ['/cuentas',    'Cuentas',    '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 10l9-6 9 6v9a2 2 0 01-2 2H5a2 2 0 01-2-2v-9zM12 14a2 2 0 100-4 2 2 0 000 4z"/>'],
                     ['/analisis',   'Analisis',   '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>'],
                 ];
                 foreach ($moreItems as [$href, $label, $icon]):
