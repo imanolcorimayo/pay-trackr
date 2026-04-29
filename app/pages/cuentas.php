@@ -195,11 +195,10 @@ async function loadAccounts() {
 }
 
 function renderTotals() {
-    document.getElementById('totals-ars').textContent = '$ ' + formatPrice(Math.abs(Number(totals.ars || 0)));
-    if (Number(totals.ars) < 0) {
-        document.getElementById('totals-ars').textContent = '−' + document.getElementById('totals-ars').textContent;
-        document.getElementById('totals-ars').classList.add('text-danger');
-    }
+    const arsNum = Number(totals.ars || 0);
+    const arsEl = document.getElementById('totals-ars');
+    arsEl.textContent = (arsNum < 0 ? '−' : '') + formatPrice(Math.abs(arsNum));
+    arsEl.classList.toggle('text-danger', arsNum < 0);
 
     const stamp = document.getElementById('totals-fx-stamp');
     const usdRate = fxRates.USD;
@@ -224,7 +223,7 @@ function renderTotals() {
         const val = document.createElement('p');
         const isNeg = Number(v) < 0;
         val.className = `text-base font-bold tabular-nums mt-0.5 ${isNeg ? 'text-danger' : 'text-dark'}`;
-        const prefix = code === 'ARS' ? '$ ' : code + ' ';
+        const prefix = code === 'ARS' ? '' : code + ' ';
         val.textContent = (isNeg ? '−' : '') + prefix + formatPrice(Math.abs(Number(v)));
         chip.appendChild(val);
         chipsEl.appendChild(chip);
@@ -324,7 +323,7 @@ function buildAccountEl(a) {
         const arsNum = Number(a.current_balance_ars);
         const arsNeg = arsNum < 0;
         arsLine.className = 'text-xs text-muted tabular-nums mt-0.5';
-        arsLine.textContent = '≈ ' + (arsNeg ? '−' : '') + '$ ' + formatPrice(Math.abs(arsNum)) + ' ARS';
+        arsLine.textContent = '≈ ' + (arsNeg ? '−' : '') + formatPrice(Math.abs(arsNum)) + ' ARS';
         balanceWrap.appendChild(arsLine);
     }
 
