@@ -1,5 +1,5 @@
 <!-- Page header -->
-<div class="flex items-center justify-between mb-8">
+<div class="flex items-center justify-between mb-5">
     <div>
         <h1 class="text-2xl font-semibold">Cuentas</h1>
         <p class="text-sm text-muted mt-1">Tus billeteras: cuentas bancarias, efectivo, cripto</p>
@@ -10,6 +10,18 @@
         </svg>
         Nueva
     </button>
+</div>
+
+<!-- KPI strip: total in ARS + per-currency chips -->
+<div class="card mb-6" id="totals-card">
+    <div class="flex items-baseline justify-between gap-3 mb-1">
+        <p class="text-xs font-semibold tracking-wide uppercase text-muted">Total en ARS</p>
+        <span id="totals-fx-stamp" class="text-[10px] text-muted">&nbsp;</span>
+    </div>
+    <p class="text-3xl lg:text-4xl font-bold tracking-tight" id="totals-ars">
+        <span class="skeleton inline-block w-44 h-8">&nbsp;</span>
+    </p>
+    <div class="flex flex-wrap gap-2 mt-4" id="totals-chips"></div>
 </div>
 
 <!-- Grid -->
@@ -138,6 +150,8 @@ const ICON_EDIT_A = 'M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.41
 const ICON_TRASH_A = 'M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6M1 7h22M9 7V4a1 1 0 011-1h4a1 1 0 011 1v3';
 
 let accounts = [];
+let totals = { ars: 0, by_currency: {} };
+let fxRates = { ARS: 1 };
 let editingAccountId = null;
 let pendingDeleteAccountId = null;
 
@@ -166,8 +180,55 @@ function iconButtonA(pathD, cls, onClick) {
 }
 
 async function loadAccounts() {
-    accounts = (await api.get('/accounts')) || [];
+    const result = await api.get('/accounts', { totals: 1 });
+    if (result && Array.isArray(result.accounts)) {
+        accounts = result.accounts;
+        totals = result.totals || { ars: 0, by_currency: {} };
+        fxRates = result.fx || { ARS: 1 };
+    } else {
+        accounts = Array.isArray(result) ? result : [];
+        totals = { ars: 0, by_currency: {} };
+        fxRates = { ARS: 1 };
+    }
+    renderTotals();
     renderAccounts();
+}
+
+function renderTotals() {
+    document.getElementById('totals-ars').textContent = '$ ' + formatPrice(Math.abs(Number(totals.ars || 0)));
+    if (Number(totals.ars) < 0) {
+        document.getElementById('totals-ars').textContent = '−' + document.getElementById('totals-ars').textContent;
+        document.getElementById('totals-ars').classList.add('text-danger');
+    }
+
+    const stamp = document.getElementById('totals-fx-stamp');
+    const usdRate = fxRates.USD;
+    const usdtRate = fxRates.USDT;
+    const parts = [];
+    if (usdRate && usdRate !== 1) parts.push(`USD ${formatPrice(usdRate)}`);
+    if (usdtRate && usdtRate !== 1) parts.push(`USDT ${formatPrice(usdtRate)}`);
+    stamp.textContent = parts.length ? `(${parts.join(' · ')})` : '';
+
+    const chipsEl = document.getElementById('totals-chips');
+    chipsEl.textContent = '';
+    const order = ['ARS', 'USD', 'USDT'];
+    order.forEach(code => {
+        const v = totals.by_currency?.[code];
+        if (v == null) return;
+        const chip = document.createElement('div');
+        chip.className = 'flex-1 min-w-[140px] rounded-lg border border-border px-3 py-2 bg-light';
+        const label = document.createElement('p');
+        label.className = 'text-[10px] font-semibold tracking-wide uppercase text-muted';
+        label.textContent = code;
+        chip.appendChild(label);
+        const val = document.createElement('p');
+        const isNeg = Number(v) < 0;
+        val.className = `text-base font-bold tabular-nums mt-0.5 ${isNeg ? 'text-danger' : 'text-dark'}`;
+        const prefix = code === 'ARS' ? '$ ' : code + ' ';
+        val.textContent = (isNeg ? '−' : '') + prefix + formatPrice(Math.abs(Number(v)));
+        chip.appendChild(val);
+        chipsEl.appendChild(chip);
+    });
 }
 
 function renderAccounts() {
@@ -257,6 +318,15 @@ function buildAccountEl(a) {
     balVal.textContent = (a.currency !== 'ARS' ? a.currency + ' ' : '') + formatPrice(Math.abs(balNum));
     if (isNeg) balVal.textContent = '−' + balVal.textContent;
     balanceWrap.appendChild(balVal);
+
+    if (a.currency !== 'ARS' && a.current_balance_ars != null) {
+        const arsLine = document.createElement('p');
+        const arsNum = Number(a.current_balance_ars);
+        const arsNeg = arsNum < 0;
+        arsLine.className = 'text-xs text-muted tabular-nums mt-0.5';
+        arsLine.textContent = '≈ ' + (arsNeg ? '−' : '') + '$ ' + formatPrice(Math.abs(arsNum)) + ' ARS';
+        balanceWrap.appendChild(arsLine);
+    }
 
     if (a.opening_balance_date) {
         const since = document.createElement('p');

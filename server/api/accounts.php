@@ -17,6 +17,8 @@ function clear_default_account(PDO $pdo, string $user_id, string $except_id = ''
 
 switch (method()) {
     case 'GET':
+        require_once __DIR__ . '/fx.php';
+
         if (!empty($_GET['id'])) {
             $stmt = $pdo->prepare(
                 "SELECT * FROM account WHERE id = ? AND user_id = ? AND deleted_ts IS NULL"
@@ -25,19 +27,47 @@ switch (method()) {
             $row = $stmt->fetch();
             if (!$row) json_error('Account not found', 404);
             $row['current_balance'] = compute_account_balance($pdo, $user_id, $row);
+            $rate = fx_get_rate($pdo, $row['currency']);
+            $row['current_balance_ars'] = round($row['current_balance'] * $rate, 2);
+            $row['fx_rate_to_ars'] = $rate;
             json_response($row);
         }
 
+        // List form: when ?include_totals=1 (or by default), wrap rows in
+        // {accounts: [...], totals: {ars: N, by_currency: {...}}, fx: {...}}
         $stmt = $pdo->prepare(
             "SELECT * FROM account WHERE user_id = ? AND deleted_ts IS NULL ORDER BY is_default DESC, name"
         );
         $stmt->execute([$user_id]);
         $rows = $stmt->fetchAll();
+
+        $rates = fx_all_rates($pdo);
+        $by_currency = [];
+        $total_ars = 0.0;
         foreach ($rows as &$r) {
             $r['current_balance'] = compute_account_balance($pdo, $user_id, $r);
+            $rate = $rates[$r['currency']] ?? 1.0;
+            $r['current_balance_ars'] = round($r['current_balance'] * $rate, 2);
+            $r['fx_rate_to_ars'] = $rate;
+            $by_currency[$r['currency']] = ($by_currency[$r['currency']] ?? 0) + (float)$r['current_balance'];
+            $total_ars += $r['current_balance_ars'];
         }
         unset($r);
-        json_response($rows);
+
+        // Bare-list mode for callers (movimientos.php, fixed.php, capture.php)
+        // that just want the array. The dedicated /cuentas page sets ?totals=1.
+        if (empty($_GET['totals'])) {
+            json_response($rows);
+        }
+
+        json_response([
+            'accounts' => $rows,
+            'totals' => [
+                'ars' => round($total_ars, 2),
+                'by_currency' => array_map(fn($v) => round($v, 2), $by_currency),
+            ],
+            'fx' => $rates,
+        ]);
 
     case 'POST':
         $data = get_json_body();
