@@ -88,6 +88,11 @@
     user-select: none;
     -webkit-user-select: none;
     touch-action: pan-y;
+    /* Clip side tiles at the card edge on narrow viewports — peek-ll/rr
+       translate up to ±90% of tile width, which exceeds the card on phones.
+       overflow-x: clip (not hidden) so shadows can still drop below. */
+    overflow-x: clip;
+    overflow-y: visible;
   }
   .stage .track {
     position: absolute; inset: 0;
