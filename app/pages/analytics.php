@@ -63,7 +63,7 @@
 
 <!-- Empty state, hidden by default -->
 <div id="empty-state" class="hidden card text-center py-12">
-    <p class="text-sm text-muted">No hay pagos en este periodo.</p>
+    <p class="text-sm text-muted">No hay movimientos en este periodo.</p>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.6/dist/chart.umd.min.js"></script>
@@ -148,7 +148,7 @@ async function loadAll() {
     }
 
     const [pays, cats] = await Promise.all([
-        api.get('/payments', params),
+        api.get('/transactions', params),
         api.get('/categories'),
     ]);
     payments = pays || [];
@@ -175,7 +175,7 @@ function renderKpis() {
     const monthsWithData = new Set();
 
     payments.forEach(p => {
-        const a = Number(p.amount);
+        const a = Math.abs(Number(p.amount));
         total += a;
         if (p.is_paid == 1) { paid += a; paidCount++; }
         else { unpaid += a; unpaidCount++; }
@@ -188,7 +188,7 @@ function renderKpis() {
     const monthCount = Math.max(monthsWithData.size, 1);
     const avg = total / monthCount;
 
-    const plural = (n) => `${n} pago${n === 1 ? '' : 's'}`;
+    const plural = (n) => `${n} movimiento${n === 1 ? '' : 's'}`;
 
     document.getElementById('kpi-total').textContent = formatPrice(total);
     document.getElementById('kpi-total-count').textContent = plural(payments.length);
@@ -210,7 +210,7 @@ function renderMonthlyChart(range) {
         if (!p.due_ts) return;
         const d = new Date(p.due_ts.replace(' ', 'T'));
         const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-        if (key in indexByKey) totals[indexByKey[key]] += Number(p.amount);
+        if (key in indexByKey) totals[indexByKey[key]] += Math.abs(Number(p.amount));
     });
 
     if (monthlyChart) monthlyChart.destroy();
@@ -253,7 +253,7 @@ function aggregateByCategory() {
     const map = {};
     payments.forEach(p => {
         const id = p.expense_category_id || 'none';
-        map[id] = (map[id] || 0) + Number(p.amount);
+        map[id] = (map[id] || 0) + Math.abs(Number(p.amount));
     });
     return Object.entries(map)
         .map(([id, amount]) => {

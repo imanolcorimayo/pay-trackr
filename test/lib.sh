@@ -7,7 +7,7 @@ set -uo pipefail
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 TEST_DIR="$REPO_ROOT/test"
 
-: "${BASE_URL:=http://ima-mangos.com}"
+: "${BASE_URL:=http://mangos-api.ima-wiseutils.com}"
 : "${TEST_USER_ID:=test-mangos-001}"
 
 DB_USER="imanol"

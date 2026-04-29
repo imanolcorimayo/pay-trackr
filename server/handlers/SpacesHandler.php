@@ -37,7 +37,7 @@ class SpacesHandler
      * Build the full object key for an AI artifact. Path is relative to
      * `<prefix>/ai-uploads/`. The user_id is part of the key for namespacing
      * and quick-glance debugging — it is NOT used for access control (auth
-     * happens on read via the payment row's user_id check).
+     * happens on read via the transaction row's user_id check).
      */
     public function artifactKey(string $userId, string $uuid, string $ext): string
     {

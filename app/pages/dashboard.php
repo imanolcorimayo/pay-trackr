@@ -168,7 +168,7 @@ function pillRow({ title, sub, amount, action }) {
 
     const amt = document.createElement('span');
     amt.className = 'text-sm font-semibold tabular-nums';
-    amt.textContent = formatPrice(amount);
+    amt.textContent = formatPrice(Math.abs(amount));
     right.appendChild(amt);
 
     if (action) right.appendChild(action);
@@ -194,7 +194,7 @@ function renderTopCategories(monthPayments, categoriesById) {
     let grand = 0;
     monthPayments.forEach(p => {
         const id = p.expense_category_id || '__none';
-        const amt = Number(p.amount) || 0;
+        const amt = Math.abs(Number(p.amount) || 0);
         totals[id] = (totals[id] || 0) + amt;
         grand += amt;
     });
@@ -252,25 +252,25 @@ function renderTopCategories(monthPayments, categoriesById) {
 // ── Mark-paid actions ─────────────────────────────────────────────────
 async function markRecurrentPaid(rec, monthPayments, btn) {
     btn.disabled = true;
-    const existing = monthPayments.find(p => p.recurrent_id === rec.id && p.payment_type === 'recurrent');
+    const existing = monthPayments.find(p => p.recurrent_id === rec.id && p.transaction_type === 'recurrent');
     let result;
     try {
         if (existing) {
-            result = await api.put('/payments', { is_paid: 1 }, { id: existing.id });
+            result = await api.put('/transactions', { is_paid: 1 }, { id: existing.id });
         } else {
             const now = new Date();
             const y = now.getFullYear();
             const m = now.getMonth();
             const day = Math.min(rec.due_date_day, lastDayOfMonth(y, m));
             const due_ts = `${y}-${String(m + 1).padStart(2, '0')}-${String(day).padStart(2, '0')} 00:00:00`;
-            result = await api.post('/payments', {
+            result = await api.post('/transactions', {
                 title: rec.title,
                 description: rec.description || '',
                 amount: rec.amount,
                 expense_category_id: rec.expense_category_id || null,
                 card_id: rec.card_id || null,
                 recurrent_id: rec.id,
-                payment_type: 'recurrent',
+                transaction_type: 'recurrent',
                 due_ts,
                 is_paid: true,
             });
@@ -291,7 +291,7 @@ async function markRecurrentPaid(rec, monthPayments, btn) {
 
 async function markPaymentPaid(payment, btn) {
     btn.disabled = true;
-    const result = await api.put('/payments', { is_paid: 1 }, { id: payment.id });
+    const result = await api.put('/transactions', { is_paid: 1 }, { id: payment.id });
     if (!result || result.error) {
         toast(result?.error || 'No se pudo actualizar', 'error');
         btn.disabled = false;
@@ -317,7 +317,7 @@ async function loadAll() {
     const sparkEnd = new Date(year, month + 1, 0);
 
     const [payments, recurrents, categories] = await Promise.all([
-        api.get('/payments', { start_date: isoDay(sparkStart), end_date: isoDay(sparkEnd) }),
+        api.get('/transactions', { start_date: isoDay(sparkStart), end_date: isoDay(sparkEnd) }),
         api.get('/recurrents'),
         api.get('/categories'),
     ]);
@@ -332,7 +332,7 @@ async function loadAll() {
         const d = parseLocalDate(p.due_ts);
         if (!d) return;
         const idx = (d.getFullYear() - sparkStart.getFullYear()) * 12 + (d.getMonth() - sparkStart.getMonth());
-        if (idx >= 0 && idx < 6) monthTotals[idx] += Number(p.amount) || 0;
+        if (idx >= 0 && idx < 6) monthTotals[idx] += Math.abs(Number(p.amount) || 0);
     });
 
     const labelsEl = document.getElementById('hero-sparkline-labels');
@@ -365,7 +365,7 @@ async function loadAll() {
     });
     monthPayments.forEach(p => {
         if (p.is_paid == 1) return;
-        if (p.payment_type === 'recurrent') return;
+        if (p.transaction_type === 'recurrent') return;
         const d = parseLocalDate(p.due_ts);
         if (d && d < today) overdueRows.push({ kind: 'payment', item: p });
     });
@@ -405,7 +405,7 @@ async function loadAll() {
     });
     monthPayments.forEach(p => {
         if (p.is_paid == 1) return;
-        if (p.payment_type === 'recurrent') return;
+        if (p.transaction_type === 'recurrent') return;
         const d = parseLocalDate(p.due_ts);
         if (d && d >= today && d <= sevenDays) {
             upcomingRows.push({ kind: 'payment', item: p, dueDay: d.getDate() });

@@ -3,16 +3,16 @@
  * Single entry point for the API.
  *
  * Routes:
- *   /api/categories         → categories.php
- *   /api/payments           → payments.php
- *   /api/recurrents         → recurrents.php
- *   /api/templates          → templates.php
- *   /api/cards              → card.php
- *   /api/ai/parse-payments    → ai.php
- *   /api/ai/commit-payments   → ai.php
- *   /api/ai/parse-single      → ai.php
- *   /api/ai/discard-artifact  → ai.php
- *   /api/payments/artifact    → payments.php (private proxy)
+ *   /api/categories               → categories.php
+ *   /api/transactions             → transactions.php
+ *   /api/recurrents               → recurrents.php
+ *   /api/templates                → templates.php
+ *   /api/cards                    → card.php
+ *   /api/ai/parse-transactions    → ai.php
+ *   /api/ai/commit-transactions   → ai.php
+ *   /api/ai/parse-single          → ai.php
+ *   /api/ai/discard-artifact      → ai.php
+ *   /api/transactions/artifact    → transactions.php (private proxy)
  *
  * Usage with PHP built-in server:
  *   php -S localhost:8000 api/index.php
@@ -62,8 +62,8 @@ try {
             require __DIR__ . '/categories.php';
             break;
 
-        case '/payments':
-            require __DIR__ . '/payments.php';
+        case '/transactions':
+            require __DIR__ . '/transactions.php';
             break;
 
         case '/recurrents':
@@ -78,13 +78,13 @@ try {
             require __DIR__ . '/card.php';
             break;
 
-        case '/ai/parse-payments':
-            $ai_action = 'parse-payments';
+        case '/ai/parse-transactions':
+            $ai_action = 'parse-transactions';
             require __DIR__ . '/ai.php';
             break;
 
-        case '/ai/commit-payments':
-            $ai_action = 'commit-payments';
+        case '/ai/commit-transactions':
+            $ai_action = 'commit-transactions';
             require __DIR__ . '/ai.php';
             break;
 
@@ -98,9 +98,9 @@ try {
             require __DIR__ . '/ai.php';
             break;
 
-        case '/payments/artifact':
-            $payments_action = 'artifact';
-            require __DIR__ . '/payments.php';
+        case '/transactions/artifact':
+            $transactions_action = 'artifact';
+            require __DIR__ . '/transactions.php';
             break;
 
         default:

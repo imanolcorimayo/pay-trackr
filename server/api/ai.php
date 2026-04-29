@@ -10,10 +10,10 @@ require_once __DIR__ . '/../handlers/GeminiHandler.php';
 
 if (method() !== 'POST') json_error('Method not allowed', 405);
 
-if ($ai_action === 'parse-payments') {
-    handle_parse_payments($pdo, $user_id);
-} elseif ($ai_action === 'commit-payments') {
-    handle_commit_payments($pdo, $user_id);
+if ($ai_action === 'parse-transactions') {
+    handle_parse_transactions($pdo, $user_id);
+} elseif ($ai_action === 'commit-transactions') {
+    handle_commit_transactions($pdo, $user_id);
 } elseif ($ai_action === 'parse-single') {
     handle_parse_single($pdo, $user_id);
 } elseif ($ai_action === 'discard-artifact') {
@@ -26,7 +26,7 @@ if ($ai_action === 'parse-payments') {
 // PARSE
 // ──────────────────────────────────────────────────────────────────
 
-function handle_parse_payments(PDO $pdo, string $user_id): void {
+function handle_parse_transactions(PDO $pdo, string $user_id): void {
     $body = get_json_body();
     $images = $body['images'] ?? [];
 
@@ -60,11 +60,12 @@ function handle_parse_payments(PDO $pdo, string $user_id): void {
     $month_end = $now->format('Y-m-t 23:59:59');
     $today = $now->format('Y-m-d');
 
-    // Current month payments
+    // Current month transactions. ABS() so the amount handed to Gemini is the
+    // displayed (positive) magnitude, matching what the user sees on screen.
     $stmt = $pdo->prepare(
-        "SELECT id, title, amount, DATE(due_ts) AS due_date, DATE(paid_ts) AS paid_date,
-                payment_type, recurrent_id, is_paid
-         FROM payment
+        "SELECT id, title, ABS(amount) AS amount, DATE(due_ts) AS due_date, DATE(paid_ts) AS paid_date,
+                transaction_type, recurrent_id, is_paid
+         FROM `transaction`
          WHERE user_id = ? AND due_ts BETWEEN ? AND ?
          ORDER BY due_ts"
     );
@@ -73,7 +74,7 @@ function handle_parse_payments(PDO $pdo, string $user_id): void {
 
     // Recurrents + their aliases (LEFT JOIN, group by recurrent)
     $stmt = $pdo->prepare(
-        "SELECT r.id, r.title, r.amount, r.due_date_day, r.expense_category_id,
+        "SELECT r.id, r.title, ABS(r.amount) AS amount, r.due_date_day, r.expense_category_id,
                 COALESCE(GROUP_CONCAT(ra.alias SEPARATOR '\n'), '') AS aliases
          FROM recurrent r
          LEFT JOIN recurrent_alias ra ON ra.recurrent_id = r.id
@@ -100,7 +101,7 @@ function handle_parse_payments(PDO $pdo, string $user_id): void {
 
     $context = [
         'today' => $today,
-        'existing_payments_this_month' => array_map(fn($p) => [
+        'existing_transactions_this_month' => array_map(fn($p) => [
             'id' => $p['id'],
             'title' => $p['title'],
             'amount' => (float)$p['amount'],
@@ -146,15 +147,15 @@ function handle_parse_payments(PDO $pdo, string $user_id): void {
         $name = $d['suggested_category_name'] ?? null;
         $d['suggested_category_id'] = $name ? ($cat_by_name[mb_strtolower($name)] ?? null) : null;
 
-        if (!empty($d['existing_payment_id']) && !in_array($d['existing_payment_id'], $existing_ids, true)) {
-            $d['existing_payment_id'] = null;
+        if (!empty($d['existing_transaction_id']) && !in_array($d['existing_transaction_id'], $existing_ids, true)) {
+            $d['existing_transaction_id'] = null;
         }
         if (!empty($d['recurrent_match_id']) && !in_array($d['recurrent_match_id'], $recurrent_ids, true)) {
             $d['recurrent_match_id'] = null;
         }
 
         // Server-side dedup belt: if Gemini missed an existing match
-        if (empty($d['existing_payment_id'])) {
+        if (empty($d['existing_transaction_id'])) {
             $d_amount = (float)($d['amount'] ?? 0);
             $d_title = mb_strtolower($d['title'] ?? '');
             $d_date = $d['date'] ?? '';
@@ -172,7 +173,7 @@ function handle_parse_payments(PDO $pdo, string $user_id): void {
                 $date_diff_days = abs(strtotime($d_date) - strtotime($ref_date)) / 86400;
                 if ($date_diff_days > 2) continue;
 
-                $d['existing_payment_id'] = $ex['id'];
+                $d['existing_transaction_id'] = $ex['id'];
                 break;
             }
         }
@@ -225,11 +226,11 @@ REGLAS DE PARSEO:
 - suggested_category_name: una EXACTA de la lista "categories" o null.
 
 DEDUPLICACION Y MATCHING:
-- existing_payment_id: si este gasto ya esta en "existing_payments_this_month" (titulo similar + monto cercano + fecha cercana), poner el id; si no, null.
+- existing_transaction_id: si este gasto ya esta en "existing_transactions_this_month" (titulo similar + monto cercano + fecha cercana), poner el id; si no, null.
 - recurrent_match_id: si el destinatario o concepto coincide con el "title" O CUALQUIERA de los "aliases" de un recurrent, poner el id de ese recurrent. EJEMPLO: si un recurrent tiene title "Clases de running" y aliases ["NAVARRO AMADEO ANDRES"], y la transaccion es "Transferencia enviada NAVARRO AMADEO ANDRES", DEBE matchear ese recurrent_id. El monto puede variar ±20% (no exigir match exacto en plata).
 - recurrent_match_confidence: "high" si el destinatario coincide casi exacto con title/alias. "medium" si es similar. "low" si solo coincide parcialmente o por monto.
 - duplicate_in_batch_idx: si esta misma transaccion ya aparece en un draft anterior de esta respuesta (mismo monto + fecha + destinatario en otra captura), poner el indice del draft anterior; si no, null.
-- Si una transaccion coincide con AMBOS (existing_payment_id Y recurrent_match_id), prioriza existing_payment_id (ya esta en la tabla).
+- Si una transaccion coincide con AMBOS (existing_transaction_id Y recurrent_match_id), prioriza existing_transaction_id (ya esta en la tabla).
 
 EXHAUSTIVIDAD:
 - Cada captura puede contener 5-30 filas. Extrae cada GASTO sin omitir ninguno.
@@ -256,7 +257,7 @@ function build_schema(): array {
                         'date' => ['type' => 'STRING'],
                         'description' => ['type' => 'STRING', 'nullable' => true],
                         'suggested_category_name' => ['type' => 'STRING', 'nullable' => true],
-                        'existing_payment_id' => ['type' => 'STRING', 'nullable' => true],
+                        'existing_transaction_id' => ['type' => 'STRING', 'nullable' => true],
                         'recurrent_match_id' => ['type' => 'STRING', 'nullable' => true],
                         'recurrent_match_confidence' => ['type' => 'STRING', 'enum' => ['high', 'medium', 'low']],
                         'duplicate_in_batch_idx' => ['type' => 'INTEGER', 'nullable' => true],
@@ -277,7 +278,7 @@ function build_schema(): array {
 // COMMIT
 // ──────────────────────────────────────────────────────────────────
 
-function handle_commit_payments(PDO $pdo, string $user_id): void {
+function handle_commit_transactions(PDO $pdo, string $user_id): void {
     $body = get_json_body();
     $rows = $body['rows'] ?? [];
     if (!is_array($rows) || empty($rows)) {
@@ -288,7 +289,7 @@ function handle_commit_payments(PDO $pdo, string $user_id): void {
     $updated_recurrents = 0;
     $marked_paid = 0;
     $skipped = 0;
-    $payment_ids = [];
+    $transaction_ids = [];
 
     $pdo->beginTransaction();
     try {
@@ -309,22 +310,22 @@ function handle_commit_payments(PDO $pdo, string $user_id): void {
                 $paid_ts = $is_paid ? ($row['paid_ts'] ?? date('Y-m-d H:i:s')) : null;
 
                 $stmt = $pdo->prepare(
-                    "INSERT INTO payment (id, user_id, title, description, amount, expense_category_id,
-                     is_paid, paid_ts, recurrent_id, card_id, payment_type, due_ts, source, status)
+                    "INSERT INTO `transaction` (id, user_id, title, description, amount, expense_category_id,
+                     is_paid, paid_ts, recurrent_id, card_id, transaction_type, due_ts, source, status)
                      VALUES (?, ?, ?, ?, ?, ?, ?, ?, NULL, ?, ?, ?, 'ai-image', 'reviewed')"
                 );
                 $stmt->execute([
                     $id, $user_id,
                     $row['title'],
                     $row['description'] ?? '',
-                    $row['amount'],
+                    -abs((float)$row['amount']),
                     $row['expense_category_id'] ?? null,
                     $is_paid, $paid_ts,
                     $row['card_id'] ?? null,
-                    $row['payment_type'] ?? 'one-time',
+                    $row['transaction_type'] ?? 'one-time',
                     $row['due_ts'] ?? null,
                 ]);
-                $payment_ids[] = $id;
+                $transaction_ids[] = $id;
                 $created++;
                 continue;
             }
@@ -334,7 +335,8 @@ function handle_commit_payments(PDO $pdo, string $user_id): void {
                 if (empty($rid)) throw new RuntimeException("Row $i: recurrent_id required");
 
                 $paid_ts = $row['paid_ts'] ?? date('Y-m-d H:i:s');
-                $amount = isset($row['amount']) ? (float)$row['amount'] : null;
+                // Frontend sends a positive magnitude; normalize to negative.
+                $signed_amount = isset($row['amount']) ? -abs((float)$row['amount']) : null;
 
                 $stmt = $pdo->prepare("SELECT * FROM recurrent WHERE id = ? AND user_id = ?");
                 $stmt->execute([$rid, $user_id]);
@@ -343,9 +345,9 @@ function handle_commit_payments(PDO $pdo, string $user_id): void {
 
                 $month = (new DateTime($paid_ts))->format('Y-m');
                 $stmt = $pdo->prepare(
-                    "SELECT id FROM payment
+                    "SELECT id FROM `transaction`
                      WHERE user_id = ? AND recurrent_id = ?
-                       AND payment_type = 'recurrent'
+                       AND transaction_type = 'recurrent'
                        AND DATE_FORMAT(due_ts, '%Y-%m') = ?
                      LIMIT 1"
                 );
@@ -353,17 +355,17 @@ function handle_commit_payments(PDO $pdo, string $user_id): void {
                 $current = $stmt->fetch();
 
                 if ($current) {
-                    $sql = "UPDATE payment SET is_paid = 1, paid_ts = ?";
+                    $sql = "UPDATE `transaction` SET is_paid = 1, paid_ts = ?";
                     $params = [$paid_ts];
-                    if ($amount !== null) {
+                    if ($signed_amount !== null) {
                         $sql .= ", amount = ?";
-                        $params[] = $amount;
+                        $params[] = $signed_amount;
                     }
                     $sql .= " WHERE id = ? AND user_id = ?";
                     $params[] = $current['id'];
                     $params[] = $user_id;
                     $pdo->prepare($sql)->execute($params);
-                    $payment_ids[] = $current['id'];
+                    $transaction_ids[] = $current['id'];
                     $marked_paid++;
                 } else {
                     $id = bin2hex(random_bytes(14));
@@ -374,30 +376,33 @@ function handle_commit_payments(PDO $pdo, string $user_id): void {
                     $day = min((int)$r['due_date_day'], $last_day);
                     $due_ts = sprintf('%04d-%02d-%02d 00:00:00', $year, $mon, $day);
 
+                    // Recurrent.amount is already stored signed (negative).
+                    $insert_amount = $signed_amount ?? (float)$r['amount'];
+
                     $stmt = $pdo->prepare(
-                        "INSERT INTO payment (id, user_id, title, description, amount, expense_category_id,
-                         is_paid, paid_ts, recurrent_id, card_id, payment_type, due_ts, source, status)
+                        "INSERT INTO `transaction` (id, user_id, title, description, amount, expense_category_id,
+                         is_paid, paid_ts, recurrent_id, card_id, transaction_type, due_ts, source, status)
                          VALUES (?, ?, ?, ?, ?, ?, 1, ?, ?, ?, 'recurrent', ?, 'ai-image', 'reviewed')"
                     );
                     $stmt->execute([
                         $id, $user_id,
                         $r['title'],
                         $r['description'] ?? '',
-                        $amount ?? (float)$r['amount'],
+                        $insert_amount,
                         $r['expense_category_id'],
                         $paid_ts,
                         $rid,
                         $r['card_id'],
                         $due_ts,
                     ]);
-                    $payment_ids[] = $id;
+                    $transaction_ids[] = $id;
                     $created++;
                     $marked_paid++;
                 }
 
-                if (!empty($row['update_recurrent_amount']) && $amount !== null) {
+                if (!empty($row['update_recurrent_amount']) && $signed_amount !== null) {
                     $pdo->prepare("UPDATE recurrent SET amount = ? WHERE id = ? AND user_id = ?")
-                        ->execute([$amount, $rid, $user_id]);
+                        ->execute([$signed_amount, $rid, $user_id]);
                     $updated_recurrents++;
                 }
                 continue;
@@ -412,7 +417,7 @@ function handle_commit_payments(PDO $pdo, string $user_id): void {
             'marked_paid' => $marked_paid,
             'updated_recurrents' => $updated_recurrents,
             'skipped' => $skipped,
-            'payment_ids' => $payment_ids,
+            'transaction_ids' => $transaction_ids,
         ]);
     } catch (\Throwable $e) {
         $pdo->rollBack();
@@ -470,9 +475,10 @@ function handle_parse_single(PDO $pdo, string $user_id): void {
     $tz = new DateTimeZone('America/Argentina/Buenos_Aires');
     $today = (new DateTime('now', $tz))->format('Y-m-d');
 
-    // Recurrents + aliases (for matching against active subscriptions)
+    // Recurrents + aliases (for matching against active subscriptions). ABS()
+    // because the prompt context expects the displayed (positive) magnitude.
     $stmt = $pdo->prepare(
-        "SELECT r.id, r.title, r.amount, r.expense_category_id,
+        "SELECT r.id, r.title, ABS(r.amount) AS amount, r.expense_category_id,
                 COALESCE(GROUP_CONCAT(ra.alias SEPARATOR '\n'), '') AS aliases
          FROM recurrent r
          LEFT JOIN recurrent_alias ra ON ra.recurrent_id = r.id

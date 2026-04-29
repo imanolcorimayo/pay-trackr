@@ -1,26 +1,31 @@
 <?php
-// $pdo, $user_id, and (when present) $payments_action provided by index.php
+// $pdo, $user_id, and (when present) $transactions_action provided by index.php
+//
+// Sign convention: this endpoint stores signed amounts. Until incomes land
+// (Phase 4), every write is an expense, so amounts are normalized to negative
+// via `-abs($input)` before insert/update. Reads return the stored signed
+// value as-is; the frontend `Math.abs()`es for display.
 
-if (($payments_action ?? null) === 'artifact') {
-    handle_payment_artifact($pdo, $user_id);
+if (($transactions_action ?? null) === 'artifact') {
+    handle_transaction_artifact($pdo, $user_id);
     return;
 }
 
 switch (method()) {
     case 'GET':
-        // Single payment with recipient
+        // Single transaction with recipient
         if (!empty($_GET['id'])) {
             $stmt = $pdo->prepare(
-                "SELECT p.*, pr.name AS recipient_name, pr.cbu AS recipient_cbu,
-                        pr.alias AS recipient_alias, pr.bank AS recipient_bank
-                 FROM payment p
-                 LEFT JOIN payment_recipient pr ON pr.payment_id = p.id
-                 WHERE p.id = ? AND p.user_id = ?"
+                "SELECT t.*, tr.name AS recipient_name, tr.cbu AS recipient_cbu,
+                        tr.alias AS recipient_alias, tr.bank AS recipient_bank
+                 FROM `transaction` t
+                 LEFT JOIN transaction_recipient tr ON tr.transaction_id = t.id
+                 WHERE t.id = ? AND t.user_id = ?"
             );
             $stmt->execute([$_GET['id'], $user_id]);
             $row = $stmt->fetch();
 
-            if (!$row) json_error('Payment not found', 404);
+            if (!$row) json_error('Transaction not found', 404);
 
             // Nest recipient into sub-object if present
             if ($row['recipient_name']) {
@@ -39,7 +44,7 @@ switch (method()) {
         }
 
         // List with filters
-        $sql = "SELECT * FROM payment WHERE user_id = ?";
+        $sql = "SELECT * FROM `transaction` WHERE user_id = ?";
         $params = [$user_id];
 
         if (!empty($_GET['start_date'])) {
@@ -52,9 +57,9 @@ switch (method()) {
             $sql .= " AND due_ts <= ?";
             $params[] = $end;
         }
-        if (!empty($_GET['payment_type'])) {
-            $sql .= " AND payment_type = ?";
-            $params[] = $_GET['payment_type'];
+        if (!empty($_GET['transaction_type'])) {
+            $sql .= " AND transaction_type = ?";
+            $params[] = $_GET['transaction_type'];
         }
         if (isset($_GET['is_paid'])) {
             $sql .= " AND is_paid = ?";
@@ -88,10 +93,11 @@ switch (method()) {
         $id = bin2hex(random_bytes(14));
         $is_paid = !empty($data['is_paid']) ? 1 : 0;
         $paid_ts = $is_paid ? date('Y-m-d H:i:s') : null;
+        $signed_amount = -abs((float)$data['amount']);
 
         $stmt = $pdo->prepare(
-            "INSERT INTO payment (id, user_id, title, description, amount, expense_category_id,
-             is_paid, paid_ts, recurrent_id, card_id, payment_type, due_ts, source, status,
+            "INSERT INTO `transaction` (id, user_id, title, description, amount, expense_category_id,
+             is_paid, paid_ts, recurrent_id, card_id, transaction_type, due_ts, source, status,
              needs_revision, is_whatsapp, audio_transcription, ai_artifact_path, ai_artifact_mime)
              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
         );
@@ -100,13 +106,13 @@ switch (method()) {
             $user_id,
             $data['title'],
             $data['description'] ?? '',
-            $data['amount'],
+            $signed_amount,
             $data['expense_category_id'] ?? null,
             $is_paid,
             $paid_ts,
             $data['recurrent_id'] ?? null,
             $data['card_id'] ?? null,
-            $data['payment_type'] ?? 'one-time',
+            $data['transaction_type'] ?? 'one-time',
             $data['due_ts'] ?? null,
             $data['source'] ?? 'manual',
             $data['status'] ?? 'reviewed',
@@ -121,7 +127,7 @@ switch (method()) {
         if (!empty($data['recipient']) && !empty($data['recipient']['name'])) {
             $r = $data['recipient'];
             $stmt = $pdo->prepare(
-                "INSERT INTO payment_recipient (payment_id, name, cbu, alias, bank)
+                "INSERT INTO transaction_recipient (transaction_id, name, cbu, alias, bank)
                  VALUES (?, ?, ?, ?, ?)"
             );
             $stmt->execute([$id, $r['name'], $r['cbu'] ?? null, $r['alias'] ?? null, $r['bank'] ?? null]);
@@ -134,11 +140,17 @@ switch (method()) {
         if (empty($id)) json_error('id is required');
 
         $data = get_json_body();
-        $allowed = ['title', 'description', 'amount', 'expense_category_id', 'card_id',
-                     'payment_type', 'due_ts', 'source', 'status', 'needs_revision',
+        $allowed = ['title', 'description', 'expense_category_id', 'card_id',
+                     'transaction_type', 'due_ts', 'source', 'status', 'needs_revision',
                      'is_whatsapp', 'audio_transcription', 'ai_artifact_path', 'ai_artifact_mime'];
         $fields = [];
         $params = [];
+
+        // Amount needs sign normalization (negative for expense).
+        if (array_key_exists('amount', $data)) {
+            $fields[] = "amount = ?";
+            $params[] = -abs((float)$data['amount']);
+        }
 
         // Special handling for is_paid toggle. NOW() is AR-anchored via the
         // session timezone we set in config.php's PDO init command.
@@ -167,7 +179,7 @@ switch (method()) {
             $params[] = $user_id;
 
             $stmt = $pdo->prepare(
-                "UPDATE payment SET " . implode(', ', $fields) .
+                "UPDATE `transaction` SET " . implode(', ', $fields) .
                 " WHERE id = ? AND user_id = ?"
             );
             $stmt->execute($params);
@@ -176,11 +188,11 @@ switch (method()) {
         // Handle recipient sub-object
         if ($has_recipient) {
             if ($data['recipient'] === null) {
-                $pdo->prepare("DELETE FROM payment_recipient WHERE payment_id = ?")->execute([$id]);
+                $pdo->prepare("DELETE FROM transaction_recipient WHERE transaction_id = ?")->execute([$id]);
             } elseif (!empty($data['recipient']['name'])) {
                 $r = $data['recipient'];
                 $stmt = $pdo->prepare(
-                    "REPLACE INTO payment_recipient (payment_id, name, cbu, alias, bank)
+                    "REPLACE INTO transaction_recipient (transaction_id, name, cbu, alias, bank)
                      VALUES (?, ?, ?, ?, ?)"
                 );
                 $stmt->execute([$id, $r['name'], $r['cbu'] ?? null, $r['alias'] ?? null, $r['bank'] ?? null]);
@@ -194,21 +206,21 @@ switch (method()) {
         if (empty($id)) json_error('id is required');
 
         // Look up the artifact path before deleting, so we can clean up Spaces.
-        $stmt = $pdo->prepare("SELECT ai_artifact_path FROM payment WHERE id = ? AND user_id = ?");
+        $stmt = $pdo->prepare("SELECT ai_artifact_path FROM `transaction` WHERE id = ? AND user_id = ?");
         $stmt->execute([$id, $user_id]);
         $artifact_path = $stmt->fetchColumn() ?: null;
 
-        $stmt = $pdo->prepare("DELETE FROM payment WHERE id = ? AND user_id = ?");
+        $stmt = $pdo->prepare("DELETE FROM `transaction` WHERE id = ? AND user_id = ?");
         $stmt->execute([$id, $user_id]);
 
-        if ($stmt->rowCount() === 0) json_error('Payment not found', 404);
+        if ($stmt->rowCount() === 0) json_error('Transaction not found', 404);
 
         if ($artifact_path) {
             $spaces_conf = $GLOBALS['mangos_config']['spaces'] ?? null;
             if ($spaces_conf && !empty($spaces_conf['key']) && $spaces_conf['key'] !== 'CHANGE_ME') {
                 require_once __DIR__ . '/../handlers/SpacesHandler.php';
                 try { (new SpacesHandler($spaces_conf))->delete($artifact_path); }
-                catch (\Throwable $e) { error_log('[payments] artifact delete failed: ' . $e->getMessage()); }
+                catch (\Throwable $e) { error_log('[transactions] artifact delete failed: ' . $e->getMessage()); }
             }
         }
 
@@ -220,23 +232,23 @@ switch (method()) {
 
 /**
  * Private proxy: streams the AI artifact stored on DO Spaces back to the
- * authenticated owner. Reached as GET /api/payments/artifact?id=<payment_id>.
+ * authenticated owner. Reached as GET /api/transactions/artifact?id=<transaction_id>.
  * Buckets are private (ACL=private) and DO's CDN public URL returns 403, so
  * this proxy is the only legitimate way for the browser to fetch the file.
  */
-function handle_payment_artifact(PDO $pdo, string $user_id): void {
+function handle_transaction_artifact(PDO $pdo, string $user_id): void {
     if (method() !== 'GET') json_error('Method not allowed', 405);
     $id = $_GET['id'] ?? '';
     if (empty($id)) json_error('id is required');
 
     $stmt = $pdo->prepare(
-        "SELECT ai_artifact_path, ai_artifact_mime FROM payment WHERE id = ? AND user_id = ?"
+        "SELECT ai_artifact_path, ai_artifact_mime FROM `transaction` WHERE id = ? AND user_id = ?"
     );
     $stmt->execute([$id, $user_id]);
     $row = $stmt->fetch();
 
-    if (!$row) json_error('Payment not found', 404);
-    if (empty($row['ai_artifact_path'])) json_error('No artifact for this payment', 404);
+    if (!$row) json_error('Transaction not found', 404);
+    if (empty($row['ai_artifact_path'])) json_error('No artifact for this transaction', 404);
 
     $spaces_conf = $GLOBALS['mangos_config']['spaces'] ?? null;
     if (!$spaces_conf || empty($spaces_conf['key']) || $spaces_conf['key'] === 'CHANGE_ME') {

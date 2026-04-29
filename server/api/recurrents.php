@@ -47,7 +47,7 @@ switch (method()) {
                 $user_id,
                 $data['title'],
                 $data['description'] ?? '',
-                $data['amount'],
+                -abs((float)$data['amount']),
                 $data['start_date'] ?? null,
                 (int) $data['due_date_day'],
                 $data['end_date'] ?? null,
@@ -70,10 +70,16 @@ switch (method()) {
         if (empty($id)) json_error('id is required');
 
         $data = get_json_body();
-        $allowed = ['title', 'description', 'amount', 'start_date', 'due_date_day',
+        $allowed = ['title', 'description', 'start_date', 'due_date_day',
                      'end_date', 'time_period', 'expense_category_id', 'card_id'];
         $fields = [];
         $params = [];
+
+        // Amount needs sign normalization (negative for expense).
+        if (array_key_exists('amount', $data)) {
+            $fields[] = "amount = ?";
+            $params[] = -abs((float)$data['amount']);
+        }
 
         foreach ($allowed as $col) {
             if (array_key_exists($col, $data)) {
@@ -121,7 +127,7 @@ switch (method()) {
 
         $pdo->beginTransaction();
         try {
-            $stmt = $pdo->prepare("DELETE FROM payment WHERE recurrent_id = ? AND user_id = ?");
+            $stmt = $pdo->prepare("DELETE FROM `transaction` WHERE recurrent_id = ? AND user_id = ?");
             $stmt->execute([$id, $user_id]);
             $instances_deleted = $stmt->rowCount();
 

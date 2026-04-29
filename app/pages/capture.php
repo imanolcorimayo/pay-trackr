@@ -2,9 +2,9 @@
 <div class="flex items-center justify-between mb-8">
     <div>
         <h1 class="text-2xl font-semibold">Capturar</h1>
-        <p class="text-sm text-muted mt-1">Sube capturas de tus transacciones y la IA arma los pagos por vos</p>
+        <p class="text-sm text-muted mt-1">Sube capturas de tus transacciones y la IA arma los movimientos por vos</p>
     </div>
-    <a href="/pagos" class="btn btn-ghost">
+    <a href="/movimientos" class="btn btn-ghost">
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
         </svg>
@@ -257,7 +257,7 @@ async function analyze() {
 
     let result;
     try {
-        result = await api.post('/ai/parse-payments', payload);
+        result = await api.post('/ai/parse-transactions', payload);
     } catch (e) {
         console.error(e);
         toast('Error de red', 'error');
@@ -275,7 +275,7 @@ async function analyze() {
 
     drafts = (result.drafts || []).map(d => ({
         ...d,
-        amount: Number(d.amount) || 0,
+        amount: Math.abs(Number(d.amount) || 0),
         date: d.date || '',
         title: d.title || '',
         description: d.description || '',
@@ -292,7 +292,7 @@ async function analyze() {
 
 function defaultActionFor(d) {
     if (d.duplicate_in_batch_idx != null) return 'skip';
-    if (d.existing_payment_id) return 'skip';
+    if (d.existing_transaction_id) return 'skip';
     if (d.recurrent_match_id) return 'mark_recurrent_paid';
     return 'create';
 }
@@ -307,7 +307,7 @@ function shouldUpdateRecurrentAmount(d) {
     if (!d.recurrent_match_id) return false;
     const r = recurrents.find(x => x.id === d.recurrent_match_id);
     if (!r) return false;
-    const diff = Math.abs(Number(d.amount) - Number(r.amount));
+    const diff = Math.abs(Math.abs(Number(d.amount)) - Math.abs(Number(r.amount)));
     return diff > 0.01;
 }
 
@@ -353,7 +353,7 @@ function statusInfo(d) {
     if (d.duplicate_in_batch_idx != null) {
         return { dot: 'bg-muted', text: `Dup. #${d.duplicate_in_batch_idx}`, tone: 'text-muted' };
     }
-    if (d.existing_payment_id) {
+    if (d.existing_transaction_id) {
         return { dot: 'bg-muted', text: 'Ya existe', tone: 'text-muted' };
     }
     if (d.recurrent_match_id) {
@@ -417,10 +417,10 @@ function buildDraftRow(d, idx) {
     const amtInp = document.createElement('input');
     amtInp.type = 'text';
     amtInp.className = 'input-sm font-mono col-span-5 sm:col-span-2 text-right';
-    amtInp.value = formatAmountForInput(d.amount);
+    amtInp.value = formatAmountForInput(Math.abs(d.amount));
     amtInp.inputMode = 'decimal';
     amtInp.addEventListener('input', () => {
-        d.amount = parseAmount(amtInp.value) || 0;
+        d.amount = Math.abs(parseAmount(amtInp.value) || 0);
         updateFooterSummary();
     });
     fields.appendChild(amtInp);
@@ -486,7 +486,7 @@ function buildDraftRow(d, idx) {
         if (!d.recurrent_match_id || d.action !== 'mark_recurrent_paid') return null;
         const r = recurrents.find(x => x.id === d.recurrent_match_id);
         if (!r) return null;
-        const diff = Math.abs(Number(d.amount) - Number(r.amount));
+        const diff = Math.abs(Math.abs(Number(d.amount)) - Math.abs(Number(r.amount)));
         return diff > 0.01 ? r : null;
     })();
 
@@ -511,7 +511,7 @@ function buildDraftRow(d, idx) {
             ucb.addEventListener('change', () => { d.update_recurrent_amount = ucb.checked; });
             lbl.appendChild(ucb);
             const t = document.createElement('span');
-            t.textContent = `Actualizar fijo: ${formatPrice(recurrentDiff.amount)} → ${formatPrice(d.amount)}`;
+            t.textContent = `Actualizar fijo: ${formatPrice(Math.abs(recurrentDiff.amount))} → ${formatPrice(Math.abs(d.amount))}`;
             lbl.appendChild(t);
             sub.appendChild(lbl);
         }
@@ -540,7 +540,7 @@ function buildDraftRow(d, idx) {
         recurrents.forEach(r => {
             const o = document.createElement('option');
             o.value = r.id;
-            o.textContent = `${r.title} (${formatPrice(r.amount)})`;
+            o.textContent = `${r.title} (${formatPrice(Math.abs(r.amount))})`;
             if (r.id === d.recurrent_match_id) o.selected = true;
             recSel.appendChild(o);
         });
@@ -610,7 +610,7 @@ function updateFooterSummary() {
     const create = drafts.filter(d => d.action === 'create');
     const markPaid = drafts.filter(d => d.action === 'mark_recurrent_paid');
     const skip = drafts.filter(d => d.action === 'skip');
-    const total = [...create, ...markPaid].reduce((s, d) => s + (Number(d.amount) || 0), 0);
+    const total = [...create, ...markPaid].reduce((s, d) => s + Math.abs(Number(d.amount) || 0), 0);
 
     document.getElementById('footer-summary').textContent =
         `${create.length} nuevos · ${markPaid.length} fijos pagados · ${skip.length} saltados · Total ${formatPrice(total)}`;
@@ -665,7 +665,7 @@ async function commit() {
             amount: Number(d.amount) || 0,
             expense_category_id: d.suggested_category_id,
             card_id: d.card_id,
-            payment_type: 'one-time',
+            transaction_type: 'one-time',
             is_paid: true,
             paid_ts,
             due_ts: paid_ts,
@@ -677,7 +677,7 @@ async function commit() {
 
     let result;
     try {
-        result = await api.post('/ai/commit-payments', { rows });
+        result = await api.post('/ai/commit-transactions', { rows });
     } catch (e) {
         console.error(e);
         toast('Error de red', 'error');
@@ -695,7 +695,7 @@ async function commit() {
 
     const monthStr = new Date().toISOString().slice(0, 7);
     toast(`${result.created} creados, ${result.marked_paid} fijos pagados, ${result.skipped} saltados`, 'success');
-    setTimeout(() => { window.location.href = `/pagos?month=${monthStr}`; }, 600);
+    setTimeout(() => { window.location.href = `/movimientos?month=${monthStr}`; }, 600);
 }
 
 function discard() {

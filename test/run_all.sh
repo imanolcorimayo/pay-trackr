@@ -22,7 +22,7 @@ tests=(
     test_auth.sh
     test_categories.sh
     test_cards.sh
-    test_payments.sh
+    test_transactions.sh
     test_recurrents.sh
     test_templates.sh
 )

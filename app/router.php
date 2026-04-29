@@ -16,9 +16,9 @@ switch ($route) {
         require __DIR__ . '/pages/fixed.php';
         break;
 
-    case '/pagos':
-        $pageTitle = 'Pagos';
-        require __DIR__ . '/pages/payments.php';
+    case '/movimientos':
+        $pageTitle = 'Movimientos';
+        require __DIR__ . '/pages/movimientos.php';
         break;
 
     case '/categorias':

@@ -4,7 +4,7 @@
 switch (method()) {
     case 'GET':
         $stmt = $pdo->prepare(
-            "SELECT * FROM payment_template WHERE user_id = ? ORDER BY usage_count DESC"
+            "SELECT * FROM transaction_template WHERE user_id = ? ORDER BY usage_count DESC"
         );
         $stmt->execute([$user_id]);
         json_response($stmt->fetchAll());
@@ -18,7 +18,7 @@ switch (method()) {
         $id = bin2hex(random_bytes(14));
 
         $stmt = $pdo->prepare(
-            "INSERT INTO payment_template (id, user_id, name, expense_category_id, description)
+            "INSERT INTO transaction_template (id, user_id, name, expense_category_id, description)
              VALUES (?, ?, ?, ?, ?)"
         );
         $stmt->execute([
@@ -40,7 +40,7 @@ switch (method()) {
         // Special case: increment usage counter
         if (!empty($data['increment_usage'])) {
             $stmt = $pdo->prepare(
-                "UPDATE payment_template SET usage_count = usage_count + 1
+                "UPDATE transaction_template SET usage_count = usage_count + 1
                  WHERE id = ? AND user_id = ?"
             );
             $stmt->execute([$id, $user_id]);
@@ -64,7 +64,7 @@ switch (method()) {
         $params[] = $user_id;
 
         $stmt = $pdo->prepare(
-            "UPDATE payment_template SET " . implode(', ', $fields) .
+            "UPDATE transaction_template SET " . implode(', ', $fields) .
             " WHERE id = ? AND user_id = ?"
         );
         $stmt->execute($params);
@@ -75,7 +75,7 @@ switch (method()) {
         $id = $_GET['id'] ?? '';
         if (empty($id)) json_error('id is required');
 
-        $stmt = $pdo->prepare("DELETE FROM payment_template WHERE id = ? AND user_id = ?");
+        $stmt = $pdo->prepare("DELETE FROM transaction_template WHERE id = ? AND user_id = ?");
         $stmt->execute([$id, $user_id]);
 
         if ($stmt->rowCount() === 0) json_error('Template not found', 404);

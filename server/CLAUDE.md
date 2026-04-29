@@ -9,24 +9,26 @@ PHP REST API backed by MySQL. Migrated from the previous Node.js + Firestore sta
 - **Auth**: session-based via `middleware/auth.php`. `$user_id` is injected into every handler.
 - **DB config**: `api/config.php` (loaded from env / config file).
 - **Endpoints**:
-  - `GET/POST/PUT/DELETE /api/payments` → `api/payments.php` (joins `payment_recipient` for transfer details)
+  - `GET/POST/PUT/DELETE /api/transactions` → `api/transactions.php` (joins `transaction_recipient` for transfer details)
   - `… /api/recurrents` → `api/recurrents.php` (with `recurrent_alias` join)
   - `… /api/templates` → `api/templates.php`
   - `… /api/categories` → `api/categories.php`
   - `… /api/cards` → `api/card.php`
-  - `POST /api/ai/parse-payments` → `api/ai.php` (image → AI-extracted draft payments)
-  - `POST /api/ai/commit-payments` → `api/ai.php` (persist drafts after user review)
+  - `POST /api/ai/parse-transactions` → `api/ai.php` (image → AI-extracted draft transactions)
+  - `POST /api/ai/commit-transactions` → `api/ai.php` (persist drafts after user review)
+
+**Sign convention**: `transaction.amount` and `recurrent.amount` are stored **signed** — expenses are negative. Write endpoints normalize input via `-abs()`. Read endpoints return signed values; the frontend `Math.abs()`es for display.
 
 ## AI: `handlers/GeminiHandler.php`
 
 Reusable Gemini wrapper. Model rotation: `gemini-2.5-flash` → `gemini-3.1-flash-lite-preview` → `gemini-2.5-flash-lite` → `gemini-2.5-pro`. Per-request timeout 45s, total budget 110s. Daily-exhaustion cache at `sys_get_temp_dir()/mangos-gemini-exhausted.json`. Vision-capable; accepts `inlineData` parts.
 
-`api/ai.php` (parse-payments) builds context per request: current-month payments, recurrents + their aliases, and category names — all passed into the prompt so the model can reconcile uploads against existing data instead of duplicating.
+`api/ai.php` (parse-transactions) builds context per request: current-month transactions, recurrents + their aliases, and category names — all passed into the prompt so the model can reconcile uploads against existing data instead of duplicating. Amounts in the prompt context are sent as positive magnitudes (`ABS()`) so the model compares like-for-like.
 
 ## Migrations
 
 - `migrate.php` — runner. Applies SQL files from `migrations/` in order, tracks applied state in DB.
-- `migrations/*.sql` — schema definitions (`payment`, `payment_recipient`, `recurrent`, `recurrent_alias`, `expense_category`, `payment_template`, `card`, `users`, `fcm_tokens`, `weekly_summaries`).
+- `migrations/*.sql` — schema definitions (`transaction`, `transaction_recipient`, `recurrent`, `recurrent_alias`, `expense_category`, `transaction_template`, `card`, `user`, `fcm_token`, `weekly_summary`).
 
 ## Deprecated (reference only, not deployed)
 

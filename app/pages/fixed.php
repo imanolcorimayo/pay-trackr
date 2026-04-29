@@ -2,7 +2,7 @@
 <div class="flex items-center justify-between mb-8">
     <div>
         <h1 class="text-2xl font-semibold">Gastos Fijos</h1>
-        <p class="text-sm text-muted mt-1">Pagos recurrentes que se repiten cada mes</p>
+        <p class="text-sm text-muted mt-1">Movimientos recurrentes que se repiten cada mes</p>
     </div>
     <div class="flex items-center gap-2">
         <a href="/capturar" class="btn btn-outline" title="Capturar con IA desde una imagen">
@@ -154,7 +154,7 @@
             <h2 class="text-lg font-semibold">Eliminar gasto fijo</h2>
             <p class="text-sm text-muted mt-2">
                 Vas a eliminar <span id="rec-delete-name" class="font-medium text-dark"></span>.
-                Tambien se eliminaran sus pagos asociados (de cualquier mes).
+                Tambien se eliminaran sus movimientos asociados (de cualquier mes).
             </p>
             <div class="flex justify-end gap-2 mt-5">
                 <button type="button" onclick="closeRecurrentDelete()" class="btn btn-ghost">Cancelar</button>
@@ -174,7 +174,7 @@ const PERIOD_LABEL = { monthly: 'Mensual', yearly: 'Anual', weekly: 'Semanal', b
 let recurrents = [];
 let categories = [];
 let cards = [];
-let monthlyPayments = [];   // payments for current month, used for paid status
+let monthlyPayments = [];   // transactions for current month, used for paid status
 let editingId = null;
 let pendingDeleteId = null;
 
@@ -231,7 +231,7 @@ async function loadAll() {
         api.get('/recurrents'),
         api.get('/categories'),
         api.get('/cards'),
-        api.get('/payments', { start_date: startDate, end_date: endDate }),
+        api.get('/transactions', { start_date: startDate, end_date: endDate }),
     ]);
 
     recurrents = recs || [];
@@ -286,9 +286,9 @@ function renderSummary() {
         else unpaid += monthlyEquivalent;
     });
 
-    document.getElementById('rec-total').textContent = formatPrice(total);
-    document.getElementById('rec-paid').textContent = formatPrice(paid);
-    document.getElementById('rec-unpaid').textContent = formatPrice(unpaid);
+    document.getElementById('rec-total').textContent = formatPrice(Math.abs(total));
+    document.getElementById('rec-paid').textContent = formatPrice(Math.abs(paid));
+    document.getElementById('rec-unpaid').textContent = formatPrice(Math.abs(unpaid));
 }
 
 function renderRecurrents() {
@@ -365,7 +365,7 @@ function buildRecurrentRow(r, isPaid, isOverdue, isLast) {
 
     const amountEl = document.createElement('span');
     amountEl.className = 'text-sm font-semibold';
-    amountEl.textContent = formatPrice(r.amount);
+    amountEl.textContent = formatPrice(Math.abs(r.amount));
     right.appendChild(amountEl);
 
     const badge = document.createElement('button');
@@ -398,7 +398,7 @@ async function toggleRecurrentPaid(r, btn) {
 
     // Find any existing instance for this recurrent in the current month
     const instance = monthlyPayments.find(
-        p => p.recurrent_id === r.id && p.payment_type === 'recurrent'
+        p => p.recurrent_id === r.id && p.transaction_type === 'recurrent'
     );
     const wasPaid = instance && instance.is_paid == 1;
 
@@ -406,7 +406,7 @@ async function toggleRecurrentPaid(r, btn) {
         let result;
         if (instance) {
             // Flip is_paid on the existing instance (preserves any custom edits)
-            result = await api.put('/payments', { is_paid: !wasPaid }, { id: instance.id });
+            result = await api.put('/transactions', { is_paid: !wasPaid }, { id: instance.id });
         } else {
             // No instance yet -> create a paid one carrying over the recurrent's data.
             // Clamp due_date_day to the month's last day so e.g. day=31 in February doesn't break.
@@ -417,14 +417,14 @@ async function toggleRecurrentPaid(r, btn) {
             const day = Math.min(r.due_date_day, lastDay);
             const due_ts = `${y}-${String(m + 1).padStart(2, '0')}-${String(day).padStart(2, '0')} 00:00:00`;
 
-            result = await api.post('/payments', {
+            result = await api.post('/transactions', {
                 title: r.title,
                 description: r.description || '',
                 amount: r.amount,
                 expense_category_id: r.expense_category_id || null,
                 card_id: r.card_id || null,
                 recurrent_id: r.id,
-                payment_type: 'recurrent',
+                transaction_type: 'recurrent',
                 due_ts,
                 is_paid: true,
             });
@@ -453,7 +453,7 @@ function openRecurrentModal(r) {
 
     document.getElementById('rec-id').value = r?.id || '';
     document.getElementById('rec-title').value = r?.title || '';
-    document.getElementById('rec-amount').value = r ? formatAmountForInput(r.amount) : '';
+    document.getElementById('rec-amount').value = r ? formatAmountForInput(Math.abs(r.amount)) : '';
     document.getElementById('rec-due-day').value = r?.due_date_day || '';
     document.getElementById('rec-category').value = r?.expense_category_id || '';
     document.getElementById('rec-card').value = r?.card_id || '';
@@ -569,7 +569,7 @@ async function confirmRecurrentDelete() {
         }
         const n = result.instances_deleted || 0;
         const msg = n > 0
-            ? `Gasto fijo eliminado (${n} pago${n === 1 ? '' : 's'} asociado${n === 1 ? '' : 's'} eliminado${n === 1 ? '' : 's'})`
+            ? `Gasto fijo eliminado (${n} movimiento${n === 1 ? '' : 's'} asociado${n === 1 ? '' : 's'} eliminado${n === 1 ? '' : 's'})`
             : 'Gasto fijo eliminado';
         toast(msg, 'success');
         closeRecurrentDelete();

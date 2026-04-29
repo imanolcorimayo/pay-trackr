@@ -35,7 +35,7 @@
 <?php
 $primaryNav = [
     ['/',          'Inicio',    '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/>'],
-    ['/pagos',     'Pagos',     '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"/>'],
+    ['/movimientos', 'Movimientos', '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"/>'],
     ['/fijos',     'Fijos',     '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>'],
 ];
 $secondaryNav = [
@@ -70,7 +70,7 @@ $isActive = function($href) use ($route) {
             $sidebarItems = [
                 ['/', 'Dashboard'],
                 ['/fijos', 'Gastos Fijos'],
-                ['/pagos', 'Pagos'],
+                ['/movimientos', 'Movimientos'],
                 ['/capturar', 'Capturar'],
                 ['/categorias', 'Categorias'],
                 ['/tarjetas', 'Tarjetas'],

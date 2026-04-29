@@ -6,8 +6,8 @@ $openAIOnLoad = !empty($_GET['ai']);
 <!-- Page header (desktop only — mobile topbar shows the page title; FAB covers AI input) -->
 <div class="hidden lg:flex items-center justify-between mb-6">
     <div>
-        <h1 class="text-2xl font-semibold">Pagos</h1>
-        <p class="text-sm text-muted mt-1">Todos tus pagos del mes</p>
+        <h1 class="text-2xl font-semibold">Movimientos</h1>
+        <p class="text-sm text-muted mt-1">Todos tus movimientos del mes</p>
     </div>
     <div class="flex items-center gap-2">
         <a href="/capturar" class="btn btn-outline" title="Capturar batch de imagenes con IA">
@@ -24,7 +24,7 @@ $openAIOnLoad = !empty($_GET['ai']);
             </svg>
             IA
         </button>
-        <button class="btn btn-outline" onclick="openPaymentModal()" title="Nuevo pago manual">
+        <button class="btn btn-outline" onclick="openPaymentModal()" title="Nuevo movimiento manual">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
             </svg>
@@ -42,7 +42,7 @@ $openAIOnLoad = !empty($_GET['ai']);
         </svg>
         <span>Capturar</span>
     </a>
-    <button type="button" onclick="openPaymentModal()" class="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border border-border text-sm text-dark hover:bg-dark/5 active:scale-95 transition" title="Nuevo pago manual">
+    <button type="button" onclick="openPaymentModal()" class="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border border-border text-sm text-dark hover:bg-dark/5 active:scale-95 transition" title="Nuevo movimiento manual">
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
         </svg>
@@ -139,7 +139,7 @@ $openAIOnLoad = !empty($_GET['ai']);
                 <div class="w-10 h-1 rounded-full bg-border"></div>
             </button>
             <header class="px-5 py-4 border-b border-border flex items-center justify-between">
-                <h2 id="payment-modal-title" class="text-lg font-semibold">Nuevo pago</h2>
+                <h2 id="payment-modal-title" class="text-lg font-semibold">Nuevo movimiento</h2>
                 <button type="button" onclick="closePaymentModal()" class="text-muted hover:text-dark p-1 -m-1">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
@@ -158,7 +158,7 @@ $openAIOnLoad = !empty($_GET['ai']);
                 </label>
                 <div class="flex flex-wrap gap-2 mt-3">
                     <button type="button" onclick="markRecurrentPaidFromAI()" class="btn btn-primary py-1.5 px-3 text-xs">Marcar recurrente como pagado</button>
-                    <button type="button" onclick="dismissRecurrentBanner()" class="btn btn-ghost py-1.5 px-3 text-xs">Crear pago nuevo</button>
+                    <button type="button" onclick="dismissRecurrentBanner()" class="btn btn-ghost py-1.5 px-3 text-xs">Crear movimiento nuevo</button>
                 </div>
             </div>
 
@@ -279,7 +279,7 @@ $openAIOnLoad = !empty($_GET['ai']);
                 <div class="w-10 h-1 rounded-full bg-border"></div>
             </button>
             <div class="p-5">
-                <h2 class="text-lg font-semibold">Eliminar pago</h2>
+                <h2 class="text-lg font-semibold">Eliminar movimiento</h2>
                 <p class="text-sm text-muted mt-2">
                     Vas a eliminar <span id="pmt-delete-name" class="font-medium text-dark"></span>.
                     Esta accion no se puede deshacer.
@@ -458,7 +458,7 @@ function readUrlState() {
     if (p.has('category')) categoryFilter = p.get('category');
 }
 
-// Mobile FAB lands on /pagos?ai=1 (or legacy /pagos#ai) when the user wants the
+// Mobile FAB lands on /movimientos?ai=1 (or legacy /movimientos#ai) when the user wants the
 // AI input modal. Detect either, strip from URL, and open the modal.
 function openAIFromUrl() {
     const params = new URLSearchParams(window.location.search);
@@ -591,7 +591,7 @@ async function loadAll() {
     const range = fmtDateRange(viewMonth);
 
     const [pays, cats, crds] = await Promise.all([
-        api.get('/payments', { start_date: range.start, end_date: range.end }),
+        api.get('/transactions', { start_date: range.start, end_date: range.end }),
         api.get('/categories'),
         api.get('/cards'),
     ]);
@@ -599,7 +599,7 @@ async function loadAll() {
     payments = Array.isArray(pays) ? pays : [];
     categories = Array.isArray(cats) ? cats : [];
     cards = Array.isArray(crds) ? crds : [];
-    if (pays && pays.error) toast(`No se pudieron cargar los pagos: ${pays.error}`, 'error');
+    if (pays && pays.error) toast(`No se pudieron cargar los movimientos: ${pays.error}`, 'error');
 
     populateDropdowns();
     document.getElementById('filter-category').value = categoryFilter;
@@ -658,15 +658,15 @@ function renderSummary() {
     let unicoTotal = 0, unicoCount = 0;
 
     filtered.forEach(p => {
-        const a = Number(p.amount);
+        const a = Math.abs(Number(p.amount));
         total += a;
         if (p.is_paid == 1) { paid += a; paidCount++; }
         else { unpaid += a; unpaidCount++; }
-        if (p.payment_type === 'recurrent') { fijoTotal += a; fijoCount++; }
+        if (p.transaction_type === 'recurrent') { fijoTotal += a; fijoCount++; }
         else { unicoTotal += a; unicoCount++; }
     });
 
-    const plural = (n) => `${n} pago${n === 1 ? '' : 's'}`;
+    const plural = (n) => `${n} movimiento${n === 1 ? '' : 's'}`;
 
     document.getElementById('sum-total').textContent = formatPrice(total);
     document.getElementById('sum-total-count').textContent = plural(filtered.length);
@@ -692,8 +692,8 @@ function renderPayments() {
         const msg = document.createElement('p');
         msg.className = 'text-sm text-muted';
         msg.textContent = payments.length === 0
-            ? 'No hay pagos en este mes.'
-            : 'Ningun pago coincide con los filtros.';
+            ? 'No hay movimientos en este mes.'
+            : 'Ningun movimiento coincide con los filtros.';
         empty.appendChild(msg);
         list.appendChild(empty);
         return;
@@ -729,10 +729,10 @@ function buildPaymentRow(p, isPaid, isOverdue, isLast) {
     const titleRow = document.createElement('p');
     titleRow.className = 'text-[15px] sm:text-sm font-medium flex items-center gap-1.5 min-w-0';
 
-    if (p.payment_type === 'recurrent') {
+    if (p.transaction_type === 'recurrent') {
         const recIcon = svgIcon(ICON_RECURRENT, 'w-3.5 h-3.5 text-muted flex-shrink-0');
         const recTitle = document.createElementNS(SVG_NS, 'title');
-        recTitle.textContent = 'Pago de gasto fijo';
+        recTitle.textContent = 'Movimiento de gasto fijo';
         recIcon.appendChild(recTitle);
         titleRow.appendChild(recIcon);
     }
@@ -766,7 +766,7 @@ function buildPaymentRow(p, isPaid, isOverdue, isLast) {
 
     const amount = document.createElement('span');
     amount.className = 'text-[15px] sm:text-sm font-semibold tabular-nums';
-    amount.textContent = formatPrice(p.amount);
+    amount.textContent = formatPrice(Math.abs(p.amount));
     right.appendChild(amount);
 
     const badge = document.createElement('button');
@@ -800,7 +800,7 @@ async function togglePaymentPaid(p, btn) {
     btn.disabled = true;
     const wasPaid = p.is_paid == 1;
     try {
-        const result = await api.put('/payments', { is_paid: !wasPaid }, { id: p.id });
+        const result = await api.put('/transactions', { is_paid: !wasPaid }, { id: p.id });
         if (!result || result.error) {
             toast(result?.error || 'No se pudo actualizar', 'error');
             btn.disabled = false;
@@ -821,18 +821,18 @@ async function openPaymentModal(p) {
     // Default to clean AI state. AI flow re-applies banner + source after this returns.
     aiSourceTag = null;
     hideRecurrentBanner();
-    document.getElementById('payment-modal-title').textContent = editingId ? 'Editar pago' : 'Nuevo pago';
+    document.getElementById('payment-modal-title').textContent = editingId ? 'Editar movimiento' : 'Nuevo movimiento';
 
     // For edit, fetch single to get nested recipient
     let full = p;
     if (p?.id) {
-        const fetched = await api.get('/payments', { id: p.id });
+        const fetched = await api.get('/transactions', { id: p.id });
         if (fetched && !fetched.error) full = fetched;
     }
 
     document.getElementById('pmt-id').value = full?.id || '';
     document.getElementById('pmt-title').value = full?.title || '';
-    document.getElementById('pmt-amount').value = full ? formatAmountForInput(full.amount) : '';
+    document.getElementById('pmt-amount').value = full ? formatAmountForInput(Math.abs(full.amount)) : '';
     document.getElementById('pmt-due').value = full?.due_ts ? full.due_ts.slice(0, 10) : (p ? '' : todayISODate());
     // For new payments default to the most-used category; for edits use the stored one.
     document.getElementById('pmt-category').value = full
@@ -869,12 +869,12 @@ async function openPaymentModal(p) {
 
 // Render the "Original" details element with an inline preview of the AI input
 // artifact (image / audio / PDF). The actual fetch goes through our private
-// proxy at /api/payments/artifact?id=<id>; the bucket itself is not exposed.
+// proxy at /api/transactions/artifact?id=<id>; the bucket itself is not exposed.
 function renderArtifactViewer(paymentId, mime) {
     const details = document.getElementById('pmt-artifact-details');
     const body = document.getElementById('pmt-artifact-body');
     const kind = document.getElementById('pmt-artifact-kind');
-    const url = `${window.MANGOS_API_URL}/payments/artifact?id=${encodeURIComponent(paymentId)}`;
+    const url = `${window.MANGOS_API_URL}/transactions/artifact?id=${encodeURIComponent(paymentId)}`;
 
     body.textContent = '';
 
@@ -1005,8 +1005,8 @@ async function submitPaymentForm(e) {
 
     try {
         const result = editingId
-            ? await api.put('/payments', body, { id: editingId })
-            : await api.post('/payments', body);
+            ? await api.put('/transactions', body, { id: editingId })
+            : await api.post('/transactions', body);
 
         // Success shape: POST → {id}, PUT → {updated: true}. Anything else
         // (including [] from a hard 500 with no JSON body) is a failure —
@@ -1019,7 +1019,7 @@ async function submitPaymentForm(e) {
             return;
         }
 
-        toast(editingId ? 'Pago actualizado' : 'Pago creado', 'success');
+        toast(editingId ? 'Movimiento actualizado' : 'Movimiento creado', 'success');
         // Payment now owns the artifact; null it so closePaymentModal's
         // discard guard doesn't try to delete it from Spaces.
         aiState.artifact = null;
@@ -1051,12 +1051,12 @@ async function confirmPaymentDelete() {
     const btn = document.getElementById('pmt-delete-submit');
     btn.disabled = true;
     try {
-        const result = await api.del('/payments', { id: pendingDeleteId });
+        const result = await api.del('/transactions', { id: pendingDeleteId });
         if (!result || result.error) {
             toast(result?.error || 'No se pudo eliminar', 'error');
             return;
         }
-        toast('Pago eliminado', 'success');
+        toast('Movimiento eliminado', 'success');
         closePaymentDelete();
         await loadAll();
     } catch (err) {
@@ -1403,8 +1403,8 @@ async function openPaymentModalFromAI(draft, matched) {
 
 function showRecurrentBanner(matched, draft) {
     document.getElementById('ai-rec-banner-title').textContent = matched.title;
-    const draftAmount = Number(draft.amount);
-    const recAmount = Number(matched.amount);
+    const draftAmount = Math.abs(Number(draft.amount));
+    const recAmount = Math.abs(Number(matched.amount));
     const diffOk = isFinite(draftAmount) && draftAmount > 0;
     const diff = diffOk ? Math.abs(draftAmount - recAmount) : 0;
     const wrap = document.getElementById('ai-rec-update-amount-wrap');
@@ -1449,7 +1449,7 @@ async function markRecurrentPaidFromAI() {
     if (updateAmount) row.update_recurrent_amount = true;
 
     try {
-        const result = await api.post('/ai/commit-payments', { rows: [row] });
+        const result = await api.post('/ai/commit-transactions', { rows: [row] });
         if (!result || Array.isArray(result) || result.error) {
             toast(result?.error || 'No se pudo marcar el recurrente', 'error');
             return;

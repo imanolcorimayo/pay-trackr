@@ -30,31 +30,31 @@ assert_status 200 "GET single recurrent"
 assert_json card_id "$card_id" "card_id stored on recurrent"
 assert_json title "Netflix" "title stored"
 
-# Create a payment instance referencing the recurrent
-req POST /api/payments "$(cat <<EOF
+# Create a transaction instance referencing the recurrent
+req POST /api/transactions "$(cat <<EOF
 {
   "title": "Netflix April",
   "amount": 8000,
   "recurrent_id": "$rec_id",
-  "payment_type": "recurrent"
+  "transaction_type": "recurrent"
 }
 EOF
 )"
-assert_status 201 "POST payment instance with recurrent_id"
+assert_status 201 "POST transaction instance with recurrent_id"
 inst_id=$(json_field id)
 
 # Update recurrent (title only)
 req PUT "/api/recurrents?id=$rec_id" '{"title":"Netflix Premium"}'
 assert_status 200 "PUT recurrent title"
 
-# Delete recurrent should cascade-delete the payment instance
+# Delete recurrent should cascade-delete the transaction instance
 req DELETE "/api/recurrents?id=$rec_id"
 assert_status 200 "DELETE recurrent"
 assert_json instances_deleted 1 "1 instance was cascade-deleted"
 
-# Payment instance should be gone now
-req GET "/api/payments?id=$inst_id"
-assert_status 404 "linked payment instance deleted"
+# Transaction instance should be gone now
+req GET "/api/transactions?id=$inst_id"
+assert_status 404 "linked transaction instance deleted"
 
 # Recurrent should be gone
 req GET "/api/recurrents?id=$rec_id"

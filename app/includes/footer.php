@@ -24,19 +24,19 @@
                     <span class="text-[10px] font-medium leading-none">Inicio</span>
                 </a>
 
-                <!-- Pagos -->
-                <a href="/pagos" class="flex flex-col items-center justify-center gap-0.5 transition-colors active:scale-95
-                    <?= $tabActive('/pagos') ? 'text-accent' : 'text-muted' ?>"
+                <!-- Movimientos -->
+                <a href="/movimientos" class="flex flex-col items-center justify-center gap-0.5 transition-colors active:scale-95
+                    <?= $tabActive('/movimientos') ? 'text-accent' : 'text-muted' ?>"
                    style="touch-action: manipulation;">
                     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"/>
                     </svg>
-                    <span class="text-[10px] font-medium leading-none">Pagos</span>
+                    <span class="text-[10px] font-medium leading-none">Movimientos</span>
                 </a>
 
                 <!-- Agregar con IA (raised center FAB).
-                     If already on /pagos, opens the modal in place. Otherwise navigates. -->
-                <a href="/pagos?ai=1" onclick="return mangosOpenAIFab(event)"
+                     If already on /movimientos, opens the modal in place. Otherwise navigates. -->
+                <a href="/movimientos?ai=1" onclick="return mangosOpenAIFab(event)"
                    class="flex items-center justify-center" aria-label="Agregar con IA"
                    style="touch-action: manipulation;">
                     <span class="-mt-6 w-14 h-14 rounded-full bg-accent text-white flex items-center justify-center shadow-lg active:scale-95 transition-transform ring-4 ring-light">
@@ -146,7 +146,7 @@
 <?php endif; ?>
 
 <script>
-// Bottom-nav FAB: when already on /pagos, openAIModal is defined — call it
+// Bottom-nav FAB: when already on /movimientos, openAIModal is defined — call it
 // directly to avoid a full page reload. Otherwise let the link navigate normally.
 function mangosOpenAIFab(e) {
     if (typeof window.openAIModal === 'function') {

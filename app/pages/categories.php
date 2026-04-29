@@ -71,7 +71,7 @@
             <h2 class="text-lg font-semibold">Eliminar categoria</h2>
             <p class="text-sm text-muted mt-2">
                 Vas a eliminar <span id="category-delete-name" class="font-medium text-dark"></span>.
-                Los pagos que la usaban quedaran sin categoria.
+                Los movimientos que la usaban quedaran sin categoria.
             </p>
             <div class="flex justify-end gap-2 mt-5">
                 <button type="button" onclick="closeCategoryDelete()" class="btn btn-ghost">Cancelar</button>

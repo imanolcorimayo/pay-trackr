@@ -1,7 +1,7 @@
 {
   "name": "mangos",
   "short_name": "mangos",
-  "description": "Tracking de pagos personales",
+  "description": "Tracking de movimientos personales",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
