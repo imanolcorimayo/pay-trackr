@@ -15,6 +15,7 @@ PHP REST API backed by MySQL. Migrated from the previous Node.js + Firestore sta
   - `… /api/categories` → `api/categories.php`
   - `… /api/cards` → `api/card.php`
   - `… /api/accounts` → `api/accounts.php`
+  - `… /api/transfers` → `api/transfers.php`
   - `POST /api/ai/parse-transactions` → `api/ai.php` (image → AI-extracted draft transactions)
   - `POST /api/ai/commit-transactions` → `api/ai.php` (persist drafts after user review)
 
@@ -23,6 +24,8 @@ PHP REST API backed by MySQL. Migrated from the previous Node.js + Firestore sta
 **Account & currency**: every `transaction` and `recurrent` carries `account_id` (FK → `account`, the wallet/source-of-money) and `currency` (`ENUM('ARS','USD','USDT')`, default `'ARS'`). `account_id` defaults to the user's `is_default` account (seeded as "Sin cuenta" on first login via `seed_default_account_for_user`); `currency` defaults to that account's currency. Pass `?account_id=` or `?currency=` to filter list endpoints. Dashboard/analytics aggregate ARS-only until Phase 3 brings FX rates.
 
 **Account balance**: each `account` has `opening_balance` + `opening_balance_date`. `GET /api/accounts` returns a computed `current_balance = opening_balance + SUM(amount)` over **paid** transactions on/after that date (NULL date = include all). Pending rows do not move the balance. Logic lives in `compute_account_balance()` in `accounts.php`.
+
+**Transfers**: a transfer between accounts is two (or three with a fee) `transaction` rows sharing a `transfer_id`. Each leg lives on its own account with its own currency, so balances stay correct without storing an exchange rate. Every row has a `kind` (`expense | income | transfer | fee`); transfers are excluded from spend rollups in dashboard/analytics, fees are included. Transfers are managed via `/api/transfers` only — `DELETE /api/transactions` returns 409 for rows that belong to a transfer.
 
 ## AI: `handlers/GeminiHandler.php`
 

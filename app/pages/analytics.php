@@ -148,7 +148,10 @@ async function loadAll() {
     }
 
     // Phase 2: analytics is ARS-only; multi-currency arrives in Phase 3.
+    // Phase 4: ?kind=expense,fee excludes transfer legs (not real spend) but
+    // keeps fees counted as expenses.
     params.currency = 'ARS';
+    params.kind = 'expense,fee';
     const [pays, cats] = await Promise.all([
         api.get('/transactions', params),
         api.get('/categories'),

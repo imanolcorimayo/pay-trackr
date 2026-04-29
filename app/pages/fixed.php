@@ -97,17 +97,17 @@
                         </select>
                     </div>
                     <div>
-                        <label for="rec-card" class="block text-sm font-medium mb-1.5">Tarjeta</label>
-                        <select id="rec-card" class="input">
-                            <option value="">Sin tarjeta</option>
-                        </select>
+                        <label class="block text-sm font-medium mb-1.5">Tarjeta</label>
+                        <input type="hidden" id="rec-card" value="">
+                        <button type="button" id="rec-card-chip" class="picker-chip"></button>
                     </div>
                 </div>
 
                 <div class="grid grid-cols-2 gap-3">
                     <div>
-                        <label for="rec-account" class="block text-sm font-medium mb-1.5">Cuenta</label>
-                        <select id="rec-account" class="input"></select>
+                        <label class="block text-sm font-medium mb-1.5">Cuenta</label>
+                        <input type="hidden" id="rec-account" value="">
+                        <button type="button" id="rec-account-chip" class="picker-chip"></button>
                     </div>
                     <div>
                         <label for="rec-currency" class="block text-sm font-medium mb-1.5">Moneda</label>
@@ -284,27 +284,11 @@ function populateDropdowns() {
         catSel.appendChild(opt);
     });
 
-    const cardSel = document.getElementById('rec-card');
-    cardSel.textContent = '';
-    const cardEmpty = document.createElement('option');
-    cardEmpty.value = '';
-    cardEmpty.textContent = 'Sin tarjeta';
-    cardSel.appendChild(cardEmpty);
-    cards.forEach(c => {
-        const opt = document.createElement('option');
-        opt.value = c.id;
-        opt.textContent = c.name + (c.last_four ? ` ····${c.last_four}` : '');
-        cardSel.appendChild(opt);
-    });
-
-    const acctSel = document.getElementById('rec-account');
-    acctSel.textContent = '';
-    accounts.forEach(a => {
-        const opt = document.createElement('option');
-        opt.value = a.id;
-        opt.textContent = a.name + ' (' + a.currency + ')';
-        acctSel.appendChild(opt);
-    });
+    if (window.mangosPicker) {
+        mangosPicker.setData({ accounts, cards });
+        mangosPicker.updateChip(document.getElementById('rec-card-chip'));
+        mangosPicker.updateChip(document.getElementById('rec-account-chip'));
+    }
 }
 
 function renderSummary() {
@@ -494,9 +478,13 @@ function openRecurrentModal(r) {
     document.getElementById('rec-amount').value = r ? formatAmountForInput(Math.abs(r.amount)) : '';
     document.getElementById('rec-due-day').value = r?.due_date_day || '';
     document.getElementById('rec-category').value = r?.expense_category_id || '';
-    document.getElementById('rec-card').value = r?.card_id || '';
+    const recCardInput = document.getElementById('rec-card');
+    recCardInput.value = r?.card_id || '';
+    recCardInput.dispatchEvent(new Event('change', { bubbles: true }));
     const defAcct = defaultAccount();
-    document.getElementById('rec-account').value = r?.account_id || (defAcct?.id || '');
+    const recAcctInput = document.getElementById('rec-account');
+    recAcctInput.value = r?.account_id || (defAcct?.id || '');
+    recAcctInput.dispatchEvent(new Event('change', { bubbles: true }));
     document.getElementById('rec-currency').value = r?.currency || (defAcct?.currency || 'ARS');
     document.getElementById('rec-period').value = r?.time_period || 'monthly';
     document.getElementById('rec-start').value = r?.start_date || '';
@@ -632,6 +620,16 @@ mangosAuth.ready.then(user => {
     document.getElementById('rec-account').addEventListener('change', e => {
         const a = accountById(e.target.value);
         if (a) document.getElementById('rec-currency').value = a.currency;
+    });
+
+    mangosPicker.bindChip(document.getElementById('rec-card-chip'), {
+        mode: 'card',
+        valueInputId: 'rec-card',
+        allowNone: true,
+    });
+    mangosPicker.bindChip(document.getElementById('rec-account-chip'), {
+        mode: 'account',
+        valueInputId: 'rec-account',
     });
     document.addEventListener('keydown', e => {
         if (e.key !== 'Escape') return;

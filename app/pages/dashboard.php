@@ -329,7 +329,11 @@ async function loadAll() {
     // Phase 2: dashboard aggregations are ARS-only. Multi-currency support
     // arrives in Phase 3 alongside FX rates. Non-ARS rows still live on
     // /movimientos but don't appear in totals/charts here.
-    const payments = allPayments.filter(p => (p.currency || 'ARS') === 'ARS');
+    // Phase 4: transfer legs are excluded from spend rollups (they are not
+    // expenses); fee rows stay in.
+    const payments = allPayments.filter(p =>
+        (p.currency || 'ARS') === 'ARS' && p.kind !== 'transfer'
+    );
     const recurrents = allRecurrents.filter(r => (r.currency || 'ARS') === 'ARS');
     const hasNonArs = allPayments.length !== payments.length || allRecurrents.length !== recurrents.length;
     const fxFootnote = document.getElementById('fx-footnote');

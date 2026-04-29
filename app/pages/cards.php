@@ -12,11 +12,39 @@
     </button>
 </div>
 
-<!-- Grid -->
-<div id="cards-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-    <div class="card"><div class="skeleton h-4 w-20 mb-3">&nbsp;</div><div class="skeleton h-5 w-32 mb-2">&nbsp;</div><div class="skeleton h-4 w-24">&nbsp;</div></div>
-    <div class="card"><div class="skeleton h-4 w-20 mb-3">&nbsp;</div><div class="skeleton h-5 w-28 mb-2">&nbsp;</div><div class="skeleton h-4 w-24">&nbsp;</div></div>
-    <div class="card"><div class="skeleton h-4 w-20 mb-3">&nbsp;</div><div class="skeleton h-5 w-36 mb-2">&nbsp;</div><div class="skeleton h-4 w-24">&nbsp;</div></div>
+<!-- Carousel -->
+<div class="card !p-4" id="cards-carousel-card">
+    <div id="cards-stage" class="stage">
+        <div class="track"></div>
+        <div class="nav-arrows">
+            <button type="button" data-prev aria-label="Anterior">
+                <svg viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></svg>
+            </button>
+            <button type="button" data-next aria-label="Siguiente">
+                <svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg>
+            </button>
+        </div>
+    </div>
+
+    <div class="mt-4 pt-4 border-t border-border flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div class="flex items-center gap-2 flex-wrap min-w-0">
+            <span id="card-info-name"  class="text-sm font-semibold truncate">—</span>
+            <span id="card-info-type"  class="badge badge-muted">—</span>
+            <span id="card-info-bank"  class="badge badge-muted hidden">—</span>
+            <span id="card-info-pan"   class="badge badge-muted font-mono">—</span>
+            <span id="card-info-cycle" class="text-[11px] text-muted hidden">—</span>
+        </div>
+        <div class="flex items-center gap-3">
+            <div id="card-info-dots" class="dots"></div>
+            <button id="card-info-edit"   type="button" class="btn btn-ghost text-xs px-2 py-1">Editar</button>
+            <button id="card-info-delete" type="button" class="btn btn-ghost text-xs px-2 py-1 text-danger hover:text-danger">Eliminar</button>
+        </div>
+    </div>
+
+    <div id="cards-empty" class="hidden text-center py-8">
+        <p class="text-sm text-muted">No tenes tarjetas aun.</p>
+        <button class="btn btn-outline mt-4" onclick="openCardModal()">Crear la primera</button>
+    </div>
 </div>
 
 <!-- ─────────────────────────── Form modal ─────────────────────────── -->
@@ -116,39 +144,11 @@
 <script>
 const TYPE_LABEL = { credit: 'Credito', debit: 'Debito', virtual: 'Virtual' };
 const TYPE_BADGE = { credit: 'badge-success', debit: 'badge-muted', virtual: 'badge-danger' };
-const SVG_NS = 'http://www.w3.org/2000/svg';
-
-const ICON_EDIT = 'M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z';
-const ICON_TRASH = 'M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6M1 7h22M9 7V4a1 1 0 011-1h4a1 1 0 011 1v3';
 
 let cards = [];
 let editingId = null;
 let pendingDeleteId = null;
-
-// ── Helpers ─────────────────────────────────────────────────────────
-function svgIcon(pathD) {
-    const svg = document.createElementNS(SVG_NS, 'svg');
-    svg.setAttribute('class', 'w-4 h-4');
-    svg.setAttribute('fill', 'none');
-    svg.setAttribute('stroke', 'currentColor');
-    svg.setAttribute('viewBox', '0 0 24 24');
-    const path = document.createElementNS(SVG_NS, 'path');
-    path.setAttribute('stroke-linecap', 'round');
-    path.setAttribute('stroke-linejoin', 'round');
-    path.setAttribute('stroke-width', '1.5');
-    path.setAttribute('d', pathD);
-    svg.appendChild(path);
-    return svg;
-}
-
-function iconButton(pathD, cls, onClick) {
-    const btn = document.createElement('button');
-    btn.type = 'button';
-    btn.className = `p-1.5 rounded ${cls} hover:bg-dark/5 transition-colors`;
-    btn.appendChild(svgIcon(pathD));
-    btn.addEventListener('click', onClick);
-    return btn;
-}
+let cardCarousel = null;
 
 // ── Loading & rendering ─────────────────────────────────────────────
 async function loadCards() {
@@ -157,87 +157,68 @@ async function loadCards() {
 }
 
 function renderCards() {
-    const grid = document.getElementById('cards-grid');
-    grid.textContent = '';
+    const stage = document.getElementById('cards-stage');
+    const empty = document.getElementById('cards-empty');
+
+    if (mangosPicker) mangosPicker.setCards(cards);
 
     if (cards.length === 0) {
-        const empty = document.createElement('div');
-        empty.className = 'card col-span-full text-center py-12';
-
-        const msg = document.createElement('p');
-        msg.className = 'text-sm text-muted';
-        msg.textContent = 'No tienes tarjetas aun.';
-        empty.appendChild(msg);
-
-        const btn = document.createElement('button');
-        btn.className = 'btn btn-outline mt-4';
-        btn.textContent = 'Crear la primera';
-        btn.addEventListener('click', () => openCardModal());
-        empty.appendChild(btn);
-
-        grid.appendChild(empty);
+        empty.classList.remove('hidden');
+        stage.classList.add('hidden');
         return;
     }
+    empty.classList.add('hidden');
+    stage.classList.remove('hidden');
 
-    cards.forEach(card => grid.appendChild(buildCardEl(card)));
+    if (!cardCarousel) {
+        cardCarousel = mangosCarousel.init(stage, cards, {
+            kind: 'card',
+            dotsEl: document.getElementById('card-info-dots'),
+            onChange: updateCardInfoBar,
+        });
+    } else {
+        cardCarousel.refresh(cards);
+    }
 }
 
-function buildCardEl(c) {
-    const wrap = document.createElement('div');
-    wrap.className = 'card group relative overflow-hidden';
+function updateCardInfoBar(_idx, c) {
+    const nameEl  = document.getElementById('card-info-name');
+    const typeEl  = document.getElementById('card-info-type');
+    const bankEl  = document.getElementById('card-info-bank');
+    const panEl   = document.getElementById('card-info-pan');
+    const cycleEl = document.getElementById('card-info-cycle');
+    const editBtn = document.getElementById('card-info-edit');
+    const delBtn  = document.getElementById('card-info-delete');
 
-    if (c.color) {
-        const stripe = document.createElement('div');
-        stripe.className = 'absolute top-0 left-0 right-0 h-1';
-        stripe.style.backgroundColor = c.color;
-        wrap.appendChild(stripe);
+    if (!c) {
+        nameEl.textContent = '—';
+        typeEl.textContent = '—';
+        bankEl.classList.add('hidden');
+        panEl.textContent = '—';
+        cycleEl.classList.add('hidden');
+        return;
     }
-
-    const head = document.createElement('div');
-    head.className = 'flex items-start justify-between mb-3';
-
-    const badge = document.createElement('span');
-    badge.className = `badge ${TYPE_BADGE[c.type] || 'badge-muted'}`;
-    badge.textContent = TYPE_LABEL[c.type] || c.type;
-    head.appendChild(badge);
-
-    const actions = document.createElement('div');
-    actions.className = 'flex gap-1 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity';
-    actions.appendChild(iconButton(ICON_EDIT, 'text-muted hover:text-dark', () => openCardModal(c)));
-    actions.appendChild(iconButton(ICON_TRASH, 'text-muted hover:text-danger', () => openCardDelete(c)));
-    head.appendChild(actions);
-    wrap.appendChild(head);
-
-    const name = document.createElement('h3');
-    name.className = 'text-base font-semibold truncate';
-    name.textContent = c.name;
-    wrap.appendChild(name);
-
-    const bank = document.createElement('p');
-    bank.className = 'text-sm text-muted mt-0.5 truncate';
-    bank.textContent = c.bank || ' ';
-    wrap.appendChild(bank);
-
-    const foot = document.createElement('div');
-    foot.className = 'mt-4 flex items-center justify-between text-xs';
-
-    const lf = document.createElement('span');
-    lf.className = 'font-mono text-muted';
-    lf.textContent = '•••• ' + (c.last_four || '————');
-    foot.appendChild(lf);
-
+    nameEl.textContent = c.name;
+    typeEl.textContent = TYPE_LABEL[c.type] || c.type;
+    typeEl.className = 'badge ' + (TYPE_BADGE[c.type] || 'badge-muted');
+    if (c.bank) {
+        bankEl.textContent = c.bank;
+        bankEl.classList.remove('hidden');
+    } else {
+        bankEl.classList.add('hidden');
+    }
+    panEl.textContent = '•••• ' + (c.last_four || '————');
     if (c.type === 'credit' && (c.closing_day || c.due_day)) {
-        const days = document.createElement('span');
-        days.className = 'text-muted';
         const parts = [];
-        if (c.closing_day) parts.push(`cierre ${c.closing_day}`);
-        if (c.due_day) parts.push(`vence ${c.due_day}`);
-        days.textContent = parts.join(' · ');
-        foot.appendChild(days);
+        if (c.closing_day) parts.push('cierre ' + c.closing_day);
+        if (c.due_day) parts.push('vence ' + c.due_day);
+        cycleEl.textContent = parts.join(' · ');
+        cycleEl.classList.remove('hidden');
+    } else {
+        cycleEl.classList.add('hidden');
     }
-
-    wrap.appendChild(foot);
-    return wrap;
+    editBtn.onclick = () => openCardModal(c);
+    delBtn.onclick  = () => openCardDelete(c);
 }
 
 // ── Modal: form ─────────────────────────────────────────────────────

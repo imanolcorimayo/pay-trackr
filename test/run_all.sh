@@ -24,6 +24,7 @@ tests=(
     test_cards.sh
     test_accounts.sh
     test_transactions.sh
+    test_transfers.sh
     test_recurrents.sh
     test_templates.sh
 )

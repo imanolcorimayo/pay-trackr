@@ -85,6 +85,17 @@ switch (method()) {
             $sql .= " AND currency = ?";
             $params[] = $_GET['currency'];
         }
+        if (!empty($_GET['kind'])) {
+            // Comma-separated list, e.g. ?kind=expense,fee for spend rollups.
+            $kinds = array_filter(array_map('trim', explode(',', $_GET['kind'])));
+            $allowed = ['expense','income','transfer','fee'];
+            $kinds = array_values(array_intersect($kinds, $allowed));
+            if (!empty($kinds)) {
+                $placeholders = implode(',', array_fill(0, count($kinds), '?'));
+                $sql .= " AND kind IN ($placeholders)";
+                $params = array_merge($params, $kinds);
+            }
+        }
 
         $sql .= " ORDER BY due_ts DESC, created_ts DESC";
 
@@ -100,7 +111,11 @@ switch (method()) {
 
         $id = bin2hex(random_bytes(14));
         $is_paid = !empty($data['is_paid']) ? 1 : 0;
-        $paid_ts = $is_paid ? date('Y-m-d H:i:s') : null;
+        // Allow clients to back-date paid_ts (e.g. logging an expense after the
+        // fact). If is_paid but no paid_ts provided, default to now.
+        $paid_ts = $is_paid
+            ? (!empty($data['paid_ts']) ? $data['paid_ts'] : date('Y-m-d H:i:s'))
+            : null;
         $signed_amount = -abs((float)$data['amount']);
 
         [$account_id, $currency] = resolve_account_and_currency(
@@ -172,14 +187,25 @@ switch (method()) {
 
         // Special handling for is_paid toggle. NOW() is AR-anchored via the
         // session timezone we set in config.php's PDO init command.
+        // When the client supplies an explicit paid_ts (back-dating), use it
+        // instead of NOW().
         if (isset($data['is_paid'])) {
             if ($data['is_paid']) {
                 $fields[] = "is_paid = 1";
-                $fields[] = "paid_ts = NOW()";
+                if (!empty($data['paid_ts'])) {
+                    $fields[] = "paid_ts = ?";
+                    $params[] = $data['paid_ts'];
+                } else {
+                    $fields[] = "paid_ts = NOW()";
+                }
             } else {
                 $fields[] = "is_paid = 0";
                 $fields[] = "paid_ts = NULL";
             }
+        } elseif (array_key_exists('paid_ts', $data) && $data['paid_ts']) {
+            // Allow updating paid_ts without toggling is_paid (edit existing paid row).
+            $fields[] = "paid_ts = ?";
+            $params[] = $data['paid_ts'];
         }
 
         foreach ($allowed as $col) {
@@ -224,9 +250,17 @@ switch (method()) {
         if (empty($id)) json_error('id is required');
 
         // Look up the artifact path before deleting, so we can clean up Spaces.
-        $stmt = $pdo->prepare("SELECT ai_artifact_path FROM `transaction` WHERE id = ? AND user_id = ?");
+        // Also fetch transfer_id: if this row belongs to a transfer, refuse the
+        // delete and tell the caller to use /api/transfers DELETE — preventing
+        // partial-transfer corruption.
+        $stmt = $pdo->prepare("SELECT ai_artifact_path, transfer_id FROM `transaction` WHERE id = ? AND user_id = ?");
         $stmt->execute([$id, $user_id]);
-        $artifact_path = $stmt->fetchColumn() ?: null;
+        $row = $stmt->fetch();
+        if (!$row) json_error('Transaction not found', 404);
+        if (!empty($row['transfer_id'])) {
+            json_error('This row is part of a transfer; delete it via /api/transfers', 409);
+        }
+        $artifact_path = $row['ai_artifact_path'] ?: null;
 
         $stmt = $pdo->prepare("DELETE FROM `transaction` WHERE id = ? AND user_id = ?");
         $stmt->execute([$id, $user_id]);

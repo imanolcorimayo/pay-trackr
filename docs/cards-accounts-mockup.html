@@ -1,0 +1,764 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Mangos · Cuentas y Tarjetas — preview</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+tailwind.config = {
+  theme: {
+    extend: {
+      fontFamily: { sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'] },
+      colors: {
+        dark:    '#292524',
+        accent:  '#D97706',
+        light:   '#FFFBF5',
+        muted:   '#8C857D',
+        border:  '#E8E2DA',
+        danger:  '#B91C1C',
+        success: '#15803D',
+      },
+    },
+  },
+};
+</script>
+<style>
+  /* mirror app/assets/css/input.css component classes so this mockup feels native */
+  body { font-feature-settings: "tnum"; background: #FFFBF5; color: #292524; }
+  .btn { display:inline-flex; align-items:center; justify-content:center; gap:.5rem; padding:.625rem 1rem; border-radius:.5rem; font-weight:500; font-size:.875rem; cursor:pointer; transition:.15s; }
+  .btn-primary { background:#D97706; color:#fff; }
+  .btn-primary:hover { background:#B45309; }
+  .btn-ghost  { color:#8C857D; }
+  .btn-ghost:hover { background:rgba(41,37,36,.05); color:#292524; }
+  .btn-outline { border:1px solid #E8E2DA; color:#292524; }
+  .btn-outline:hover { background:rgba(41,37,36,.05); }
+  .card { background:#fff; border:1px solid #E8E2DA; border-radius:.75rem; padding:1.25rem; }
+  .input { width:100%; padding:.625rem 1rem; border-radius:.5rem; border:1px solid #E8E2DA; background:#fff; font-size:.875rem; outline:none; }
+  .input:focus { border-color:#D97706; box-shadow:0 0 0 3px rgba(217,119,6,.18); }
+  .badge { display:inline-block; font-size:10px; font-weight:600; letter-spacing:.04em; text-transform:uppercase; padding:2px 8px; border-radius:4px; }
+  .badge-success { background:rgba(21,128,61,.1); color:#15803D; }
+  .badge-danger  { background:rgba(185,28,28,.1); color:#B91C1C; }
+  .badge-muted   { background:rgba(140,133,125,.1); color:#8C857D; }
+
+  /* ─── Apple-Wallet style stacked carousel ──────────────────────────── */
+  .stage {
+    position: relative;
+    height: 220px;
+    perspective: 1400px;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+  .stage .track {
+    position: absolute; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    transform-style: preserve-3d;
+  }
+  .tile {
+    position: absolute;
+    width: 280px; height: 176px;            /* ~1.586:1 credit-card aspect */
+    border-radius: 14px;
+    cursor: pointer;
+    transition: transform .55s cubic-bezier(.22,1,.36,1),
+                box-shadow .45s cubic-bezier(.22,1,.36,1),
+                filter .45s cubic-bezier(.22,1,.36,1),
+                opacity .35s cubic-bezier(.22,1,.36,1);
+    will-change: transform, box-shadow;
+    box-shadow: 0 8px 22px -8px rgba(41,37,36,.18), 0 2px 6px rgba(41,37,36,.06);
+    color: #fff;
+    overflow: hidden;
+    isolation: isolate;
+    /* Single-color → gradient: mix the saved color with ink (top-left) and
+       white (bottom-right) so the user only stores ONE hex. */
+    --c: #292524;
+    background:
+      linear-gradient(135deg,
+        color-mix(in oklab, var(--c) 35%, #1a1714) 0%,
+        var(--c) 55%,
+        color-mix(in oklab, var(--c) 65%, #ffffff) 100%);
+  }
+  .tile.active   { z-index:5; transform: translateX(0) scale(1) rotateY(0); box-shadow: 0 22px 44px -16px rgba(41,37,36,.32), 0 8px 18px -8px rgba(41,37,36,.18); }
+  .tile.peek-l   { z-index:4; transform: translateX(-58%) scale(.86) rotateY(16deg);  filter: brightness(.96) saturate(.9); }
+  .tile.peek-r   { z-index:4; transform: translateX( 58%) scale(.86) rotateY(-16deg); filter: brightness(.96) saturate(.9); }
+  .tile.peek-ll  { z-index:3; transform: translateX(-90%) scale(.74) rotateY(20deg);  filter: brightness(.92) saturate(.8); opacity:.6; }
+  .tile.peek-rr  { z-index:3; transform: translateX( 90%) scale(.74) rotateY(-20deg); filter: brightness(.92) saturate(.8); opacity:.6; }
+  .tile.hidden   { z-index:1; transform: scale(.5); opacity:0; pointer-events:none; }
+
+  /* mobile shrinks tile + peek travel so peeks stay on screen */
+  @media (max-width: 640px) {
+    .stage { height: 200px; }
+    .tile { width: 240px; height: 150px; border-radius: 12px; }
+    .tile.peek-l   { transform: translateX(-50%) scale(.82) rotateY(14deg); }
+    .tile.peek-r   { transform: translateX( 50%) scale(.82) rotateY(-14deg); }
+    .tile.peek-ll  { transform: translateX(-78%) scale(.7) rotateY(18deg); opacity:.5; }
+    .tile.peek-rr  { transform: translateX( 78%) scale(.7) rotateY(-18deg); opacity:.5; }
+  }
+
+  .tile .face {
+    position: absolute; inset: 0;
+    padding: 14px 16px;
+    display: flex; flex-direction: column; justify-content: space-between;
+  }
+  .tile .face::after {
+    /* sheen */
+    content: ""; position: absolute; inset: 0; pointer-events: none;
+    background: linear-gradient(135deg, rgba(255,255,255,0.16) 0%, rgba(255,255,255,0) 40%, rgba(0,0,0,0.10) 100%);
+  }
+  .tile .face::before {
+    /* grain */
+    content: ""; position: absolute; inset: 0; pointer-events: none;
+    background-image: radial-gradient(rgba(255,255,255,0.04) 1px, transparent 1px);
+    background-size: 3px 3px; mix-blend-mode: overlay;
+  }
+  .tile .face > * { position: relative; z-index: 1; }
+
+  .tile-label  { font-size: 9.5px; font-weight: 600; letter-spacing: .14em; text-transform: uppercase; color: rgba(255,251,245,.78); }
+  .tile-name   { font-size: 14px; font-weight: 600; line-height: 1.15; margin-top: 2px; max-width: 80%; }
+  .tile-amount { font-size: 22px; font-weight: 700; letter-spacing: -.02em; line-height: 1; }
+  .tile-amount .frac { font-size: 12px; font-weight: 500; opacity: .75; }
+  .tile-pill {
+    display: inline-flex; align-items: center; gap: 5px;
+    padding: 3px 8px; border-radius: 999px;
+    background: rgba(255,251,245,.16);
+    border: 1px solid rgba(255,251,245,.22);
+    font-size: 10px; font-weight: 600; letter-spacing: .06em;
+    backdrop-filter: blur(6px);
+  }
+  .tile-pill .dot { width: 5px; height: 5px; border-radius: 50%; background: #FFFBF5; }
+  .tile-glyph {
+    width: 28px; height: 28px; border-radius: 8px;
+    background: rgba(255,251,245,.14);
+    border: 1px solid rgba(255,251,245,.2);
+    display: grid; place-items: center;
+  }
+  .tile-glyph svg { width: 14px; height: 14px; stroke: #fff; fill: none; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+
+  /* card-as-instrument extras */
+  .tile-chip {
+    width: 26px; height: 20px; border-radius: 4px;
+    background: linear-gradient(135deg, #E8C97A 0%, #B68A2A 100%);
+    position: relative;
+  }
+  .tile-chip::before, .tile-chip::after { content:""; position:absolute; left:5px; right:5px; height:1px; background:rgba(0,0,0,.18); }
+  .tile-chip::before { top:6px; }
+  .tile-chip::after  { top:13px; }
+  .tile-pan { font-family: ui-monospace, "JetBrains Mono", monospace; font-size: 13px; letter-spacing: .14em; }
+  .tile-pan .dim { opacity: .5; }
+  .tile-net { font-weight: 700; font-style: italic; font-size: 14px; letter-spacing: -.02em; }
+
+  /* default star */
+  .default-tag { font-size: 9.5px; font-weight: 600; color: #FCD9A1; letter-spacing:.12em; }
+  .default-tag::before { content:"★ "; }
+
+  .nav-arrows {
+    position: absolute; inset: 0; pointer-events: none;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 4px;
+  }
+  .nav-arrows button {
+    pointer-events: auto;
+    width: 32px; height: 32px; border-radius: 50%;
+    border: 1px solid #E8E2DA;
+    background: #fff;
+    display: grid; place-items: center;
+    cursor: pointer;
+    box-shadow: 0 2px 6px rgba(41,37,36,.08);
+    transition: .15s;
+    color: #292524;
+  }
+  .nav-arrows button:hover { background: #292524; color: #fff; }
+  .nav-arrows svg { width: 14px; height: 14px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+
+  .dots { display: inline-flex; gap: 6px; }
+  .dots button {
+    width: 18px; height: 4px; border-radius: 2px; border: 0;
+    background: rgba(41,37,36,.14); cursor: pointer; padding: 0;
+    transition: background .25s, width .25s;
+  }
+  .dots button.is-active { background: #292524; width: 28px; }
+
+  /* ─── form chip (compact, single-line) ─── */
+  .picker-chip {
+    display: inline-flex; align-items: center; gap: 8px;
+    width: 100%;
+    padding: 6px 10px 6px 6px;
+    border-radius: 8px;
+    background: #fff;
+    border: 1px solid #E8E2DA;
+    cursor: pointer;
+    transition: .15s;
+    text-align: left;
+    min-height: 36px;
+    --c: #292524;
+  }
+  .picker-chip:hover { border-color: #292524; box-shadow: 0 1px 3px rgba(41,37,36,.06); }
+  .picker-chip .swatch {
+    width: 28px; height: 20px; border-radius: 4px;
+    overflow: hidden; flex: none;
+    background:
+      linear-gradient(135deg,
+        color-mix(in oklab, var(--c) 35%, #1a1714) 0%,
+        var(--c) 55%,
+        color-mix(in oklab, var(--c) 65%, #ffffff) 100%);
+  }
+  .picker-chip .nm { font-size: 13px; font-weight: 500; line-height: 1; flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .picker-chip .mt { font-size: 11px; color: #8C857D; line-height: 1; font-feature-settings: "tnum"; flex: none; }
+  .picker-chip .chev { color: #8C857D; flex: none; }
+  .picker-chip.empty { border-style: dashed; color: #8C857D; width: auto; }
+  .picker-chip.empty .swatch { background: transparent; border: 1px dashed #E8E2DA; }
+
+  /* ─── modal sheet ─── */
+  .sheet-backdrop {
+    position: fixed; inset: 0; background: rgba(41,37,36,.42);
+    backdrop-filter: blur(4px);
+    opacity: 0; pointer-events: none; transition: opacity .25s; z-index: 50;
+  }
+  .sheet-backdrop.open { opacity: 1; pointer-events: auto; }
+  .sheet {
+    position: fixed; left: 50%; bottom: 0;
+    width: min(560px, 100%);
+    transform: translate(-50%, 100%);
+    background: #fff;
+    border-top-left-radius: 18px; border-top-right-radius: 18px;
+    border: 1px solid #E8E2DA; border-bottom: 0;
+    padding: 14px 18px 22px;
+    z-index: 60;
+    transition: transform .45s cubic-bezier(.34,1.56,.64,1);
+    box-shadow: 0 -20px 50px -20px rgba(41,37,36,.25);
+  }
+  .sheet.open { transform: translate(-50%, 0); }
+  .sheet .grabber { width: 36px; height: 4px; border-radius: 2px; background: rgba(41,37,36,.16); margin: 0 auto 12px; }
+  .sheet .stage { height: 170px; }
+  .sheet .stage .tile { width: 220px; height: 138px; }
+
+  @media (min-width: 640px) {
+    .sheet { left: auto; right: 24px; bottom: 24px; transform: translateY(calc(100% + 24px)); border-radius: 18px; border-bottom: 1px solid #E8E2DA; }
+    .sheet.open { transform: translateY(0); }
+  }
+</style>
+</head>
+<body class="min-h-screen">
+
+<div class="max-w-5xl mx-auto px-4 sm:px-6 py-6 pb-24">
+
+  <header class="flex items-center justify-between mb-6">
+    <div>
+      <p class="text-xs font-semibold tracking-wide uppercase text-muted">Preview</p>
+      <h1 class="text-2xl font-semibold">Cuentas y Tarjetas</h1>
+    </div>
+    <span class="badge badge-muted">Mockup · v2</span>
+  </header>
+
+  <!-- ─── ACCOUNTS SECTION ─── -->
+  <section class="mb-10">
+    <div class="flex items-end justify-between mb-3">
+      <div>
+        <h2 class="text-lg font-semibold">Cuentas</h2>
+        <p class="text-xs text-muted">Tus billeteras: bancarias, efectivo, cripto</p>
+      </div>
+      <button class="btn btn-primary text-xs px-3 py-2" onclick="alert('mock: nueva cuenta')">+ Nueva</button>
+    </div>
+
+    <!-- Carousel card wrapper -->
+    <div class="card !p-4">
+      <div class="stage" data-carousel="accounts">
+        <div class="track">
+          <article class="tile" data-i="0" style="--c:#D97706;">
+            <div class="face">
+              <div class="flex items-start justify-between">
+                <div>
+                  <div class="tile-label">Banco · ARS</div>
+                  <div class="tile-name">Galicia · Sueldo</div>
+                </div>
+                <div class="tile-glyph"><svg viewBox="0 0 24 24"><path d="M3 21h18M5 21V10M19 21V10M3 10l9-6 9 6M9 21v-7M15 21v-7"/></svg></div>
+              </div>
+              <div class="flex items-end justify-between gap-3">
+                <div>
+                  <div class="default-tag">POR DEFECTO</div>
+                  <div class="tile-amount">$1.842.500<span class="frac">,30</span></div>
+                </div>
+                <div class="tile-pill"><span class="dot"></span>ARS</div>
+              </div>
+            </div>
+          </article>
+          <article class="tile" data-i="1" style="--c:#15803D;">
+            <div class="face">
+              <div class="flex items-start justify-between">
+                <div>
+                  <div class="tile-label">Cripto · USDT</div>
+                  <div class="tile-name">Binance · Spot</div>
+                </div>
+                <div class="tile-glyph"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M8 12l3 3 5-6"/></svg></div>
+              </div>
+              <div class="flex items-end justify-between gap-3">
+                <div>
+                  <div class="tile-label" style="opacity:.7">Disponible</div>
+                  <div class="tile-amount">2,481<span class="frac">.92</span></div>
+                </div>
+                <div class="tile-pill"><span class="dot"></span>USDT</div>
+              </div>
+            </div>
+          </article>
+          <article class="tile" data-i="2" style="--c:#A855F7;">
+            <div class="face">
+              <div class="flex items-start justify-between">
+                <div>
+                  <div class="tile-label">Efectivo · USD</div>
+                  <div class="tile-name">Caja chica</div>
+                </div>
+                <div class="tile-glyph"><svg viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/><path d="M6 9v6M18 9v6"/></svg></div>
+              </div>
+              <div class="flex items-end justify-between gap-3">
+                <div>
+                  <div class="tile-label" style="opacity:.7">Saldo</div>
+                  <div class="tile-amount">$840<span class="frac">.00</span></div>
+                </div>
+                <div class="tile-pill"><span class="dot"></span>USD</div>
+              </div>
+            </div>
+          </article>
+          <article class="tile" data-i="3" style="--c:#292524;">
+            <div class="face">
+              <div class="flex items-start justify-between">
+                <div>
+                  <div class="tile-label">Otra · ARS</div>
+                  <div class="tile-name">Sin cuenta</div>
+                </div>
+                <div class="tile-glyph"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 015 0c0 1.5-2.5 2-2.5 4M12 17h.01"/></svg></div>
+              </div>
+              <div class="flex items-end justify-between gap-3">
+                <div>
+                  <div class="tile-label" style="opacity:.7">Legacy</div>
+                  <div class="tile-amount">$0<span class="frac">,00</span></div>
+                </div>
+                <div class="tile-pill"><span class="dot"></span>ARS</div>
+              </div>
+            </div>
+          </article>
+        </div>
+        <div class="nav-arrows">
+          <button data-prev aria-label="Anterior"><svg viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></svg></button>
+          <button data-next aria-label="Siguiente"><svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></button>
+        </div>
+      </div>
+
+      <!-- below-stage info bar (replaces the side panel; matches app style) -->
+      <div class="mt-4 pt-4 border-t border-border flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div class="flex items-center gap-2 flex-wrap">
+          <span id="acc-name" class="text-sm font-semibold">Galicia · Sueldo</span>
+          <span id="acc-type" class="badge badge-success">Banco</span>
+          <span id="acc-cur" class="badge badge-muted font-mono">ARS</span>
+          <span id="acc-default" class="badge badge-success">Por defecto</span>
+        </div>
+        <div class="flex items-center gap-3">
+          <div class="dots" data-dots-acc>
+            <button class="is-active"></button><button></button><button></button><button></button>
+          </div>
+          <button class="btn btn-ghost text-xs px-2 py-1" onclick="alert('mock: editar cuenta')">Editar</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ─── CARDS SECTION ─── -->
+  <section class="mb-10">
+    <div class="flex items-end justify-between mb-3">
+      <div>
+        <h2 class="text-lg font-semibold">Tarjetas</h2>
+        <p class="text-xs text-muted">Tus tarjetas de credito, debito y virtuales</p>
+      </div>
+      <button class="btn btn-primary text-xs px-3 py-2" onclick="alert('mock: nueva tarjeta')">+ Nueva</button>
+    </div>
+
+    <div class="card !p-4">
+      <div class="stage" data-carousel="cards">
+        <div class="track">
+          <article class="tile" data-i="0" style="--c:#3F3A36;">
+            <div class="face">
+              <div class="flex items-start justify-between">
+                <div class="tile-chip"></div>
+                <span class="tile-label">Visa Débito</span>
+              </div>
+              <div class="flex items-end justify-between gap-3">
+                <div>
+                  <div class="tile-pan"><span class="dim">•••• ••••</span> 4827</div>
+                  <div class="tile-label" style="margin-top:6px">Galicia</div>
+                </div>
+                <div class="tile-net">VISA</div>
+              </div>
+            </div>
+          </article>
+          <article class="tile" data-i="1" style="--c:#D97706;">
+            <div class="face">
+              <div class="flex items-start justify-between">
+                <div class="tile-chip"></div>
+                <span class="tile-label">MC Crédito</span>
+              </div>
+              <div class="flex items-end justify-between gap-3">
+                <div>
+                  <div class="tile-pan"><span class="dim">•••• ••••</span> 1903</div>
+                  <div class="tile-label" style="margin-top:6px">Naranja X</div>
+                </div>
+                <div class="tile-net">mc</div>
+              </div>
+            </div>
+          </article>
+          <article class="tile" data-i="2" style="--c:#15803D;">
+            <div class="face">
+              <div class="flex items-start justify-between">
+                <div class="tile-chip"></div>
+                <span class="tile-label">Visa Crédito</span>
+              </div>
+              <div class="flex items-end justify-between gap-3">
+                <div>
+                  <div class="tile-pan"><span class="dim">•••• ••••</span> 0042</div>
+                  <div class="tile-label" style="margin-top:6px">BBVA · USD</div>
+                </div>
+                <div class="tile-net">VISA</div>
+              </div>
+            </div>
+          </article>
+        </div>
+        <div class="nav-arrows">
+          <button data-prev><svg viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></svg></button>
+          <button data-next><svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></button>
+        </div>
+      </div>
+
+      <div class="mt-4 pt-4 border-t border-border flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div class="flex items-center gap-2 flex-wrap">
+          <span id="card-name" class="text-sm font-semibold">Galicia · Visa Débito</span>
+          <span id="card-type" class="badge badge-muted">Débito</span>
+          <span id="card-issuer" class="badge badge-muted">Galicia</span>
+          <span id="card-pan" class="badge badge-muted font-mono">•••• 4827</span>
+        </div>
+        <div class="flex items-center gap-3">
+          <div class="dots" data-dots-card>
+            <button class="is-active"></button><button></button><button></button>
+          </div>
+          <button class="btn btn-ghost text-xs px-2 py-1" onclick="alert('mock: editar tarjeta')">Editar</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ─── PICKER (transaction form fragment) ─── -->
+  <section>
+    <div class="flex items-end justify-between mb-3">
+      <div>
+        <h2 class="text-lg font-semibold">Selección en transacciones</h2>
+        <p class="text-xs text-muted">Toca un chip para abrir el picker</p>
+      </div>
+    </div>
+
+    <div class="card">
+      <form class="space-y-4" onsubmit="event.preventDefault(); alert('mock: guardado');">
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div class="sm:col-span-2">
+            <label class="block text-sm font-medium mb-1.5">Descripción</label>
+            <input class="input" placeholder="Ej: Compras Coto" value="Compras Coto" />
+          </div>
+          <div>
+            <label class="block text-sm font-medium mb-1.5">Monto</label>
+            <div class="relative">
+              <span class="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-muted">ARS</span>
+              <input class="input pl-12 font-mono" value="48.500,00" />
+            </div>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label class="block text-sm font-medium mb-1.5">Cuenta</label>
+            <button type="button" class="picker-chip" id="chip-acc" data-open="accounts">
+              <span class="swatch" id="chip-acc-swatch"></span>
+              <span class="nm" id="chip-acc-name">Galicia · Sueldo</span>
+              <span class="mt" id="chip-acc-meta">ARS</span>
+              <svg class="chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+            </button>
+          </div>
+          <div>
+            <label class="block text-sm font-medium mb-1.5">Tarjeta</label>
+            <div class="flex flex-wrap items-center gap-2">
+              <button type="button" class="picker-chip flex-1" id="chip-card" data-open="cards">
+                <span class="swatch" id="chip-card-swatch"></span>
+                <span class="nm" id="chip-card-name">Galicia · Visa Débito</span>
+                <span class="mt" id="chip-card-meta">•••• 4827</span>
+                <svg class="chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+              </button>
+              <button type="button" class="picker-chip empty" onclick="alert('mock: nueva tarjeta')">
+                <span class="swatch"></span>
+                <span class="nm">+</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div class="flex items-center justify-end gap-2 pt-2">
+          <button type="button" class="btn btn-ghost">Cancelar</button>
+          <button type="submit" class="btn btn-primary">Guardar</button>
+        </div>
+      </form>
+    </div>
+  </section>
+
+</div>
+
+<!-- ─── Sheet picker ─── -->
+<div class="sheet-backdrop" data-backdrop></div>
+<aside class="sheet" data-sheet>
+  <div class="grabber"></div>
+  <div class="flex items-center justify-between mb-3">
+    <h3 id="sheet-title" class="text-base font-semibold">Elegir cuenta</h3>
+    <button class="btn btn-ghost text-xs px-2 py-1" data-sheet-close>Cerrar</button>
+  </div>
+  <div class="stage" data-sheet-stage>
+    <div class="track" data-sheet-track></div>
+    <div class="nav-arrows">
+      <button data-sheet-prev><svg viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></svg></button>
+      <button data-sheet-next><svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></button>
+    </div>
+  </div>
+  <div class="flex items-center justify-between mt-3">
+    <span id="sheet-meta" class="text-xs text-muted">—</span>
+    <button class="btn btn-primary text-xs px-3 py-2" data-sheet-confirm>Usar esta</button>
+  </div>
+</aside>
+
+<script>
+const ACCOUNTS = [
+  { name:'Galicia · Sueldo', type:'Banco',    badge:'badge-success', currency:'ARS',  isDefault:true,  amount:'$1.842.500', frac:',30', label:'Banco · ARS', glyph:'bank',   c:'#D97706' },
+  { name:'Binance · Spot',   type:'Cripto',   badge:'badge-danger',  currency:'USDT', isDefault:false, amount:'2,481',     frac:'.92',  label:'Cripto · USDT', glyph:'crypto', c:'#15803D' },
+  { name:'Caja chica',       type:'Efectivo', badge:'badge-muted',   currency:'USD',  isDefault:false, amount:'$840',      frac:'.00',  label:'Efectivo · USD', glyph:'cash',  c:'#A855F7' },
+  { name:'Sin cuenta',       type:'Otra',     badge:'badge-muted',   currency:'ARS',  isDefault:false, amount:'$0',        frac:',00',  label:'Otra · ARS', glyph:'other',     c:'#292524' },
+];
+
+const CARDS = [
+  { name:'Galicia · Visa Débito',     type:'Débito',  pan:'4827', issuer:'Galicia',   net:'VISA', label:'Visa Débito',  c:'#3F3A36' },
+  { name:'Naranja X · MC Crédito',    type:'Crédito', pan:'1903', issuer:'Naranja X', net:'mc',   label:'MC Crédito',   c:'#D97706' },
+  { name:'BBVA · Visa Crédito (USD)', type:'Crédito', pan:'0042', issuer:'BBVA · USD',net:'VISA', label:'Visa Crédito', c:'#15803D' },
+];
+
+const SVG_NS = 'http://www.w3.org/2000/svg';
+const GLYPHS = {
+  bank:   'M3 21h18M5 21V10M19 21V10M3 10l9-6 9 6M9 21v-7M15 21v-7',
+  cash:   'M3 6h18v12H3z|M12 12m-2.5 0a2.5 2.5 0 105 0 2.5 2.5 0 10-5 0|M6 9v6M18 9v6',
+  crypto: 'M12 3a9 9 0 100 18 9 9 0 000-18z|M8 12l3 3 5-6',
+  other:  'M12 3a9 9 0 100 18 9 9 0 000-18z|M9.5 9.5a2.5 2.5 0 015 0c0 1.5-2.5 2-2.5 4|M12 17h.01',
+};
+
+function el(tag, attrs, kids, ns) {
+  const node = ns ? document.createElementNS(ns, tag) : document.createElement(tag);
+  if (attrs) for (const [k,v] of Object.entries(attrs)) {
+    if (k === 'class') node.setAttribute('class', v);
+    else if (k === 'text') node.textContent = v;
+    else if (k === 'style') node.setAttribute('style', v);
+    else node.setAttribute(k, v);
+  }
+  if (kids) for (const k of kids) if (k != null && k !== false) node.appendChild(typeof k === 'string' ? document.createTextNode(k) : k);
+  return node;
+}
+function svgGlyph(kind) {
+  const svg = el('svg', { viewBox: '0 0 24 24' }, null, SVG_NS);
+  svg.setAttribute('stroke', '#fff'); svg.setAttribute('fill', 'none');
+  svg.setAttribute('stroke-width', '1.6'); svg.setAttribute('stroke-linecap', 'round'); svg.setAttribute('stroke-linejoin', 'round');
+  for (const d of (GLYPHS[kind] || GLYPHS.other).split('|')) {
+    if (d.includes('m-')) {
+      // circle shorthand "12 12m-2.5 0a..." — rewrite as plain path
+      svg.appendChild(el('path', { d: 'M9.5 12a2.5 2.5 0 005 0 2.5 2.5 0 00-5 0z' }, null, SVG_NS));
+    } else {
+      svg.appendChild(el('path', { d }, null, SVG_NS));
+    }
+  }
+  return svg;
+}
+
+function applyStack(tiles, idx) {
+  const n = tiles.length;
+  tiles.forEach((node, i) => {
+    node.classList.remove('active','peek-l','peek-ll','peek-r','peek-rr','hidden');
+    const fwd = ((i - idx) % n + n) % n;
+    const back = (n - fwd) % n;
+    if (fwd === 0) node.classList.add('active');
+    else if (fwd === 1) node.classList.add('peek-r');
+    else if (fwd === 2) node.classList.add('peek-rr');
+    else if (back === 1) node.classList.add('peek-l');
+    else if (back === 2) node.classList.add('peek-ll');
+    else node.classList.add('hidden');
+  });
+}
+
+function initStage(stage, opts) {
+  const tiles = [...stage.querySelectorAll('.tile')];
+  let i = 0;
+  const dots = opts.dotsEl ? [...opts.dotsEl.querySelectorAll('button')] : [];
+  function render() {
+    applyStack(tiles, i);
+    dots.forEach((d, k) => d.classList.toggle('is-active', k === i));
+    if (opts.onChange) opts.onChange(i);
+  }
+  function set(k) { i = (k + tiles.length) % tiles.length; render(); }
+  function go(d)  { set(i + d); }
+  tiles.forEach((node, k) => node.addEventListener('click', () => set(k)));
+  stage.querySelector('[data-prev]')?.addEventListener('click', () => go(-1));
+  stage.querySelector('[data-next]')?.addEventListener('click', () => go(1));
+  dots.forEach((d, k) => d.addEventListener('click', () => set(k)));
+  render();
+  return { set, go, get: () => i };
+}
+
+/* accounts info bar update */
+function updateAccountInfo(i) {
+  const a = ACCOUNTS[i];
+  document.getElementById('acc-name').textContent = a.name;
+  const tEl = document.getElementById('acc-type'); tEl.textContent = a.type; tEl.className = 'badge ' + a.badge;
+  document.getElementById('acc-cur').textContent = a.currency;
+  document.getElementById('acc-default').classList.toggle('hidden', !a.isDefault);
+}
+function updateCardInfo(i) {
+  const c = CARDS[i];
+  document.getElementById('card-name').textContent = c.name;
+  document.getElementById('card-type').textContent = c.type;
+  document.getElementById('card-issuer').textContent = c.issuer;
+  document.getElementById('card-pan').textContent = '•••• ' + c.pan;
+}
+
+const accStage  = initStage(document.querySelector('[data-carousel="accounts"]'), { dotsEl: document.querySelector('[data-dots-acc]'),  onChange: updateAccountInfo });
+const cardStage = initStage(document.querySelector('[data-carousel="cards"]'),    { dotsEl: document.querySelector('[data-dots-card]'), onChange: updateCardInfo });
+
+/* keyboard nav follows hover */
+let hovered = 'acc';
+document.querySelector('[data-carousel="accounts"]').addEventListener('mouseenter', () => hovered = 'acc');
+document.querySelector('[data-carousel="cards"]').addEventListener('mouseenter',    () => hovered = 'card');
+window.addEventListener('keydown', e => {
+  if (sheetOpen) return;
+  const s = hovered === 'acc' ? accStage : cardStage;
+  if (e.key === 'ArrowLeft')  s.go(-1);
+  if (e.key === 'ArrowRight') s.go(1);
+});
+
+/* ─── chip swatches: set --c variable so the same gradient recipe applies ─── */
+function paintChip(chipEl, color) { chipEl.style.setProperty('--c', color); }
+paintChip(document.getElementById('chip-acc'),  ACCOUNTS[0].c);
+paintChip(document.getElementById('chip-card'), CARDS[0].c);
+
+/* ─── sheet picker ─── */
+const sheet      = document.querySelector('[data-sheet]');
+const backdrop   = document.querySelector('[data-backdrop]');
+const sheetTitle = document.getElementById('sheet-title');
+const sheetMeta  = document.getElementById('sheet-meta');
+const sheetTrack = document.querySelector('[data-sheet-track]');
+const sheetStage = document.querySelector('[data-sheet-stage]');
+let sheetOpen = false;
+let sheetMode = 'accounts';
+let sheetIdx = 0;
+
+function buildAccountTile(a) {
+  const tile = el('article', { class: 'tile', style: `--c:${a.c}` });
+  const top = el('div', { class: 'flex items-start justify-between' }, [
+    el('div', null, [
+      el('div', { class: 'tile-label', text: a.label }),
+      el('div', { class: 'tile-name',  text: a.name }),
+    ]),
+    el('div', { class: 'tile-glyph' }, [svgGlyph(a.glyph)]),
+  ]);
+  const bot = el('div', { class: 'flex items-end justify-between gap-3' }, [
+    el('div', null, [
+      a.isDefault ? el('div', { class: 'default-tag', text: 'POR DEFECTO' }) : el('div', { class: 'tile-label', style: 'opacity:.7', text: 'Saldo' }),
+      el('div', { class: 'tile-amount' }, [a.amount, el('span', { class: 'frac', text: a.frac })]),
+    ]),
+    el('div', { class: 'tile-pill' }, [el('span', { class: 'dot' }), a.currency]),
+  ]);
+  tile.appendChild(el('div', { class: 'face' }, [top, bot]));
+  return tile;
+}
+function buildCardTile(c) {
+  const tile = el('article', { class: 'tile', style: `--c:${c.c}` });
+  const top = el('div', { class: 'flex items-start justify-between' }, [
+    el('div', { class: 'tile-chip' }),
+    el('span', { class: 'tile-label', text: c.label }),
+  ]);
+  const pan = el('div', { class: 'tile-pan' }, [el('span', { class: 'dim', text: '•••• ••••' }), ` ${c.pan}`]);
+  const meta = el('div', { class: 'tile-label', style: 'margin-top:6px', text: c.issuer });
+  const bot = el('div', { class: 'flex items-end justify-between gap-3' }, [
+    el('div', null, [pan, meta]),
+    el('div', { class: 'tile-net', text: c.net }),
+  ]);
+  tile.appendChild(el('div', { class: 'face' }, [top, bot]));
+  return tile;
+}
+
+function renderSheetTrack() {
+  while (sheetTrack.firstChild) sheetTrack.removeChild(sheetTrack.firstChild);
+  const data = sheetMode === 'accounts' ? ACCOUNTS : CARDS;
+  data.forEach((it, k) => {
+    const tile = sheetMode === 'accounts' ? buildAccountTile(it) : buildCardTile(it);
+    tile.addEventListener('click', () => { sheetIdx = k; applyStack([...sheetTrack.querySelectorAll('.tile')], sheetIdx); refreshSheetMeta(); });
+    sheetTrack.appendChild(tile);
+  });
+  applyStack([...sheetTrack.querySelectorAll('.tile')], sheetIdx);
+  refreshSheetMeta();
+}
+function refreshSheetMeta() {
+  const it = (sheetMode === 'accounts' ? ACCOUNTS : CARDS)[sheetIdx];
+  sheetMeta.textContent = sheetMode === 'accounts' ? `${it.name} · ${it.currency} · ${it.type}` : `${it.name} · •••• ${it.pan}`;
+}
+
+function openSheet(mode) {
+  sheetMode = mode;
+  sheetIdx = mode === 'accounts' ? accStage.get() : cardStage.get();
+  sheetTitle.textContent = mode === 'accounts' ? 'Elegir cuenta' : 'Elegir tarjeta';
+  renderSheetTrack();
+  sheet.classList.add('open');
+  backdrop.classList.add('open');
+  sheetOpen = true;
+}
+function closeSheet() {
+  sheet.classList.remove('open');
+  backdrop.classList.remove('open');
+  sheetOpen = false;
+}
+
+document.querySelectorAll('[data-open]').forEach(b => b.addEventListener('click', () => openSheet(b.dataset.open)));
+document.querySelector('[data-sheet-close]').addEventListener('click', closeSheet);
+backdrop.addEventListener('click', closeSheet);
+document.querySelector('[data-sheet-prev]').addEventListener('click', () => {
+  const data = sheetMode === 'accounts' ? ACCOUNTS : CARDS;
+  sheetIdx = (sheetIdx - 1 + data.length) % data.length;
+  applyStack([...sheetTrack.querySelectorAll('.tile')], sheetIdx); refreshSheetMeta();
+});
+document.querySelector('[data-sheet-next]').addEventListener('click', () => {
+  const data = sheetMode === 'accounts' ? ACCOUNTS : CARDS;
+  sheetIdx = (sheetIdx + 1) % data.length;
+  applyStack([...sheetTrack.querySelectorAll('.tile')], sheetIdx); refreshSheetMeta();
+});
+document.querySelector('[data-sheet-confirm]').addEventListener('click', () => {
+  if (sheetMode === 'accounts') {
+    const a = ACCOUNTS[sheetIdx];
+    document.getElementById('chip-acc-name').textContent = a.name;
+    document.getElementById('chip-acc-meta').textContent = a.currency;
+    paintChip(document.getElementById('chip-acc'), a.c);
+    accStage.set(sheetIdx);
+  } else {
+    const c = CARDS[sheetIdx];
+    document.getElementById('chip-card-name').textContent = c.name;
+    document.getElementById('chip-card-meta').textContent = '•••• ' + c.pan;
+    paintChip(document.getElementById('chip-card'), c.c);
+    cardStage.set(sheetIdx);
+  }
+  closeSheet();
+});
+window.addEventListener('keydown', e => {
+  if (!sheetOpen) return;
+  const data = sheetMode === 'accounts' ? ACCOUNTS : CARDS;
+  if (e.key === 'Escape')     closeSheet();
+  if (e.key === 'ArrowLeft')  { sheetIdx = (sheetIdx - 1 + data.length) % data.length; applyStack([...sheetTrack.querySelectorAll('.tile')], sheetIdx); refreshSheetMeta(); }
+  if (e.key === 'ArrowRight') { sheetIdx = (sheetIdx + 1) % data.length;                applyStack([...sheetTrack.querySelectorAll('.tile')], sheetIdx); refreshSheetMeta(); }
+  if (e.key === 'Enter')      document.querySelector('[data-sheet-confirm]').click();
+});
+</script>
+</body>
+</html>

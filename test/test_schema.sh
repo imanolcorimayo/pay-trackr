@@ -96,7 +96,8 @@ for col in opening_balance opening_balance_date; do
 done
 
 # transaction.account_id and transaction.currency columns exist (added in 017)
-for col in account_id currency; do
+# transaction.transfer_id and transaction.kind columns exist (added in 020)
+for col in account_id currency transfer_id kind; do
     found=$(mysql_exec "SELECT COUNT(*) FROM information_schema.columns WHERE table_schema='$DB_NAME' AND table_name='transaction' AND column_name='$col';")
     TESTS_RUN=$((TESTS_RUN + 1))
     if [ "$found" = "1" ]; then
@@ -108,6 +109,18 @@ for col in account_id currency; do
         printf '  [FAIL] transaction.%s column missing\n' "$col"
     fi
 done
+
+# idx_transaction_transfer index exists (added in 020)
+idx=$(mysql_exec "SELECT COUNT(*) FROM information_schema.statistics WHERE table_schema='$DB_NAME' AND table_name='transaction' AND index_name='idx_transaction_transfer';")
+TESTS_RUN=$((TESTS_RUN + 1))
+if [ "$idx" -gt "0" ]; then
+    TESTS_PASSED=$((TESTS_PASSED + 1))
+    printf '  [ OK ] idx_transaction_transfer index present\n'
+else
+    TESTS_FAILED=$((TESTS_FAILED + 1))
+    FAILURES+=("idx_transaction_transfer index missing")
+    printf '  [FAIL] idx_transaction_transfer index missing\n'
+fi
 
 # recurrent.account_id and recurrent.currency columns exist (added in 017)
 for col in account_id currency; do

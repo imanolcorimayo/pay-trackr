@@ -24,10 +24,41 @@
     <div class="flex flex-wrap gap-2 mt-4" id="totals-chips"></div>
 </div>
 
-<!-- Grid -->
-<div id="accounts-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-    <div class="card"><div class="skeleton h-4 w-20 mb-3">&nbsp;</div><div class="skeleton h-5 w-32 mb-2">&nbsp;</div><div class="skeleton h-4 w-24">&nbsp;</div></div>
-    <div class="card"><div class="skeleton h-4 w-20 mb-3">&nbsp;</div><div class="skeleton h-5 w-28 mb-2">&nbsp;</div><div class="skeleton h-4 w-24">&nbsp;</div></div>
+<!-- Carousel -->
+<div class="card !p-4" id="accounts-carousel-card">
+    <div id="accounts-stage" class="stage">
+        <div class="track"></div>
+        <div class="nav-arrows">
+            <button type="button" data-prev aria-label="Anterior">
+                <svg viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></svg>
+            </button>
+            <button type="button" data-next aria-label="Siguiente">
+                <svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg>
+            </button>
+        </div>
+    </div>
+
+    <!-- Info bar (active account details) -->
+    <div class="mt-4 pt-4 border-t border-border flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div class="flex items-center gap-2 flex-wrap min-w-0">
+            <span id="acc-info-name" class="text-sm font-semibold truncate">—</span>
+            <span id="acc-info-type" class="badge badge-muted">—</span>
+            <span id="acc-info-currency" class="badge badge-muted font-mono">—</span>
+            <span id="acc-info-default" class="badge badge-success hidden">Por defecto</span>
+            <span id="acc-info-since" class="text-[11px] text-muted hidden">—</span>
+        </div>
+        <div class="flex items-center gap-3">
+            <div id="acc-info-dots" class="dots"></div>
+            <button id="acc-info-edit"   type="button" class="btn btn-ghost text-xs px-2 py-1">Editar</button>
+            <button id="acc-info-delete" type="button" class="btn btn-ghost text-xs px-2 py-1 text-danger hover:text-danger">Eliminar</button>
+        </div>
+    </div>
+
+    <!-- Empty state -->
+    <div id="accounts-empty" class="hidden text-center py-8">
+        <p class="text-sm text-muted">No tenes cuentas aun.</p>
+        <button class="btn btn-outline mt-4" onclick="openAccountModal()">Crear la primera</button>
+    </div>
 </div>
 
 <!-- ─────────────────────────── Form modal ─────────────────────────── -->
@@ -144,40 +175,12 @@
 <script>
 const ACCOUNT_TYPE_LABEL = { bank: 'Banco', cash: 'Efectivo', crypto: 'Cripto', other: 'Otra' };
 const ACCOUNT_TYPE_BADGE = { bank: 'badge-success', cash: 'badge-muted', crypto: 'badge-danger', other: 'badge-muted' };
-const ACCOUNT_SVG_NS = 'http://www.w3.org/2000/svg';
-
-const ICON_EDIT_A = 'M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z';
-const ICON_TRASH_A = 'M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6M1 7h22M9 7V4a1 1 0 011-1h4a1 1 0 011 1v3';
 
 let accounts = [];
 let totals = { ars: 0, by_currency: {} };
 let fxRates = { ARS: 1 };
 let editingAccountId = null;
 let pendingDeleteAccountId = null;
-
-function svgIconA(pathD) {
-    const svg = document.createElementNS(ACCOUNT_SVG_NS, 'svg');
-    svg.setAttribute('class', 'w-4 h-4');
-    svg.setAttribute('fill', 'none');
-    svg.setAttribute('stroke', 'currentColor');
-    svg.setAttribute('viewBox', '0 0 24 24');
-    const path = document.createElementNS(ACCOUNT_SVG_NS, 'path');
-    path.setAttribute('stroke-linecap', 'round');
-    path.setAttribute('stroke-linejoin', 'round');
-    path.setAttribute('stroke-width', '1.5');
-    path.setAttribute('d', pathD);
-    svg.appendChild(path);
-    return svg;
-}
-
-function iconButtonA(pathD, cls, onClick) {
-    const btn = document.createElement('button');
-    btn.type = 'button';
-    btn.className = `p-1.5 rounded ${cls} hover:bg-dark/5 transition-colors`;
-    btn.appendChild(svgIconA(pathD));
-    btn.addEventListener('click', onClick);
-    return btn;
-}
 
 async function loadAccounts() {
     const result = await api.get('/accounts', { totals: 1 });
@@ -230,117 +233,64 @@ function renderTotals() {
     });
 }
 
+let accountCarousel = null;
+
 function renderAccounts() {
-    const grid = document.getElementById('accounts-grid');
-    grid.textContent = '';
+    const carouselCard = document.getElementById('accounts-carousel-card');
+    const empty = document.getElementById('accounts-empty');
+    const stage = document.getElementById('accounts-stage');
+
+    if (mangosPicker) mangosPicker.setAccounts(accounts);
 
     if (accounts.length === 0) {
-        const empty = document.createElement('div');
-        empty.className = 'card col-span-full text-center py-12';
-
-        const msg = document.createElement('p');
-        msg.className = 'text-sm text-muted';
-        msg.textContent = 'No tienes cuentas aun.';
-        empty.appendChild(msg);
-
-        const btn = document.createElement('button');
-        btn.className = 'btn btn-outline mt-4';
-        btn.textContent = 'Crear la primera';
-        btn.addEventListener('click', () => openAccountModal());
-        empty.appendChild(btn);
-
-        grid.appendChild(empty);
+        empty.classList.remove('hidden');
+        stage.classList.add('hidden');
         return;
     }
+    empty.classList.add('hidden');
+    stage.classList.remove('hidden');
 
-    accounts.forEach(a => grid.appendChild(buildAccountEl(a)));
+    if (!accountCarousel) {
+        accountCarousel = mangosCarousel.init(stage, accounts, {
+            kind: 'account',
+            dotsEl: document.getElementById('acc-info-dots'),
+            onChange: updateAccountInfoBar,
+        });
+    } else {
+        accountCarousel.refresh(accounts);
+    }
 }
 
-function buildAccountEl(a) {
-    const wrap = document.createElement('div');
-    wrap.className = 'card group relative overflow-hidden';
+function updateAccountInfoBar(_idx, a) {
+    const nameEl  = document.getElementById('acc-info-name');
+    const typeEl  = document.getElementById('acc-info-type');
+    const curEl   = document.getElementById('acc-info-currency');
+    const defEl   = document.getElementById('acc-info-default');
+    const sinceEl = document.getElementById('acc-info-since');
+    const editBtn = document.getElementById('acc-info-edit');
+    const delBtn  = document.getElementById('acc-info-delete');
 
-    if (a.color) {
-        const stripe = document.createElement('div');
-        stripe.className = 'absolute top-0 left-0 right-0 h-1';
-        stripe.style.backgroundColor = a.color;
-        wrap.appendChild(stripe);
+    if (!a) {
+        nameEl.textContent = '—';
+        typeEl.textContent = '—';
+        curEl.textContent = '—';
+        defEl.classList.add('hidden');
+        sinceEl.classList.add('hidden');
+        return;
     }
-
-    const head = document.createElement('div');
-    head.className = 'flex items-start justify-between mb-3';
-
-    const badges = document.createElement('div');
-    badges.className = 'flex items-center gap-2 flex-wrap';
-
-    const typeBadge = document.createElement('span');
-    typeBadge.className = `badge ${ACCOUNT_TYPE_BADGE[a.type] || 'badge-muted'}`;
-    typeBadge.textContent = ACCOUNT_TYPE_LABEL[a.type] || a.type;
-    badges.appendChild(typeBadge);
-
-    const curBadge = document.createElement('span');
-    curBadge.className = 'badge badge-muted font-mono';
-    curBadge.textContent = a.currency;
-    badges.appendChild(curBadge);
-
-    if (Number(a.is_default) === 1) {
-        const def = document.createElement('span');
-        def.className = 'badge badge-success';
-        def.textContent = 'Por defecto';
-        badges.appendChild(def);
-    }
-    head.appendChild(badges);
-
-    const actions = document.createElement('div');
-    actions.className = 'flex gap-1 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity';
-    actions.appendChild(iconButtonA(ICON_EDIT_A, 'text-muted hover:text-dark', () => openAccountModal(a)));
-    actions.appendChild(iconButtonA(ICON_TRASH_A, 'text-muted hover:text-danger', () => openAccountDelete(a)));
-    head.appendChild(actions);
-    wrap.appendChild(head);
-
-    const name = document.createElement('h3');
-    name.className = 'text-base font-semibold truncate';
-    name.textContent = a.name;
-    wrap.appendChild(name);
-
-    const balanceWrap = document.createElement('div');
-    balanceWrap.className = 'mt-3 pt-3 border-t border-border';
-    const balLabel = document.createElement('p');
-    balLabel.className = 'text-[10px] font-semibold tracking-wide uppercase text-muted';
-    balLabel.textContent = 'Saldo actual';
-    balanceWrap.appendChild(balLabel);
-
-    const balVal = document.createElement('p');
-    const balNum = Number(a.current_balance ?? 0);
-    const isNeg = balNum < 0;
-    balVal.className = `text-xl font-bold tabular-nums mt-0.5 ${isNeg ? 'text-danger' : 'text-dark'}`;
-    balVal.textContent = (a.currency !== 'ARS' ? a.currency + ' ' : '') + formatPrice(Math.abs(balNum));
-    if (isNeg) balVal.textContent = '−' + balVal.textContent;
-    balanceWrap.appendChild(balVal);
-
-    if (a.currency !== 'ARS' && a.current_balance_ars != null) {
-        const arsLine = document.createElement('p');
-        const arsNum = Number(a.current_balance_ars);
-        const arsNeg = arsNum < 0;
-        arsLine.className = 'text-xs text-muted tabular-nums mt-0.5';
-        arsLine.textContent = '≈ ' + (arsNeg ? '−' : '') + formatPrice(Math.abs(arsNum)) + ' ARS';
-        balanceWrap.appendChild(arsLine);
-    }
-
+    nameEl.textContent = a.name;
+    typeEl.textContent = ACCOUNT_TYPE_LABEL[a.type] || a.type;
+    typeEl.className = 'badge ' + (ACCOUNT_TYPE_BADGE[a.type] || 'badge-muted');
+    curEl.textContent = a.currency;
+    defEl.classList.toggle('hidden', Number(a.is_default) !== 1);
     if (a.opening_balance_date) {
-        const since = document.createElement('p');
-        since.className = 'text-[11px] text-muted mt-0.5';
-        since.textContent = `Desde ${a.opening_balance_date}`;
-        balanceWrap.appendChild(since);
+        sinceEl.textContent = 'Desde ' + a.opening_balance_date;
+        sinceEl.classList.remove('hidden');
     } else {
-        const hint = document.createElement('p');
-        hint.className = 'text-[11px] text-muted italic mt-0.5';
-        hint.textContent = 'Configura saldo inicial para fijar punto de partida';
-        balanceWrap.appendChild(hint);
+        sinceEl.classList.add('hidden');
     }
-    wrap.appendChild(balanceWrap);
-
-    return wrap;
+    editBtn.onclick = () => openAccountModal(a);
+    delBtn.onclick  = () => openAccountDelete(a);
 }
 
 function parseBalanceInput(input) {

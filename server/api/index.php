@@ -9,6 +9,7 @@
  *   /api/templates                → templates.php
  *   /api/cards                    → card.php
  *   /api/accounts                 → accounts.php
+ *   /api/transfers                → transfers.php
  *   /api/fx-rates                 → fx.php
  *   /api/ai/parse-transactions    → ai.php
  *   /api/ai/commit-transactions   → ai.php
@@ -82,6 +83,10 @@ try {
 
         case '/accounts':
             require __DIR__ . '/accounts.php';
+            break;
+
+        case '/transfers':
+            require __DIR__ . '/transfers.php';
             break;
 
         case '/fx-rates':

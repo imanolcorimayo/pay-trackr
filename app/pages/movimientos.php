@@ -24,6 +24,12 @@ $openAIOnLoad = !empty($_GET['ai']);
             </svg>
             IA
         </button>
+        <button class="btn btn-outline" onclick="openTransferModal()" title="Transferir entre cuentas">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/>
+            </svg>
+            Transferir
+        </button>
         <button class="btn btn-outline" onclick="openPaymentModal()" title="Nuevo movimiento manual">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
@@ -33,17 +39,25 @@ $openAIOnLoad = !empty($_GET['ai']);
     </div>
 </div>
 
-<!-- Mobile action row (Capturar + Nuevo manual; AI lives on the bottom-nav FAB) -->
-<div class="lg:hidden flex items-center justify-end gap-2 mb-3">
-    <a href="/capturar" class="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border border-border text-sm text-dark hover:bg-dark/5 active:scale-95 transition" title="Capturar batch de imagenes">
-        <svg class="w-4 h-4 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+<!-- Mobile action row (Capturar + Transferir + Nuevo manual; AI lives on the bottom-nav FAB).
+     Grid keeps all three buttons on-screen on narrow phones — a flex row with
+     justify-end pushed the rightmost button off-screen on widths ≤375px. -->
+<div class="lg:hidden grid grid-cols-3 gap-2 mb-3">
+    <a href="/capturar" class="inline-flex items-center justify-center gap-1.5 px-2 py-2 rounded-lg border border-border text-sm text-dark hover:bg-dark/5 active:scale-95 transition" title="Capturar batch de imagenes">
+        <svg class="w-4 h-4 text-accent flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                   d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-6.857 2.286L12 21l-2.286-6.857L3 12l6.857-2.286L12 3z"/>
         </svg>
         <span>Capturar</span>
     </a>
-    <button type="button" onclick="openPaymentModal()" class="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border border-border text-sm text-dark hover:bg-dark/5 active:scale-95 transition" title="Nuevo movimiento manual">
-        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <button type="button" onclick="openTransferModal()" class="inline-flex items-center justify-center gap-1.5 px-2 py-2 rounded-lg border border-border text-sm text-dark hover:bg-dark/5 active:scale-95 transition" title="Transferir entre cuentas">
+        <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/>
+        </svg>
+        <span>Transferir</span>
+    </button>
+    <button type="button" onclick="openPaymentModal()" class="inline-flex items-center justify-center gap-1.5 px-2 py-2 rounded-lg border border-border text-sm text-dark hover:bg-dark/5 active:scale-95 transition" title="Nuevo movimiento manual">
+        <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
         </svg>
         <span>Manual</span>
@@ -192,17 +206,17 @@ $openAIOnLoad = !empty($_GET['ai']);
                         </div>
                     </div>
                     <div>
-                        <label for="pmt-card" class="block text-sm font-medium mb-1.5">Tarjeta</label>
-                        <select id="pmt-card" class="input">
-                            <option value="">Sin tarjeta</option>
-                        </select>
+                        <label class="block text-sm font-medium mb-1.5">Tarjeta</label>
+                        <input type="hidden" id="pmt-card" value="">
+                        <button type="button" id="pmt-card-chip" class="picker-chip"></button>
                     </div>
                 </div>
 
                 <div class="grid grid-cols-2 gap-3">
                     <div>
-                        <label for="pmt-account" class="block text-sm font-medium mb-1.5">Cuenta</label>
-                        <select id="pmt-account" class="input"></select>
+                        <label class="block text-sm font-medium mb-1.5">Cuenta</label>
+                        <input type="hidden" id="pmt-account" value="">
+                        <button type="button" id="pmt-account-chip" class="picker-chip"></button>
                     </div>
                     <div>
                         <label for="pmt-currency" class="block text-sm font-medium mb-1.5">Moneda</label>
@@ -218,6 +232,13 @@ $openAIOnLoad = !empty($_GET['ai']);
                     <input type="checkbox" id="pmt-is-paid" class="w-4 h-4 rounded border-border text-accent focus:ring-accent/30">
                     <span class="text-sm">Marcar como pagado</span>
                 </label>
+
+                <!-- Paid date — only meaningful when "Marcar como pagado" is on.
+                     Lets the user back-date when the payment actually happened. -->
+                <div id="pmt-paid-ts-wrap" class="hidden">
+                    <label for="pmt-paid-ts" class="block text-sm font-medium mb-1.5">Fecha de pago</label>
+                    <input type="date" id="pmt-paid-ts" class="input">
+                </div>
 
                 <div>
                     <label for="pmt-description" class="block text-sm font-medium mb-1.5">Descripcion</label>
@@ -304,6 +325,100 @@ $openAIOnLoad = !empty($_GET['ai']);
                     <button type="button" onclick="confirmPaymentDelete()" id="pmt-delete-submit" class="btn btn-danger">Eliminar</button>
                 </div>
             </div>
+        </div>
+    </div>
+</div>
+
+<!-- ─────────────────────────── Transfer modal ─────────────────────────── -->
+<div id="transfer-modal" class="fixed inset-0 z-50 hidden bg-dark/40">
+    <div class="absolute inset-x-0 bottom-0 sm:inset-0 sm:flex sm:items-center sm:justify-center sm:p-4"
+         style="bottom: var(--keyboard-inset, 0px);">
+        <div class="bg-white rounded-t-2xl sm:rounded-xl border-t sm:border border-border w-full sm:max-w-lg max-h-[85dvh] sm:max-h-[92vh] overflow-y-auto safe-bottom">
+            <button type="button" onclick="closeTransferModal()" class="w-full pt-2 pb-1 flex justify-center sm:hidden" aria-label="Cerrar">
+                <div class="w-10 h-1 rounded-full bg-border"></div>
+            </button>
+            <header class="px-5 py-4 border-b border-border flex items-center justify-between">
+                <h2 id="transfer-modal-title" class="text-lg font-semibold">Nueva transferencia</h2>
+                <button type="button" onclick="closeTransferModal()" class="text-muted hover:text-dark p-1 -m-1">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                    </svg>
+                </button>
+            </header>
+
+            <form id="transfer-form" class="p-5 space-y-4">
+                <input type="hidden" id="trf-id">
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label for="trf-from" class="block text-sm font-medium mb-1.5">Desde <span class="text-danger">*</span></label>
+                        <select id="trf-from" class="input" required></select>
+                    </div>
+                    <div>
+                        <label for="trf-to" class="block text-sm font-medium mb-1.5">Hacia <span class="text-danger">*</span></label>
+                        <select id="trf-to" class="input" required></select>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label for="trf-sent" class="block text-sm font-medium mb-1.5">
+                            Monto enviado <span class="text-danger">*</span>
+                            <span id="trf-sent-cur" class="text-xs text-muted ml-1"></span>
+                        </label>
+                        <input type="text" id="trf-sent" class="input" placeholder="100,00" inputmode="decimal" required>
+                    </div>
+                    <div>
+                        <label for="trf-received" class="block text-sm font-medium mb-1.5">
+                            Monto recibido <span class="text-danger">*</span>
+                            <span id="trf-received-cur" class="text-xs text-muted ml-1"></span>
+                        </label>
+                        <input type="text" id="trf-received" class="input" placeholder="85.000,00" inputmode="decimal" required>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label for="trf-fee" class="block text-sm font-medium mb-1.5">
+                            Comisión
+                            <span id="trf-fee-cur" class="text-xs text-muted ml-1"></span>
+                        </label>
+                        <input type="text" id="trf-fee" class="input" placeholder="Opcional" inputmode="decimal">
+                    </div>
+                    <div>
+                        <label for="trf-fee-cat" class="block text-sm font-medium mb-1.5">Categoría comisión</label>
+                        <select id="trf-fee-cat" class="input">
+                            <option value="">Sin categoría</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div>
+                    <label for="trf-description" class="block text-sm font-medium mb-1.5">Descripción</label>
+                    <input type="text" id="trf-description" class="input" placeholder="Opcional" maxlength="200">
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label for="trf-due" class="block text-sm font-medium mb-1.5">Fecha</label>
+                        <input type="date" id="trf-due" class="input">
+                    </div>
+                    <label class="flex items-end pb-2 gap-2 cursor-pointer select-none">
+                        <input type="checkbox" id="trf-is-paid" class="w-4 h-4 rounded border-border text-accent focus:ring-accent/30" checked>
+                        <span class="text-sm">Marcar como pagada</span>
+                    </label>
+                </div>
+
+                <div class="flex justify-between items-center gap-2 pt-2">
+                    <button type="button" id="trf-delete-btn" onclick="confirmTransferDelete()" class="btn btn-ghost text-danger hidden">
+                        Eliminar
+                    </button>
+                    <div class="flex justify-end gap-2 ml-auto">
+                        <button type="button" onclick="closeTransferModal()" class="btn btn-ghost">Cancelar</button>
+                        <button type="submit" id="trf-submit" class="btn btn-primary">Guardar</button>
+                    </div>
+                </div>
+            </form>
         </div>
     </div>
 </div>
@@ -421,7 +536,13 @@ $openAIOnLoad = !empty($_GET['ai']);
 
                 <p id="ai-error" class="hidden text-sm text-danger"></p>
 
-                <div class="flex justify-end gap-2 pt-2">
+                <div class="flex items-center gap-2 pt-2">
+                    <!-- Escape hatch: bail out of AI and open the manual form pre-empty.
+                         Useful when the user already knows the data and AI is overkill. -->
+                    <button type="button" onclick="switchAIToManual()" class="text-sm text-muted hover:text-dark underline-offset-2 hover:underline transition-colors">
+                        Cargar manualmente
+                    </button>
+                    <div class="flex-1"></div>
                     <button type="button" onclick="closeAIModal()" class="btn btn-ghost">Cancelar</button>
                     <button type="button" id="ai-submit-btn" onclick="submitAIInput()" class="btn btn-primary">
                         <svg id="ai-submit-spinner" class="hidden w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
@@ -641,14 +762,13 @@ function populateDropdowns() {
         catSel.appendChild(opt);
     });
 
-    const cardSel = document.getElementById('pmt-card');
-    cardSel.textContent = '';
-    cardSel.appendChild(makeOption('', 'Sin tarjeta'));
-    cards.forEach(c => cardSel.appendChild(makeOption(c.id, c.name + (c.last_four ? ` ····${c.last_four}` : ''))));
-
-    const acctSel = document.getElementById('pmt-account');
-    acctSel.textContent = '';
-    accounts.forEach(a => acctSel.appendChild(makeOption(a.id, a.name + ' (' + a.currency + ')')));
+    // Account/card pickers read from window.mangosPicker; refresh its data and
+    // re-render whichever chip is currently bound.
+    if (window.mangosPicker) {
+        mangosPicker.setData({ accounts, cards });
+        mangosPicker.updateChip(document.getElementById('pmt-card-chip'));
+        mangosPicker.updateChip(document.getElementById('pmt-account-chip'));
+    }
 
     // Filter bar (preserve current selection)
     const filterSel = document.getElementById('filter-category');
@@ -676,7 +796,9 @@ function applyFilters(list) {
 }
 
 function renderSummary() {
-    const filtered = applyFilters(payments);
+    // Transfer legs aren't expenses — they only move money between accounts.
+    // Skip them in the totals; fee rows stay in (real cost).
+    const filtered = applyFilters(payments).filter(p => p.kind !== 'transfer');
     let total = 0, paid = 0, unpaid = 0;
     let paidCount = 0, unpaidCount = 0;
     let fijoTotal = 0, fijoCount = 0;
@@ -727,13 +849,117 @@ function renderPayments() {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    filtered.forEach((p, i) => {
-        const isLast = i === filtered.length - 1;
-        const isPaid = p.is_paid == 1;
-        const dueDate = p.due_ts ? new Date(p.due_ts.replace(' ', 'T')) : null;
-        const isOverdue = !isPaid && dueDate && dueDate < today;
-        list.appendChild(buildPaymentRow(p, isPaid, isOverdue, isLast));
+    // Group transfer legs by transfer_id so we render one composite row per
+    // transfer instead of two/three separate rows. The first leg encountered
+    // (in date-desc order) becomes the anchor; later legs are skipped.
+    // We pull legs from the unfiltered `payments` so a transfer never shows as
+    // a half-pair if one leg falls outside the active filters.
+    const renderedTransfers = new Set();
+    const itemsToRender = [];
+    filtered.forEach(p => {
+        if (p.transfer_id) {
+            if (renderedTransfers.has(p.transfer_id)) return;
+            renderedTransfers.add(p.transfer_id);
+            const legs = payments.filter(x => x.transfer_id === p.transfer_id);
+            itemsToRender.push({ kind: 'transfer', legs });
+        } else {
+            itemsToRender.push({ kind: 'payment', p });
+        }
     });
+
+    itemsToRender.forEach((item, i) => {
+        const isLast = i === itemsToRender.length - 1;
+        if (item.kind === 'transfer') {
+            list.appendChild(buildTransferRow(item.legs, isLast));
+        } else {
+            const p = item.p;
+            const isPaid = p.is_paid == 1;
+            const dueDate = p.due_ts ? new Date(p.due_ts.replace(' ', 'T')) : null;
+            const isOverdue = !isPaid && dueDate && dueDate < today;
+            list.appendChild(buildPaymentRow(p, isPaid, isOverdue, isLast));
+        }
+    });
+}
+
+const ICON_TRANSFER = 'M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4';
+
+function buildTransferRow(legs, isLast) {
+    const row = document.createElement('div');
+    row.className = `group flex items-center gap-3 py-3.5 sm:py-3 px-1 cursor-pointer hover:bg-dark/5 active:bg-dark/5 -mx-1 rounded transition-colors ${isLast ? '' : 'border-b border-border'}`;
+
+    const transferId = legs[0].transfer_id;
+    row.addEventListener('click', () => openTransferModal(transferId));
+
+    const fromLeg = legs.find(l => l.kind === 'transfer' && Number(l.amount) < 0);
+    const toLeg   = legs.find(l => l.kind === 'transfer' && Number(l.amount) > 0);
+    const feeLeg  = legs.find(l => l.kind === 'fee');
+
+    const fromAcct = fromLeg ? accountById(fromLeg.account_id) : null;
+    const toAcct   = toLeg   ? accountById(toLeg.account_id)   : null;
+
+    // Use the transfer-arrows icon in place of the category dot, sized to
+    // match the dot's footprint so this row aligns with regular rows.
+    const iconWrap = document.createElement('div');
+    iconWrap.className = 'h-3 w-3 sm:h-2.5 sm:w-2.5 flex-shrink-0 flex items-center justify-center text-accent';
+    iconWrap.title = 'Transferencia';
+    iconWrap.appendChild(svgIcon(ICON_TRANSFER, 'w-3.5 h-3.5'));
+    row.appendChild(iconWrap);
+
+    const info = document.createElement('div');
+    info.className = 'flex-1 min-w-0';
+
+    const titleRow = document.createElement('p');
+    titleRow.className = 'text-[15px] sm:text-sm font-medium truncate';
+    titleRow.textContent = `${fromAcct?.name || '?'} → ${toAcct?.name || '?'}`;
+    info.appendChild(titleRow);
+
+    const subParts = [];
+    const anchor = legs[0];
+    if (anchor.is_paid == 1 && anchor.paid_ts) subParts.push(`Pagado: ${formatDate(anchor.paid_ts)}`);
+    else if (anchor.due_ts) subParts.push(formatDate(anchor.due_ts));
+    if (feeLeg) {
+        const cb = fmtCurrencyBadge(feeLeg.currency);
+        subParts.push(`Comisión ${(cb ? cb + ' ' : '')}${formatPrice(Math.abs(feeLeg.amount))}`);
+    }
+    const sub = document.createElement('p');
+    sub.className = 'text-xs text-muted truncate mt-0.5';
+    sub.textContent = subParts.join(' · ') || ' ';
+    info.appendChild(sub);
+
+    row.appendChild(info);
+
+    const right = document.createElement('div');
+    right.className = 'flex items-center gap-2 flex-shrink-0';
+
+    // Stacked −sent / +received amounts (red over green) on the left of the
+    // badge, mirroring the layout the user preferred.
+    const amounts = document.createElement('div');
+    amounts.className = 'flex flex-col items-end gap-0.5';
+
+    const out = document.createElement('span');
+    out.className = 'text-[13px] sm:text-xs font-semibold tabular-nums text-danger';
+    if (fromLeg) {
+        const cb = fmtCurrencyBadge(fromLeg.currency);
+        out.textContent = '−' + (cb ? cb + ' ' : '') + formatPrice(Math.abs(fromLeg.amount));
+    }
+    amounts.appendChild(out);
+
+    const inn = document.createElement('span');
+    inn.className = 'text-[13px] sm:text-xs font-semibold tabular-nums text-success';
+    if (toLeg) {
+        const cb = fmtCurrencyBadge(toLeg.currency);
+        inn.textContent = '+' + (cb ? cb + ' ' : '') + formatPrice(Math.abs(toLeg.amount));
+    }
+    amounts.appendChild(inn);
+    right.appendChild(amounts);
+
+    const badge = document.createElement('span');
+    badge.className = 'inline-block font-semibold tracking-wide uppercase rounded whitespace-nowrap text-[10px] px-2.5 py-1 sm:px-2 sm:py-0.5 bg-accent/10 text-accent';
+    badge.textContent = 'Transfer';
+    right.appendChild(badge);
+
+    row.appendChild(right);
+    return row;
 }
 
 function buildPaymentRow(p, isPaid, isOverdue, isLast) {
@@ -866,12 +1092,23 @@ async function openPaymentModal(p) {
     document.getElementById('pmt-category').value = full
         ? (full.expense_category_id || '')
         : mostCommonCategoryId();
-    document.getElementById('pmt-card').value = full?.card_id || '';
+    const cardInput = document.getElementById('pmt-card');
+    cardInput.value = full?.card_id || '';
+    cardInput.dispatchEvent(new Event('change', { bubbles: true }));
     const defAcct = defaultAccount();
-    document.getElementById('pmt-account').value = full?.account_id || (defAcct?.id || '');
+    const acctInput = document.getElementById('pmt-account');
+    acctInput.value = full?.account_id || (defAcct?.id || '');
+    acctInput.dispatchEvent(new Event('change', { bubbles: true }));
     document.getElementById('pmt-currency').value = full?.currency || (defAcct?.currency || 'ARS');
     // New payments: default checked (most logging happens after paying); edits: actual state.
-    document.getElementById('pmt-is-paid').checked = full ? full.is_paid == 1 : true;
+    const isPaidNow = full ? full.is_paid == 1 : true;
+    document.getElementById('pmt-is-paid').checked = isPaidNow;
+    // Paid date defaults to the stored paid_ts on edit, or the due date / today
+    // for new payments. Visibility tracks the "Marcar como pagado" checkbox.
+    const dueIso = document.getElementById('pmt-due').value || todayISODate();
+    const paidIso = full?.paid_ts ? full.paid_ts.slice(0, 10) : dueIso;
+    document.getElementById('pmt-paid-ts').value = paidIso;
+    document.getElementById('pmt-paid-ts-wrap').classList.toggle('hidden', !isPaidNow);
     document.getElementById('pmt-description').value = full?.description || '';
     updateCategorySwatch();
 
@@ -1018,6 +1255,8 @@ async function submitPaymentForm(e) {
           }
         : null;
 
+    const isPaidChecked = document.getElementById('pmt-is-paid').checked;
+    const paidDate = document.getElementById('pmt-paid-ts').value;
     const body = {
         title: document.getElementById('pmt-title').value.trim(),
         amount: amountNum,
@@ -1026,7 +1265,9 @@ async function submitPaymentForm(e) {
         card_id: document.getElementById('pmt-card').value || null,
         account_id: document.getElementById('pmt-account').value || null,
         currency: document.getElementById('pmt-currency').value || 'ARS',
-        is_paid: document.getElementById('pmt-is-paid').checked,
+        is_paid: isPaidChecked,
+        // Only send paid_ts when the row is paid; otherwise let the API NULL it.
+        paid_ts: (isPaidChecked && paidDate) ? `${paidDate} 12:00:00` : null,
         description: document.getElementById('pmt-description').value.trim(),
         recipient,
     };
@@ -1099,6 +1340,162 @@ async function confirmPaymentDelete() {
     }
 }
 
+// ── Transfer modal ──────────────────────────────────────────────────
+let editingTransferId = null;
+
+function populateTransferDropdowns() {
+    const fromSel = document.getElementById('trf-from');
+    const toSel   = document.getElementById('trf-to');
+    fromSel.textContent = '';
+    toSel.textContent = '';
+    accounts.forEach(a => {
+        fromSel.appendChild(makeOption(a.id, `${a.name} (${a.currency})`));
+        toSel.appendChild(makeOption(a.id, `${a.name} (${a.currency})`));
+    });
+    if (accounts.length >= 2) {
+        fromSel.value = accounts[0].id;
+        toSel.value   = accounts[1].id;
+    }
+
+    // Fee category dropdown reuses the same category list as expenses.
+    const catSel = document.getElementById('trf-fee-cat');
+    catSel.textContent = '';
+    catSel.appendChild(makeOption('', 'Sin categoría'));
+    categories.forEach(c => catSel.appendChild(makeOption(c.id, c.name)));
+}
+
+function updateTransferCurrencyBadges() {
+    const from = accountById(document.getElementById('trf-from').value);
+    const to   = accountById(document.getElementById('trf-to').value);
+    document.getElementById('trf-sent-cur').textContent     = from ? `(${from.currency})` : '';
+    document.getElementById('trf-received-cur').textContent = to   ? `(${to.currency})`   : '';
+    document.getElementById('trf-fee-cur').textContent      = from ? `(${from.currency})` : '';
+    // Auto-mirror when currencies match and user hasn't typed a different value yet.
+    const sentEl = document.getElementById('trf-sent');
+    const recvEl = document.getElementById('trf-received');
+    if (from && to && from.currency === to.currency && sentEl.value && !recvEl.value) {
+        recvEl.value = sentEl.value;
+    }
+}
+
+async function openTransferModal(transferId) {
+    editingTransferId = transferId || null;
+    document.getElementById('transfer-modal-title').textContent =
+        transferId ? 'Editar transferencia' : 'Nueva transferencia';
+    populateTransferDropdowns();
+
+    const form = document.getElementById('transfer-form');
+    form.reset();
+    document.getElementById('trf-id').value = transferId || '';
+    document.getElementById('trf-due').value = todayISODate();
+    document.getElementById('trf-is-paid').checked = true;
+    document.getElementById('trf-delete-btn').classList.toggle('hidden', !transferId);
+
+    if (transferId) {
+        try {
+            const t = await api.get('/transfers', { id: transferId });
+            if (t && !t.error && t.from_leg && t.to_leg) {
+                document.getElementById('trf-from').value = t.from_leg.account_id;
+                document.getElementById('trf-to').value   = t.to_leg.account_id;
+                document.getElementById('trf-sent').value     = formatAmountForInput(Math.abs(t.from_leg.amount));
+                document.getElementById('trf-received').value = formatAmountForInput(Math.abs(t.to_leg.amount));
+                if (t.fee_leg) {
+                    document.getElementById('trf-fee').value     = formatAmountForInput(Math.abs(t.fee_leg.amount));
+                    document.getElementById('trf-fee-cat').value = t.fee_leg.expense_category_id || '';
+                }
+                document.getElementById('trf-description').value = t.from_leg.description || '';
+                if (t.from_leg.due_ts) {
+                    document.getElementById('trf-due').value = t.from_leg.due_ts.slice(0, 10);
+                }
+                document.getElementById('trf-is-paid').checked = t.from_leg.is_paid == 1;
+            }
+        } catch (e) {
+            toast('No se pudo cargar la transferencia', 'error');
+        }
+    }
+
+    updateTransferCurrencyBadges();
+    document.getElementById('transfer-modal').classList.remove('hidden');
+    setTimeout(() => document.getElementById('trf-sent').focus(), 50);
+}
+
+function closeTransferModal() {
+    document.getElementById('transfer-modal').classList.add('hidden');
+    editingTransferId = null;
+}
+
+async function submitTransferForm(e) {
+    e.preventDefault();
+    const fromId = document.getElementById('trf-from').value;
+    const toId   = document.getElementById('trf-to').value;
+    if (fromId === toId) {
+        toast('Las cuentas deben ser distintas', 'error');
+        return;
+    }
+    const sent = parseAmount(document.getElementById('trf-sent').value);
+    const received = parseAmount(document.getElementById('trf-received').value);
+    if (!isFinite(sent) || sent <= 0 || !isFinite(received) || received <= 0) {
+        toast('Montos inválidos', 'error');
+        return;
+    }
+    const feeRaw = document.getElementById('trf-fee').value.trim();
+    const fee = feeRaw ? parseAmount(feeRaw) : 0;
+    if (feeRaw && (!isFinite(fee) || fee < 0)) {
+        toast('Comisión inválida', 'error');
+        return;
+    }
+
+    const body = {
+        from_account_id: fromId,
+        to_account_id:   toId,
+        amount_sent:     sent,
+        amount_received: received,
+        description: document.getElementById('trf-description').value.trim(),
+        due_ts:      document.getElementById('trf-due').value || null,
+        is_paid:     document.getElementById('trf-is-paid').checked,
+    };
+    if (fee > 0) {
+        body.fee = fee;
+        body.fee_category_id = document.getElementById('trf-fee-cat').value || null;
+    }
+
+    const btn = document.getElementById('trf-submit');
+    btn.disabled = true;
+    try {
+        const result = editingTransferId
+            ? await api.put('/transfers', body, { id: editingTransferId })
+            : await api.post('/transfers', body);
+        if (!result || result.error) {
+            toast(result?.error || 'No se pudo guardar', 'error');
+            return;
+        }
+        toast(editingTransferId ? 'Transferencia actualizada' : 'Transferencia creada', 'success');
+        closeTransferModal();
+        await loadAll();
+    } catch (err) {
+        toast('Error de red', 'error');
+    } finally {
+        btn.disabled = false;
+    }
+}
+
+async function confirmTransferDelete() {
+    if (!editingTransferId) return;
+    if (!confirm('¿Eliminar esta transferencia y todos sus movimientos?')) return;
+    try {
+        const result = await api.del('/transfers', { id: editingTransferId });
+        if (!result || result.error) {
+            toast(result?.error || 'No se pudo eliminar', 'error');
+            return;
+        }
+        toast('Transferencia eliminada', 'success');
+        closeTransferModal();
+        await loadAll();
+    } catch (err) {
+        toast('Error de red', 'error');
+    }
+}
+
 // ── Filter handlers ─────────────────────────────────────────────────
 function setStatusFilter(status) {
     statusFilter = status;
@@ -1136,6 +1533,13 @@ function openAIModal() {
 function closeAIModal() {
     document.getElementById('ai-input-modal').classList.add('hidden');
     resetAIModal();
+}
+
+// Bail out of the AI flow into the plain manual form. Closing the AI modal
+// first keeps the two modals from layering and resets any in-flight AI state.
+function switchAIToManual() {
+    closeAIModal();
+    openPaymentModal();
 }
 
 function resetAIModal() {
@@ -1541,6 +1945,33 @@ mangosAuth.ready.then(user => {
         if (a) document.getElementById('pmt-currency').value = a.currency;
     });
 
+    // Wire account/card picker chips. The hidden inputs hold the IDs; chip face
+    // refreshes whenever its input fires a 'change' event.
+    mangosPicker.bindChip(document.getElementById('pmt-card-chip'), {
+        mode: 'card',
+        valueInputId: 'pmt-card',
+        allowNone: true,
+    });
+    mangosPicker.bindChip(document.getElementById('pmt-account-chip'), {
+        mode: 'account',
+        valueInputId: 'pmt-account',
+    });
+    // Show/hide the paid-date row in lockstep with the "Marcar como pagado"
+    // checkbox so unpaid rows don't carry a stray date.
+    document.getElementById('pmt-is-paid').addEventListener('change', e => {
+        const wrap = document.getElementById('pmt-paid-ts-wrap');
+        wrap.classList.toggle('hidden', !e.target.checked);
+        if (e.target.checked && !document.getElementById('pmt-paid-ts').value) {
+            const dueIso = document.getElementById('pmt-due').value || todayISODate();
+            document.getElementById('pmt-paid-ts').value = dueIso;
+        }
+    });
+
+    // Transfer modal wiring
+    document.getElementById('transfer-form').addEventListener('submit', submitTransferForm);
+    document.getElementById('trf-from').addEventListener('change', updateTransferCurrencyBadges);
+    document.getElementById('trf-to').addEventListener('change', updateTransferCurrencyBadges);
+
     // AI modal: tab switching
     document.querySelectorAll('.ai-mode-tab').forEach(t => {
         t.addEventListener('click', () => setAIMode(t.dataset.mode));
@@ -1594,6 +2025,7 @@ mangosAuth.ready.then(user => {
     document.addEventListener('keydown', e => {
         if (e.key !== 'Escape') return;
         if (!document.getElementById('ai-input-modal').classList.contains('hidden')) closeAIModal();
+        else if (!document.getElementById('transfer-modal').classList.contains('hidden')) closeTransferModal();
         else if (!document.getElementById('payment-modal').classList.contains('hidden')) closePaymentModal();
         else if (!document.getElementById('payment-delete-modal').classList.contains('hidden')) closePaymentDelete();
     });
