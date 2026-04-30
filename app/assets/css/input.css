@@ -56,12 +56,6 @@
     -moz-appearance: none;
     background-clip: padding-box;
   }
-  /* Ensure text-aligned consistency on date inputs (iOS centers placeholder otherwise) */
-  .input[type="date"],
-  .input[type="time"],
-  .input[type="datetime-local"] {
-    min-height: 42px;
-  }
   /* Custom dropdown arrow on selects (since appearance:none kills the native one) */
   select.input {
     background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='%238C857D'><path d='M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z'/></svg>");
