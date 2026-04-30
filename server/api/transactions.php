@@ -97,7 +97,9 @@ switch (method()) {
             }
         }
 
-        $sql .= " ORDER BY due_ts DESC, created_ts DESC";
+        // Sort by the most recent real-world timestamp: paid_ts when paid,
+        // due_ts otherwise. Keeps just-paid items at the top of the list.
+        $sql .= " ORDER BY COALESCE(paid_ts, due_ts) DESC, created_ts DESC";
 
         $stmt = $pdo->prepare($sql);
         $stmt->execute($params);

@@ -1007,8 +1007,10 @@ function buildPaymentRow(p, isPaid, isOverdue, isLast) {
     const sourceLabel = labelForSource(p.source);
     if (sourceLabel) subParts.push(sourceLabel);
 
+    // Subline wraps to 2 lines on mobile (truncate would clip card/account
+    // beyond the date), single-line truncated on desktop where width allows.
     const sub = document.createElement('p');
-    sub.className = 'text-xs text-muted truncate mt-0.5';
+    sub.className = 'text-xs text-muted mt-0.5 line-clamp-2 sm:line-clamp-1';
     sub.textContent = subParts.join(' · ') || ' ';
     info.appendChild(sub);
 
@@ -1807,8 +1809,12 @@ async function submitAIInput() {
     aiState.draft = result.draft;
     aiState.matched = result.matched_recurrent || null;
     aiState.artifact = result.ai_artifact || null;
+    // Capture the mode BEFORE closeAIModal — resetAIModal() flips aiState.mode
+    // back to 'text', so reading it later in openPaymentModalFromAI would
+    // always tag the source as 'ai-text' regardless of the actual input mode.
+    const submittedMode = aiState.mode;
     closeAIModal();
-    await openPaymentModalFromAI(result.draft, result.matched_recurrent || null);
+    await openPaymentModalFromAI(result.draft, result.matched_recurrent || null, submittedMode);
 }
 
 function showAIError(msg) {
@@ -1817,7 +1823,7 @@ function showAIError(msg) {
     el.classList.remove('hidden');
 }
 
-async function openPaymentModalFromAI(draft, matched) {
+async function openPaymentModalFromAI(draft, matched, submittedMode) {
     const detectedCur = draft.detected_currency || 'ARS';
     // If AI detected a non-ARS currency, prefer matching it to a same-currency account.
     const matchByCurrency = accounts.find(a => a.currency === detectedCur);
@@ -1833,7 +1839,7 @@ async function openPaymentModalFromAI(draft, matched) {
         description: draft.description || '',
         recipient: (draft.recipient && draft.recipient.name) ? draft.recipient : null,
     };
-    const mode = aiState.mode;
+    const mode = submittedMode || aiState.mode;
     await openPaymentModal(synthetic);  // clears aiSourceTag + banner
     aiSourceTag = `ai-${mode}`;
     aiState.draft = draft;
