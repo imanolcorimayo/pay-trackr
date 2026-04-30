@@ -429,17 +429,31 @@ function renderRecurrents() {
     const paidRecIds = new Set(
         monthlyPayments.filter(p => p.is_paid == 1 && p.recurrent_id).map(p => p.recurrent_id)
     );
-    const today = new Date().getDate();
+    const now = new Date();
+    const todayDay = now.getDate();
+    const todayMonth = now.getMonth();
 
     sorted.forEach((r, i) => {
         const isLast = i === sorted.length - 1;
-        const isPaid = paidRecIds.has(r.id);
-        const isOverdue = !isPaid && r.due_date_day < today;
-        listEl.appendChild(buildRecurrentRow(r, isPaid, isOverdue, isLast));
+        const dueMonth = recurrentDueMonth(r);          // null = every month (monthly)
+        const isDueThisMonth = dueMonth === null || dueMonth === todayMonth;
+        const isPaid = isDueThisMonth && paidRecIds.has(r.id);
+        const isOverdue = isDueThisMonth && !isPaid && r.due_date_day < todayDay;
+        listEl.appendChild(buildRecurrentRow(r, isPaid, isOverdue, isDueThisMonth, dueMonth, isLast));
     });
 }
 
-function buildRecurrentRow(r, isPaid, isOverdue, isLast) {
+// For yearly recurrents, the "due month" comes from start_date. Returns null
+// for non-yearly (monthly counts every month as due).
+function recurrentDueMonth(r) {
+    if (r.time_period !== 'yearly') return null;
+    if (!r.start_date) return null;
+    const d = new Date(r.start_date + 'T00:00:00');
+    if (isNaN(d.getTime())) return null;
+    return d.getMonth();
+}
+
+function buildRecurrentRow(r, isPaid, isOverdue, isDueThisMonth, dueMonth, isLast) {
     const row = document.createElement('div');
     row.className = `group flex items-center gap-3 py-3 px-1 cursor-pointer hover:bg-dark/5 -mx-1 rounded transition-colors ${isLast ? '' : 'border-b border-border'}`;
     row.addEventListener('click', () => openRecurrentModal(r));
@@ -484,15 +498,26 @@ function buildRecurrentRow(r, isPaid, isOverdue, isLast) {
     const badge = document.createElement('button');
     badge.type = 'button';
     let badgeVariant;
-    if (isPaid) { badgeVariant = 'badge-success'; badge.textContent = 'Pagado'; }
-    else if (isOverdue) { badgeVariant = 'badge-danger'; badge.textContent = 'Vencido'; }
-    else { badgeVariant = 'badge-muted'; badge.textContent = 'Pendiente'; }
-    badge.className = `badge ${badgeVariant} cursor-pointer hover:opacity-80 active:scale-95 transition disabled:opacity-50 disabled:cursor-wait`;
-    badge.title = isPaid ? 'Marcar como pendiente' : 'Marcar como pagado';
-    badge.addEventListener('click', e => {
-        e.stopPropagation();
-        toggleRecurrentPaid(r, badge);
-    });
+    if (!isDueThisMonth) {
+        // Yearly recurrent in an off-month: don't flag as overdue, don't allow
+        // toggling (would otherwise create a stray current-month transaction).
+        badgeVariant = 'badge-muted';
+        badge.textContent = 'Anual';
+        badge.disabled = true;
+        badge.className = `badge ${badgeVariant} cursor-default opacity-70`;
+        const monthName = (dueMonth != null) ? MONTH_LABEL[dueMonth] : null;
+        badge.title = monthName ? `Vence en ${monthName.toLowerCase()}` : 'No vence este mes';
+    } else {
+        if (isPaid) { badgeVariant = 'badge-success'; badge.textContent = 'Pagado'; }
+        else if (isOverdue) { badgeVariant = 'badge-danger'; badge.textContent = 'Vencido'; }
+        else { badgeVariant = 'badge-muted'; badge.textContent = 'Pendiente'; }
+        badge.className = `badge ${badgeVariant} cursor-pointer hover:opacity-80 active:scale-95 transition disabled:opacity-50 disabled:cursor-wait`;
+        badge.title = isPaid ? 'Marcar como pendiente' : 'Marcar como pagado';
+        badge.addEventListener('click', e => {
+            e.stopPropagation();
+            toggleRecurrentPaid(r, badge);
+        });
+    }
     right.appendChild(badge);
 
     const actions = document.createElement('div');

@@ -13,11 +13,11 @@
 </div>
 
 <!-- Grid -->
-<div id="categories-grid" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
-    <div class="card flex items-center gap-3 py-4"><div class="skeleton h-8 w-8 rounded-full">&nbsp;</div><div class="skeleton h-4 w-24">&nbsp;</div></div>
-    <div class="card flex items-center gap-3 py-4"><div class="skeleton h-8 w-8 rounded-full">&nbsp;</div><div class="skeleton h-4 w-20">&nbsp;</div></div>
-    <div class="card flex items-center gap-3 py-4"><div class="skeleton h-8 w-8 rounded-full">&nbsp;</div><div class="skeleton h-4 w-28">&nbsp;</div></div>
-    <div class="card flex items-center gap-3 py-4"><div class="skeleton h-8 w-8 rounded-full">&nbsp;</div><div class="skeleton h-4 w-24">&nbsp;</div></div>
+<div id="categories-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+    <div class="card flex items-center gap-3 py-4"><div class="skeleton h-6 w-6 sm:h-8 sm:w-8 rounded-full">&nbsp;</div><div class="skeleton h-4 w-24">&nbsp;</div></div>
+    <div class="card flex items-center gap-3 py-4"><div class="skeleton h-6 w-6 sm:h-8 sm:w-8 rounded-full">&nbsp;</div><div class="skeleton h-4 w-20">&nbsp;</div></div>
+    <div class="card flex items-center gap-3 py-4"><div class="skeleton h-6 w-6 sm:h-8 sm:w-8 rounded-full">&nbsp;</div><div class="skeleton h-4 w-28">&nbsp;</div></div>
+    <div class="card flex items-center gap-3 py-4"><div class="skeleton h-6 w-6 sm:h-8 sm:w-8 rounded-full">&nbsp;</div><div class="skeleton h-4 w-24">&nbsp;</div></div>
 </div>
 
 <!-- ─────────────────────────── Form modal ─────────────────────────── -->
@@ -159,7 +159,7 @@ function buildCategoryEl(c) {
     wrap.className = 'card group flex items-center gap-3 py-4 px-4';
 
     const swatch = document.createElement('div');
-    swatch.className = 'h-9 w-9 rounded-full flex-shrink-0 border border-border';
+    swatch.className = 'h-6 w-6 sm:h-9 sm:w-9 rounded-full flex-shrink-0 border border-border';
     swatch.style.backgroundColor = c.color;
     wrap.appendChild(swatch);
 
