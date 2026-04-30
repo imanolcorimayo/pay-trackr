@@ -21,7 +21,10 @@
     </div>
 </div>
 
-<!-- Summary card -->
+<!-- FX rate strip (shown once rates load; hidden when only ARS is in use) -->
+<p id="fx-strip" class="hidden text-xs text-muted mb-3"></p>
+
+<!-- Summary card — each amount stacks one line per currency present -->
 <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
     <div class="card">
         <p class="text-xs font-semibold tracking-wide uppercase text-muted mb-1">Total mensual</p>
@@ -47,22 +50,20 @@
     </div>
 </div>
 
-<!-- List -->
-<div class="card">
+<!-- List — V3 skeleton mirrors the actual row layout (date-tile + title row + subline) -->
+<div class="card !p-0">
     <div id="recurrents-list">
-        <div class="space-y-3">
-            <div class="flex justify-between items-center py-3 border-b border-border">
-                <span class="skeleton w-40 h-4">&nbsp;</span>
-                <span class="skeleton w-24 h-4">&nbsp;</span>
-            </div>
-            <div class="flex justify-between items-center py-3 border-b border-border">
-                <span class="skeleton w-32 h-4">&nbsp;</span>
-                <span class="skeleton w-20 h-4">&nbsp;</span>
-            </div>
-            <div class="flex justify-between items-center py-3">
-                <span class="skeleton w-36 h-4">&nbsp;</span>
-                <span class="skeleton w-24 h-4">&nbsp;</span>
-            </div>
+        <div class="py-3 px-3 border-b border-border">
+            <div class="flex items-center gap-3"><span class="skeleton w-9 h-10 rounded-lg flex-shrink-0">&nbsp;</span><span class="skeleton flex-1 h-4 max-w-[220px]">&nbsp;</span></div>
+            <div class="flex items-end justify-between gap-3 mt-2 pl-12"><span class="skeleton h-3 w-32">&nbsp;</span><span class="skeleton h-4 w-20">&nbsp;</span></div>
+        </div>
+        <div class="py-3 px-3 border-b border-border">
+            <div class="flex items-center gap-3"><span class="skeleton w-9 h-10 rounded-lg flex-shrink-0">&nbsp;</span><span class="skeleton flex-1 h-4 max-w-[180px]">&nbsp;</span></div>
+            <div class="flex items-end justify-between gap-3 mt-2 pl-12"><span class="skeleton h-3 w-40">&nbsp;</span><span class="skeleton h-4 w-16">&nbsp;</span></div>
+        </div>
+        <div class="py-3 px-3">
+            <div class="flex items-center gap-3"><span class="skeleton w-9 h-10 rounded-lg flex-shrink-0">&nbsp;</span><span class="skeleton flex-1 h-4 max-w-[200px]">&nbsp;</span></div>
+            <div class="flex items-end justify-between gap-3 mt-2 pl-12"><span class="skeleton h-3 w-28">&nbsp;</span><span class="skeleton h-4 w-20">&nbsp;</span></div>
         </div>
     </div>
 </div>
@@ -213,10 +214,6 @@
 
 <script>
 const SVG_NS = 'http://www.w3.org/2000/svg';
-const ICON_EDIT = 'M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z';
-const ICON_TRASH = 'M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6M1 7h22M9 7V4a1 1 0 011-1h4a1 1 0 011 1v3';
-const ICON_HISTORY = 'M12 8v4l3 2m6-2a9 9 0 11-18 0 9 9 0 0118 0z';
-
 const MONTH_LABEL = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
 const HISTORY_MAX_BUCKETS = 240;  // hard cap to avoid runaway loops on bad data
 
@@ -230,17 +227,41 @@ let monthlyPayments = [];   // transactions for current month, used for paid sta
 let editingId = null;
 let pendingDeleteId = null;
 let searchQuery = '';       // free-text substring filter (case-insensitive)
+// Per-row currency override. id → currency code. Absent = native (default).
+// Lost on reload — this is a quick "show me the converted amount" affordance.
+const currencyOverrides = new Map();
+// Single row open at a time, synced to ?open=<id> in the URL.
+let expandedId = null;
+
+const CURRENCY_ORDER = ['ARS', 'USD', 'USDT'];
 
 function readUrlState() {
     const p = new URLSearchParams(window.location.search);
     if (p.has('q')) searchQuery = p.get('q');
+    if (p.has('open')) expandedId = p.get('open');
 }
 
 function writeUrlState() {
     const params = new URLSearchParams();
     if (searchQuery) params.set('q', searchQuery);
+    if (expandedId) params.set('open', expandedId);
     const qs = params.toString();
     history.replaceState(null, '', window.location.pathname + (qs ? '?' + qs : ''));
+}
+
+function toggleExpanded(id) {
+    expandedId = expandedId === id ? null : id;
+    writeUrlState();
+    renderRecurrents();
+    if (expandedId) scrollToExpanded();
+}
+
+function scrollToExpanded() {
+    if (!expandedId) return;
+    requestAnimationFrame(() => {
+        const el = document.querySelector(`[data-row-id="${CSS.escape(expandedId)}"]`);
+        if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    });
 }
 
 function recurrentSearchableText(r) {
@@ -288,15 +309,6 @@ function svgIcon(pathD, sizeCls = 'w-4 h-4') {
     path.setAttribute('d', pathD);
     svg.appendChild(path);
     return svg;
-}
-
-function iconButton(pathD, cls, onClick) {
-    const btn = document.createElement('button');
-    btn.type = 'button';
-    btn.className = `p-1.5 rounded ${cls} hover:bg-dark/5 transition-colors`;
-    btn.appendChild(svgIcon(pathD));
-    btn.addEventListener('click', e => { e.stopPropagation(); onClick(); });
-    return btn;
 }
 
 // User input "1.234,56" → number 1234.56 ; "1234.56" also accepted
@@ -348,6 +360,8 @@ async function loadAll() {
     populateDropdowns();
     renderSummary();
     renderRecurrents();
+    // If we landed via /fijos?open=<id>, scroll to that row once mounted.
+    scrollToExpanded();
 }
 
 function populateDropdowns() {
@@ -371,23 +385,73 @@ function populateDropdowns() {
     }
 }
 
-function renderSummary() {
-    let total = 0, paid = 0, unpaid = 0;
+function summaryBuckets() {
     const paidRecIds = new Set(
         monthlyPayments.filter(p => p.is_paid == 1 && p.recurrent_id).map(p => p.recurrent_id)
     );
 
+    const buckets = {};
     applySearchFilter(recurrents).forEach(r => {
-        // Annualize yearly: amount/12 contributes to monthly total
+        const cur = r.currency || 'ARS';
+        const b = buckets[cur] || (buckets[cur] = { total: 0, paid: 0, unpaid: 0 });
+        // Annualize yearly: amount/12 contributes to the monthly total
         const monthlyEquivalent = r.time_period === 'yearly' ? Number(r.amount) / 12 : Number(r.amount);
-        total += monthlyEquivalent;
-        if (paidRecIds.has(r.id)) paid += monthlyEquivalent;
-        else unpaid += monthlyEquivalent;
+        b.total += monthlyEquivalent;
+        if (paidRecIds.has(r.id)) b.paid += monthlyEquivalent;
+        else b.unpaid += monthlyEquivalent;
     });
+    return buckets;
+}
 
-    document.getElementById('rec-total').textContent = formatPrice(Math.abs(total));
-    document.getElementById('rec-paid').textContent = formatPrice(Math.abs(paid));
-    document.getElementById('rec-unpaid').textContent = formatPrice(Math.abs(unpaid));
+function sortedCurrencyCodes(buckets) {
+    return Object.keys(buckets).sort((a, b) => {
+        const ai = CURRENCY_ORDER.indexOf(a), bi = CURRENCY_ORDER.indexOf(b);
+        return (ai === -1 ? 99 : ai) - (bi === -1 ? 99 : bi);
+    });
+}
+
+// Replaces the element's contents with one line per currency. ARS keeps the
+// hero size; other currencies render smaller and muted underneath.
+function renderStackedAmount(elId, buckets, key) {
+    const el = document.getElementById(elId);
+    el.textContent = '';
+    const codes = sortedCurrencyCodes(buckets);
+    if (codes.length === 0) {
+        el.textContent = formatPrice(0, 'ARS');
+        return;
+    }
+    codes.forEach((code, i) => {
+        const line = document.createElement('span');
+        line.className = i === 0
+            ? 'block'
+            : 'block text-base font-semibold text-muted -mt-0.5';
+        line.textContent = formatPrice(Math.abs(buckets[code][key]), code);
+        el.appendChild(line);
+    });
+}
+
+function renderFxStrip() {
+    const el = document.getElementById('fx-strip');
+    const parts = [];
+    ['USD', 'USDT'].forEach(code => {
+        const r = fx.rateFor(code);
+        if (r && r !== 1) parts.push(`${code} ${formatPrice(r, 'ARS')}`);
+    });
+    if (parts.length === 0) {
+        el.classList.add('hidden');
+        el.textContent = '';
+        return;
+    }
+    const age = fx.relativeAge();
+    el.textContent = `Cotización: ${parts.join(' · ')}${age ? ' · ' + age : ''}`;
+    el.classList.remove('hidden');
+}
+
+function renderSummary() {
+    const buckets = summaryBuckets();
+    renderStackedAmount('rec-total',  buckets, 'total');
+    renderStackedAmount('rec-paid',   buckets, 'paid');
+    renderStackedAmount('rec-unpaid', buckets, 'unpaid');
 }
 
 function renderRecurrents() {
@@ -453,54 +517,128 @@ function recurrentDueMonth(r) {
     return d.getMonth();
 }
 
+// Single-line right-aligned amount. Defaults to native currency; when a
+// per-row override is set, shows the converted value with an "≈" prefix to
+// flag it as inexact.
+function buildAmountStack(r) {
+    const native = r.currency || 'ARS';
+    const display = currencyOverrides.get(r.id) || native;
+    const nativeAmt = Math.abs(Number(r.amount) || 0);
+    const value = display === native ? nativeAmt : fx.convert(nativeAmt, native, display);
+
+    const span = document.createElement('span');
+    span.className = 'text-sm font-semibold tabular-nums';
+    span.textContent = (display === native ? '' : '≈ ') + formatPrice(value, display);
+    return span;
+}
+
+// Switches the row's display currency. Storing native as an override would be
+// pointless — clear it instead so default rendering kicks in.
+function setRowDisplay(r, currency) {
+    const native = r.currency || 'ARS';
+    if (currency === native) currencyOverrides.delete(r.id);
+    else currencyOverrides.set(r.id, currency);
+    renderRecurrents();
+}
+
+// Builds the "..." trigger + menu sections for a recurrent row. Uses the
+// shared rowMenu module — see app/assets/js/row-menu.js.
+function makeRowActions(r) {
+    return rowMenu.trigger(anchor => {
+        const native = r.currency || 'ARS';
+        const display = currencyOverrides.get(r.id) || native;
+        const nativeAmt = Math.abs(Number(r.amount) || 0);
+
+        const currencyItems = CURRENCY_ORDER
+            .filter(c => c !== display)
+            .map(c => ({ value: c, amount: fx.convert(nativeAmt, native, c) }))
+            .filter(o => Number.isFinite(o.amount))
+            .map(o => ({
+                label: formatPrice(o.amount, o.value),
+                onClick: () => setRowDisplay(r, o.value),
+            }));
+
+        const sections = [];
+        if (currencyItems.length) {
+            sections.push({ header: 'Mostrar como', items: currencyItems });
+        }
+        sections.push({
+            items: [
+                { label: 'Editar',    onClick: () => openRecurrentModal(r) },
+                { label: 'Historial', onClick: () => openRecurrentHistory(r) },
+                { label: 'Eliminar',  danger: true, onClick: () => openRecurrentDelete(r) },
+            ],
+        });
+
+        rowMenu.open(anchor, sections);
+    });
+}
+
+// V3 row layout: title on its own line (full width); subline + amount/badge
+// below. The "Día N" date-tile replaces the category dot — strong visual cue
+// that this is a recurring bill, with day-of-month right at the front.
 function buildRecurrentRow(r, isPaid, isOverdue, isDueThisMonth, dueMonth, isLast) {
-    const row = document.createElement('div');
-    row.className = `group flex items-center gap-3 py-3 px-1 cursor-pointer hover:bg-dark/5 -mx-1 rounded transition-colors ${isLast ? '' : 'border-b border-border'}`;
-    row.addEventListener('click', () => openRecurrentModal(r));
+    const wrap = document.createElement('div');
+    wrap.dataset.rowId = r.id;
+    if (!isLast) wrap.classList.add('border-b', 'border-border');
+
+    const header = document.createElement('div');
+    header.className = 'py-3 px-3 cursor-pointer hover:bg-dark/5 active:bg-dark/5 transition-colors';
+    header.addEventListener('click', () => toggleExpanded(r.id));
+
+    // Title row: date-tile + title + ⋮
+    const titleRow = document.createElement('div');
+    titleRow.className = 'flex items-center gap-3';
 
     const cat = categoryById(r.expense_category_id);
-    const dot = document.createElement('div');
-    dot.className = 'h-2.5 w-2.5 rounded-full flex-shrink-0';
-    dot.style.backgroundColor = cat?.color || '#E8E2DA';
-    dot.title = cat?.name || 'Sin categoria';
-    row.appendChild(dot);
+    const tile = document.createElement('div');
+    // Yearly recurrents in off-months get a muted tile so they fade visually.
+    const tileMuted = !isDueThisMonth;
+    tile.className = 'rounded-lg flex flex-col items-center justify-center flex-shrink-0 leading-none w-9 h-10 ' +
+                     (tileMuted ? 'bg-muted/10 text-muted' : 'bg-accent/10 text-accent');
+    tile.title = cat?.name ? `${cat.name} · día ${r.due_date_day}` : `Día ${r.due_date_day}`;
+    const dayLabel = document.createElement('span');
+    dayLabel.className = 'text-[9px] font-semibold uppercase tracking-wide';
+    dayLabel.textContent = 'Día';
+    const dayValue = document.createElement('span');
+    dayValue.className = 'text-base font-bold mt-0.5';
+    dayValue.textContent = String(r.due_date_day);
+    tile.appendChild(dayLabel);
+    tile.appendChild(dayValue);
+    titleRow.appendChild(tile);
 
-    const info = document.createElement('div');
-    info.className = 'flex-1 min-w-0';
+    const titleText = document.createElement('p');
+    titleText.className = 'flex-1 text-[15px] font-medium truncate';
+    titleText.textContent = r.title;
+    titleRow.appendChild(titleText);
+    titleRow.appendChild(makeRowActions(r));
+    header.appendChild(titleRow);
 
-    const title = document.createElement('p');
-    title.className = 'text-sm font-medium truncate';
-    title.textContent = r.title;
-    info.appendChild(title);
+    // Subline + amount row, indented to align with the title text
+    const subRow = document.createElement('div');
+    subRow.className = 'flex items-end justify-between gap-3 mt-1 pl-12';
 
-    const subtitle = document.createElement('p');
-    subtitle.className = 'text-xs text-muted truncate';
-    const subParts = [`Vence el ${r.due_date_day}`];
+    const subParts = [];
     if (r.time_period && r.time_period !== 'monthly') {
         subParts.push((PERIOD_LABEL[r.time_period] || r.time_period).toLowerCase());
+    } else {
+        subParts.push('Mensual');
     }
     const card = cardById(r.card_id);
     if (card) subParts.push(card.name + (card.last_four ? ` ····${card.last_four}` : ''));
-    subtitle.textContent = subParts.join(' · ');
-    info.appendChild(subtitle);
-
-    row.appendChild(info);
+    const sub = document.createElement('p');
+    sub.className = 'text-xs text-muted truncate flex-1 min-w-0';
+    sub.textContent = subParts.join(' · ');
+    subRow.appendChild(sub);
 
     const right = document.createElement('div');
     right.className = 'flex items-center gap-2 flex-shrink-0';
-
-    const amountEl = document.createElement('span');
-    amountEl.className = 'text-sm font-semibold';
-    const curPrefix = (r.currency && r.currency !== 'ARS') ? r.currency + ' ' : '';
-    amountEl.textContent = curPrefix + formatPrice(Math.abs(r.amount));
-    right.appendChild(amountEl);
+    right.appendChild(buildAmountStack(r));
 
     const badge = document.createElement('button');
     badge.type = 'button';
     let badgeVariant;
     if (!isDueThisMonth) {
-        // Yearly recurrent in an off-month: don't flag as overdue, don't allow
-        // toggling (would otherwise create a stray current-month transaction).
         badgeVariant = 'badge-muted';
         badge.textContent = 'Anual';
         badge.disabled = true;
@@ -508,9 +646,9 @@ function buildRecurrentRow(r, isPaid, isOverdue, isDueThisMonth, dueMonth, isLas
         const monthName = (dueMonth != null) ? MONTH_LABEL[dueMonth] : null;
         badge.title = monthName ? `Vence en ${monthName.toLowerCase()}` : 'No vence este mes';
     } else {
-        if (isPaid) { badgeVariant = 'badge-success'; badge.textContent = 'Pagado'; }
-        else if (isOverdue) { badgeVariant = 'badge-danger'; badge.textContent = 'Vencido'; }
-        else { badgeVariant = 'badge-muted'; badge.textContent = 'Pendiente'; }
+        if (isPaid)        { badgeVariant = 'badge-success'; badge.textContent = 'Pagado'; }
+        else if (isOverdue){ badgeVariant = 'badge-danger';  badge.textContent = 'Vencido'; }
+        else               { badgeVariant = 'badge-muted';   badge.textContent = 'Pendiente'; }
         badge.className = `badge ${badgeVariant} cursor-pointer hover:opacity-80 active:scale-95 transition disabled:opacity-50 disabled:cursor-wait`;
         badge.title = isPaid ? 'Marcar como pendiente' : 'Marcar como pagado';
         badge.addEventListener('click', e => {
@@ -519,16 +657,64 @@ function buildRecurrentRow(r, isPaid, isOverdue, isDueThisMonth, dueMonth, isLas
         });
     }
     right.appendChild(badge);
+    subRow.appendChild(right);
+    header.appendChild(subRow);
 
-    const actions = document.createElement('div');
-    actions.className = 'flex gap-0.5 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity';
-    actions.appendChild(iconButton(ICON_HISTORY, 'text-muted hover:text-dark', () => openRecurrentHistory(r)));
-    actions.appendChild(iconButton(ICON_EDIT, 'text-muted hover:text-dark', () => openRecurrentModal(r)));
-    actions.appendChild(iconButton(ICON_TRASH, 'text-muted hover:text-danger', () => openRecurrentDelete(r)));
-    right.appendChild(actions);
+    wrap.appendChild(header);
 
-    row.appendChild(right);
-    return row;
+    if (expandedId === r.id) {
+        wrap.appendChild(buildRecurrentExpansion(r));
+    }
+    return wrap;
+}
+
+// Expansion: gray panel with key/value rows. No buttons — actions live in "⋮".
+function buildRecurrentExpansion(r) {
+    const exp = document.createElement('div');
+    exp.className = 'border-t border-border bg-muted/[.04] px-4 py-3';
+
+    const kv = (k, v) => {
+        if (v == null || v === '') return;
+        const row = document.createElement('div');
+        row.className = 'flex items-baseline justify-between gap-3 py-1 text-[13px]';
+        const ks = document.createElement('span');
+        ks.className = 'text-muted flex-shrink-0';
+        ks.textContent = k;
+        const vs = document.createElement('span');
+        vs.className = 'text-dark font-medium text-right break-words min-w-0';
+        vs.textContent = v;
+        row.appendChild(ks); row.appendChild(vs);
+        exp.appendChild(row);
+    };
+
+    if (r.description) kv('Descripción', r.description);
+
+    const cat = categoryById(r.expense_category_id);
+    if (cat) kv('Categoría', cat.name);
+
+    const acct = accountById(r.account_id);
+    if (acct) kv('Cuenta', acct.name);
+
+    const card = cardById(r.card_id);
+    if (card) kv('Tarjeta', card.name + (card.last_four ? ` ····${card.last_four}` : ''));
+
+    const period = PERIOD_LABEL[r.time_period] || r.time_period || 'Mensual';
+    kv('Frecuencia', `${period} · día ${r.due_date_day}`);
+
+    if (r.start_date) kv('Vigente desde', formatDateLong(r.start_date));
+    if (r.end_date)   kv('Hasta',          formatDateLong(r.end_date));
+
+    if (Array.isArray(r.aliases) && r.aliases.length) {
+        kv('Aliases IA', r.aliases.join(', '));
+    }
+
+    const native = r.currency || 'ARS';
+    if (native !== 'ARS') {
+        const arsEquiv = fx.toArs(Math.abs(Number(r.amount) || 0), native);
+        kv('Equivalente', '≈ ' + formatPrice(arsEquiv, 'ARS'));
+    }
+
+    return exp;
 }
 
 // ── Toggle paid status for the current month ────────────────────────
@@ -864,7 +1050,7 @@ function buildHistoryRow(r, occ, today) {
     if (tx) {
         const txAmount = Math.abs(Number(tx.amount));
         if (txAmount && txAmount !== Math.abs(Number(r.amount))) {
-            subParts.push(`pagado ${formatPrice(txAmount)}`);
+            subParts.push(`pagado ${formatPrice(txAmount, tx.currency)}`);
         }
     }
     sub.textContent = subParts.join(' · ');
@@ -978,6 +1164,14 @@ mangosAuth.ready.then(user => {
     if (!user) return;
     readUrlState();
     loadAll();
+
+    // Refresh once FX rates are in so the rate strip and any non-ARS row
+    // amounts switch to the freshly fetched rates.
+    fx.ready.then(() => {
+        renderFxStrip();
+        renderSummary();
+        renderRecurrents();
+    });
 
     const searchInput = document.getElementById('filter-search');
     searchInput.value = searchQuery;

@@ -26,6 +26,8 @@
     <script src="<?= asset('/assets/js/auth.js') ?>"></script>
     <script src="<?= asset('/assets/js/api.js') ?>"></script>
     <script src="<?= asset('/assets/js/app.js') ?>"></script>
+    <script src="<?= asset('/assets/js/fx.js') ?>"></script>
+    <script src="<?= asset('/assets/js/row-menu.js') ?>"></script>
     <script src="<?= asset('/assets/js/account-card-picker.js') ?>"></script>
 </head>
 <body class="min-h-screen">

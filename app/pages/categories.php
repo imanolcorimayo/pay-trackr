@@ -1,5 +1,5 @@
-<!-- Page header -->
-<div class="flex items-center justify-between mb-8">
+<!-- Page header (desktop only — mobile topbar shows the page title) -->
+<div class="hidden lg:flex items-center justify-between mb-6">
     <div>
         <h1 class="text-2xl font-semibold">Categorias</h1>
         <p class="text-sm text-muted mt-1">Clasifica tus gastos para entender en que se va tu plata</p>
@@ -12,6 +12,16 @@
     </button>
 </div>
 
+<!-- Mobile action row -->
+<div class="lg:hidden mb-3">
+    <button type="button" onclick="openCategoryModal()" class="w-full inline-flex items-center justify-center gap-1.5 px-2 py-2 rounded-lg border border-border text-sm text-dark hover:bg-dark/5 active:scale-95 transition" title="Nueva categoria">
+        <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+        </svg>
+        <span>Nueva categoria</span>
+    </button>
+</div>
+
 <!-- Grid -->
 <div id="categories-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
     <div class="card flex items-center gap-3 py-4"><div class="skeleton h-6 w-6 sm:h-8 sm:w-8 rounded-full">&nbsp;</div><div class="skeleton h-4 w-24">&nbsp;</div></div>
@@ -21,9 +31,16 @@
 </div>
 
 <!-- ─────────────────────────── Form modal ─────────────────────────── -->
-<div id="category-modal" class="fixed inset-0 z-50 hidden bg-dark/40 overflow-y-auto">
-    <div class="min-h-full flex items-center justify-center p-4">
-        <div class="bg-white rounded-xl border border-border w-full max-w-md">
+<div id="category-modal" class="fixed inset-0 z-50 hidden bg-dark/40">
+    <!-- bottom: var(--keyboard-inset) lifts the sheet above the on-screen keyboard on iOS;
+         max-h: 85dvh shrinks the sheet with the visual viewport when the keyboard opens. -->
+    <div class="absolute inset-x-0 bottom-0 sm:inset-0 sm:flex sm:items-center sm:justify-center sm:p-4"
+         style="bottom: var(--keyboard-inset, 0px);">
+        <div class="bg-white rounded-t-2xl sm:rounded-xl border-t sm:border border-border w-full sm:max-w-md max-h-[85dvh] sm:max-h-[92vh] overflow-y-auto safe-bottom">
+            <!-- Drag handle (mobile only, tap to close) -->
+            <button type="button" onclick="closeCategoryModal()" class="w-full pt-2 pb-1 flex justify-center sm:hidden" aria-label="Cerrar">
+                <div class="w-10 h-1 rounded-full bg-border"></div>
+            </button>
             <header class="px-5 py-4 border-b border-border flex items-center justify-between">
                 <h2 id="category-modal-title" class="text-lg font-semibold">Nueva categoria</h2>
                 <button type="button" onclick="closeCategoryModal()" class="text-muted hover:text-dark p-1 -m-1">
@@ -66,16 +83,23 @@
 
 <!-- ─────────────────────────── Confirm delete ─────────────────────────── -->
 <div id="category-delete-modal" class="fixed inset-0 z-50 hidden bg-dark/40">
-    <div class="min-h-full flex items-center justify-center p-4">
-        <div class="bg-white rounded-xl border border-border w-full max-w-sm p-5">
-            <h2 class="text-lg font-semibold">Eliminar categoria</h2>
-            <p class="text-sm text-muted mt-2">
-                Vas a eliminar <span id="category-delete-name" class="font-medium text-dark"></span>.
-                Los movimientos que la usaban quedaran sin categoria.
-            </p>
-            <div class="flex justify-end gap-2 mt-5">
-                <button type="button" onclick="closeCategoryDelete()" class="btn btn-ghost">Cancelar</button>
-                <button type="button" onclick="confirmCategoryDelete()" id="category-delete-submit" class="btn btn-danger">Eliminar</button>
+    <div class="absolute inset-x-0 bottom-0 sm:inset-0 sm:flex sm:items-center sm:justify-center sm:p-4"
+         style="bottom: var(--keyboard-inset, 0px);">
+        <div class="bg-white rounded-t-2xl sm:rounded-xl border-t sm:border border-border w-full sm:max-w-sm safe-bottom">
+            <!-- Drag handle (mobile only, tap to close) -->
+            <button type="button" onclick="closeCategoryDelete()" class="w-full pt-2 pb-1 flex justify-center sm:hidden" aria-label="Cerrar">
+                <div class="w-10 h-1 rounded-full bg-border"></div>
+            </button>
+            <div class="p-5">
+                <h2 class="text-lg font-semibold">Eliminar categoria</h2>
+                <p class="text-sm text-muted mt-2">
+                    Vas a eliminar <span id="category-delete-name" class="font-medium text-dark"></span>.
+                    Los movimientos que la usaban quedaran sin categoria.
+                </p>
+                <div class="flex justify-end gap-2 mt-5">
+                    <button type="button" onclick="closeCategoryDelete()" class="btn btn-ghost">Cancelar</button>
+                    <button type="button" onclick="confirmCategoryDelete()" id="category-delete-submit" class="btn btn-danger">Eliminar</button>
+                </div>
             </div>
         </div>
     </div>
@@ -116,7 +140,7 @@ function svgIcon(pathD, sizeCls = 'w-4 h-4') {
 function iconButton(pathD, cls, onClick) {
     const btn = document.createElement('button');
     btn.type = 'button';
-    btn.className = `p-1.5 rounded ${cls} hover:bg-dark/5 transition-colors`;
+    btn.className = `p-2.5 sm:p-1.5 rounded ${cls} hover:bg-dark/5 transition-colors`;
     btn.appendChild(svgIcon(pathD));
     btn.addEventListener('click', onClick);
     return btn;
@@ -191,7 +215,7 @@ function buildPalette() {
     PALETTE.forEach(hex => {
         const sw = document.createElement('button');
         sw.type = 'button';
-        sw.className = 'h-7 w-7 rounded-full border border-border transition-transform hover:scale-110 focus:outline-none focus:ring-2 focus:ring-accent/30';
+        sw.className = 'h-9 w-9 sm:h-8 sm:w-8 rounded-full border border-border transition-transform hover:scale-110 focus:outline-none focus:ring-2 focus:ring-accent/30';
         sw.style.backgroundColor = hex;
         sw.title = hex;
         sw.addEventListener('click', () => setColor(hex));

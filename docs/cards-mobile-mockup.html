@@ -1,0 +1,480 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Mangos · Mobile cards — final mockup</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+tailwind.config = {
+  theme: {
+    extend: {
+      fontFamily: { sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'] },
+      colors: {
+        dark:    '#292524',
+        accent:  '#D97706',
+        light:   '#FFFBF5',
+        muted:   '#8C857D',
+        border:  '#E8E2DA',
+        danger:  '#B91C1C',
+        success: '#15803D',
+      },
+    },
+  },
+};
+</script>
+<style>
+  body { font-feature-settings: "tnum"; background: #FFFBF5; color: #292524; font-family: Inter, system-ui, sans-serif; }
+  .card { background:#fff; border:1px solid #E8E2DA; border-radius:.75rem; padding:0; }
+  .badge { display:inline-block; font-size:10px; font-weight:600; letter-spacing:.04em; text-transform:uppercase; padding:2px 8px; border-radius:4px; white-space:nowrap; }
+  .badge-success { background:rgba(21,128,61,.1); color:#15803D; }
+  .badge-danger  { background:rgba(185,28,28,.1); color:#B91C1C; }
+  .badge-muted   { background:rgba(140,133,125,.1); color:#8C857D; }
+
+  /* Phone frame so reviewers see this at the actual mobile width */
+  .phone {
+    width: 380px; max-width: 100%;
+    margin: 0 auto;
+    border: 1px solid #E8E2DA;
+    border-radius: 16px;
+    background: #FFFBF5;
+    padding: 12px;
+  }
+
+  /* Leading slot variants — per-type sizing.
+     Same vertical alignment within a row; slight cross-row variance is fine. */
+  .lead-dot   { width:.625rem; height:.625rem; border-radius:9999px; flex-shrink:0; }
+  .lead-tile  {
+    width:1.75rem; height:1.75rem; border-radius:.5rem;
+    display:flex; align-items:center; justify-content:center; flex-shrink:0;
+  }
+  .lead-date  {
+    width:2.25rem; height:2.5rem; border-radius:.5rem;
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    background:rgba(217,119,6,.1); color:#D97706; flex-shrink:0; line-height:1;
+  }
+
+  /* Aligns line 2 (subline + amount) under the title for each leading-slot size. */
+  .pad-dot   { padding-left:1.375rem; }   /* 10px dot + 12px gap */
+  .pad-tile  { padding-left:2.5rem;   }   /* 28px tile + 12px gap */
+  .pad-date  { padding-left:3rem;     }   /* 36px date + 12px gap */
+
+  /* Expansion section — gray background, info only, no buttons. */
+  .expansion {
+    background: rgba(140,133,125,.04);
+    border-top: 1px solid #E8E2DA;
+    padding: .75rem 1rem .9rem 1rem;
+  }
+  .expansion-row {
+    display:flex; justify-content:space-between; gap:.75rem;
+    font-size:.78rem; padding:.25rem 0;
+  }
+  .expansion-row .k { color:#8C857D; }
+  .expansion-row .v { color:#292524; font-weight:500; text-align:right; }
+
+  .label-final { color:#15803D; font-size:.7rem; font-weight:600; letter-spacing:.05em; text-transform:uppercase; margin-bottom:.5rem; }
+  .label-ex    { color:#8C857D; font-size:.7rem; font-weight:600; letter-spacing:.05em; text-transform:uppercase; margin-bottom:.5rem; }
+</style>
+</head>
+<body class="min-h-screen p-6">
+
+<div class="max-w-7xl mx-auto">
+  <header class="mb-8">
+    <h1 class="text-2xl font-bold">Mobile cards — diseño final</h1>
+    <p class="text-sm text-muted mt-1 max-w-2xl">
+      Una propuesta por tipo (V3: título de ancho completo). Estado expandido al pie sin botones — sólo info extra.
+    </p>
+  </header>
+
+  <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+
+  <!-- ════════════════════════════════════════════════════════════════ -->
+  <!-- 1 · Movimiento común (en /movimientos)                            -->
+  <!-- ════════════════════════════════════════════════════════════════ -->
+  <section>
+    <h2 class="text-lg font-semibold mb-1">1 · Movimiento común</h2>
+    <p class="text-xs text-muted mb-3"><code>/movimientos</code></p>
+
+    <p class="label-final">Final</p>
+    <div class="phone">
+      <div class="card">
+        <!-- ─ row ─ -->
+        <div class="py-3 px-3 border-b border-border">
+          <div class="flex items-center gap-3">
+            <div class="lead-dot" style="background:#8C857D"></div>
+            <p class="flex-1 text-[15px] font-medium truncate">Cafe</p>
+            <button class="p-1.5 text-muted -mr-1" aria-label="Más">⋮</button>
+          </div>
+          <div class="flex items-end justify-between gap-3 mt-1 pad-dot">
+            <p class="text-xs text-muted truncate flex-1 min-w-0">29 abr · Mercado Pago ····9023 · IA texto</p>
+            <div class="flex items-center gap-2 flex-shrink-0">
+              <span class="text-[15px] font-semibold tabular-nums leading-none">$ 15.000</span>
+              <span class="badge badge-success">Pagado</span>
+            </div>
+          </div>
+        </div>
+        <!-- ─ row ─ -->
+        <div class="py-3 px-3 border-b border-border">
+          <div class="flex items-center gap-3">
+            <div class="lead-dot" style="background:#D97706"></div>
+            <p class="flex-1 text-[15px] font-medium truncate">Hostinger email muy largo de verdad</p>
+            <button class="p-1.5 text-muted -mr-1" aria-label="Más">⋮</button>
+          </div>
+          <div class="flex items-end justify-between gap-3 mt-1 pad-dot">
+            <p class="text-xs text-muted truncate flex-1 min-w-0">5 may · Visa ····4421</p>
+            <div class="flex items-center gap-2 flex-shrink-0">
+              <span class="text-[15px] font-semibold tabular-nums leading-none">USD 5,00</span>
+              <span class="badge badge-muted">Pendiente</span>
+            </div>
+          </div>
+        </div>
+        <!-- ─ row ─ -->
+        <div class="py-3 px-3">
+          <div class="flex items-center gap-3">
+            <div class="lead-dot" style="background:#15803D"></div>
+            <p class="flex-1 text-[15px] font-medium truncate">Panaderia</p>
+            <button class="p-1.5 text-muted -mr-1" aria-label="Más">⋮</button>
+          </div>
+          <div class="flex items-end justify-between gap-3 mt-1 pad-dot">
+            <p class="text-xs text-muted truncate flex-1 min-w-0">28 abr · IA texto</p>
+            <div class="flex items-center gap-2 flex-shrink-0">
+              <span class="text-[15px] font-semibold tabular-nums leading-none">$ 2.800</span>
+              <span class="badge badge-success">Pagado</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ════════════════════════════════════════════════════════════════ -->
+  <!-- 2 · Movimiento de un fijo (instancia en /movimientos)             -->
+  <!-- ════════════════════════════════════════════════════════════════ -->
+  <section>
+    <h2 class="text-lg font-semibold mb-1">2 · Instancia de un fijo</h2>
+    <p class="text-xs text-muted mb-3"><code>/movimientos</code> · Icono ↻ tintado con el color de la categoría</p>
+
+    <p class="label-final">Final</p>
+    <div class="phone">
+      <div class="card">
+        <!-- categoría: Servicios (orange) -->
+        <div class="py-3 px-3 border-b border-border">
+          <div class="flex items-center gap-3">
+            <div class="lead-tile" style="background:rgba(217,119,6,.1); color:#D97706;">
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+              </svg>
+            </div>
+            <p class="flex-1 text-[15px] font-medium truncate">Hostinger email</p>
+            <button class="p-1.5 text-muted -mr-1" aria-label="Más">⋮</button>
+          </div>
+          <div class="flex items-end justify-between gap-3 mt-1 pad-tile">
+            <p class="text-xs text-muted truncate flex-1 min-w-0">29 abr · Deel</p>
+            <div class="flex items-center gap-2 flex-shrink-0">
+              <span class="text-[15px] font-semibold tabular-nums leading-none">USD 5,00</span>
+              <span class="badge badge-success">Pagado</span>
+            </div>
+          </div>
+        </div>
+        <!-- categoría: Entretenimiento (green) -->
+        <div class="py-3 px-3 border-b border-border">
+          <div class="flex items-center gap-3">
+            <div class="lead-tile" style="background:rgba(21,128,61,.1); color:#15803D;">
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+              </svg>
+            </div>
+            <p class="flex-1 text-[15px] font-medium truncate">Netflix</p>
+            <button class="p-1.5 text-muted -mr-1" aria-label="Más">⋮</button>
+          </div>
+          <div class="flex items-end justify-between gap-3 mt-1 pad-tile">
+            <p class="text-xs text-muted truncate flex-1 min-w-0">12 abr · Visa ····4421</p>
+            <div class="flex items-center gap-2 flex-shrink-0">
+              <span class="text-[15px] font-semibold tabular-nums leading-none">$ 8.500</span>
+              <span class="badge badge-success">Pagado</span>
+            </div>
+          </div>
+        </div>
+        <!-- categoría: Comida (red) -->
+        <div class="py-3 px-3">
+          <div class="flex items-center gap-3">
+            <div class="lead-tile" style="background:rgba(185,28,28,.1); color:#B91C1C;">
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+              </svg>
+            </div>
+            <p class="flex-1 text-[15px] font-medium truncate">Suscripción almacén</p>
+            <button class="p-1.5 text-muted -mr-1" aria-label="Más">⋮</button>
+          </div>
+          <div class="flex items-end justify-between gap-3 mt-1 pad-tile">
+            <p class="text-xs text-muted truncate flex-1 min-w-0">Vence 30 abr · Mercado Pago</p>
+            <div class="flex items-center gap-2 flex-shrink-0">
+              <span class="text-[15px] font-semibold tabular-nums leading-none">$ 24.500</span>
+              <span class="badge badge-danger">Vencido</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ════════════════════════════════════════════════════════════════ -->
+  <!-- 3 · Transferencia (en /movimientos)                               -->
+  <!-- ════════════════════════════════════════════════════════════════ -->
+  <section>
+    <h2 class="text-lg font-semibold mb-1">3 · Transferencia</h2>
+    <p class="text-xs text-muted mb-3"><code>/movimientos</code> · Título full-width, icono identifica</p>
+
+    <p class="label-final">Final</p>
+    <div class="phone">
+      <div class="card">
+        <!-- Cross-currency con comisión -->
+        <div class="py-3 px-3 border-b border-border">
+          <div class="flex items-center gap-3">
+            <div class="lead-tile" style="background:rgba(217,119,6,.1); color:#D97706;">
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/>
+              </svg>
+            </div>
+            <p class="flex-1 text-[15px] font-medium truncate">Deel → Mercado Pago</p>
+            <button class="p-1.5 text-muted -mr-1" aria-label="Más">⋮</button>
+          </div>
+          <div class="flex items-end justify-between gap-3 mt-1 pad-tile">
+            <p class="text-xs text-muted truncate flex-1 min-w-0">29 abr · Comisión USD 0,50</p>
+            <div class="flex flex-col items-end flex-shrink-0 gap-0.5">
+              <span class="text-[13px] font-semibold tabular-nums text-danger leading-tight">−USD 100,00</span>
+              <span class="text-[13px] font-semibold tabular-nums text-success leading-tight">+$ 135.000</span>
+            </div>
+          </div>
+        </div>
+        <!-- Same-currency sin comisión -->
+        <div class="py-3 px-3">
+          <div class="flex items-center gap-3">
+            <div class="lead-tile" style="background:rgba(217,119,6,.1); color:#D97706;">
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/>
+              </svg>
+            </div>
+            <p class="flex-1 text-[15px] font-medium truncate">Galicia → Mercado Pago</p>
+            <button class="p-1.5 text-muted -mr-1" aria-label="Más">⋮</button>
+          </div>
+          <div class="flex items-end justify-between gap-3 mt-1 pad-tile">
+            <p class="text-xs text-muted truncate flex-1 min-w-0">28 abr · sin comisión</p>
+            <div class="flex flex-col items-end flex-shrink-0 gap-0.5">
+              <span class="text-[13px] font-semibold tabular-nums text-danger leading-tight">−$ 50.000</span>
+              <span class="text-[13px] font-semibold tabular-nums text-success leading-tight">+$ 50.000</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ════════════════════════════════════════════════════════════════ -->
+  <!-- 4 · Tarjeta de gasto fijo (en /fijos)                             -->
+  <!-- ════════════════════════════════════════════════════════════════ -->
+  <section>
+    <h2 class="text-lg font-semibold mb-1">4 · Tarjeta de gasto fijo</h2>
+    <p class="text-xs text-muted mb-3"><code>/fijos</code> · Date-tile "Día N" como diferenciador</p>
+
+    <p class="label-final">Final</p>
+    <div class="phone">
+      <div class="card">
+        <div class="py-3 px-3 border-b border-border">
+          <div class="flex items-center gap-3">
+            <div class="lead-date">
+              <span class="text-[9px] font-semibold uppercase tracking-wide">Día</span>
+              <span class="text-base font-bold mt-0.5">5</span>
+            </div>
+            <p class="flex-1 text-[15px] font-medium truncate">Hostinger email recurrente</p>
+            <button class="p-1.5 text-muted -mr-1" aria-label="Más">⋮</button>
+          </div>
+          <div class="flex items-end justify-between gap-3 mt-1 pad-date">
+            <p class="text-xs text-muted truncate flex-1 min-w-0">Mensual · Visa ····4421</p>
+            <div class="flex items-center gap-2 flex-shrink-0">
+              <span class="text-[15px] font-semibold tabular-nums leading-none">USD 5,00</span>
+              <span class="badge badge-muted">Pendiente</span>
+            </div>
+          </div>
+        </div>
+        <div class="py-3 px-3 border-b border-border">
+          <div class="flex items-center gap-3">
+            <div class="lead-date">
+              <span class="text-[9px] font-semibold uppercase tracking-wide">Día</span>
+              <span class="text-base font-bold mt-0.5">12</span>
+            </div>
+            <p class="flex-1 text-[15px] font-medium truncate">Netflix</p>
+            <button class="p-1.5 text-muted -mr-1" aria-label="Más">⋮</button>
+          </div>
+          <div class="flex items-end justify-between gap-3 mt-1 pad-date">
+            <p class="text-xs text-muted truncate flex-1 min-w-0">Mensual</p>
+            <div class="flex items-center gap-2 flex-shrink-0">
+              <span class="text-[15px] font-semibold tabular-nums leading-none">$ 8.500</span>
+              <span class="badge badge-success">Pagado</span>
+            </div>
+          </div>
+        </div>
+        <!-- Anual: date-tile en gris muted -->
+        <div class="py-3 px-3">
+          <div class="flex items-center gap-3">
+            <div class="lead-date" style="background:rgba(140,133,125,.1); color:#8C857D;">
+              <span class="text-[9px] font-semibold uppercase tracking-wide">Día</span>
+              <span class="text-base font-bold mt-0.5">25</span>
+            </div>
+            <p class="flex-1 text-[15px] font-medium truncate">Patente auto</p>
+            <button class="p-1.5 text-muted -mr-1" aria-label="Más">⋮</button>
+          </div>
+          <div class="flex items-end justify-between gap-3 mt-1 pad-date">
+            <p class="text-xs text-muted truncate flex-1 min-w-0">Anual · vence en mayo</p>
+            <div class="flex items-center gap-2 flex-shrink-0">
+              <span class="text-[15px] font-semibold tabular-nums leading-none">$ 320.000</span>
+              <span class="badge badge-muted">Anual</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  </div><!-- /grid -->
+
+  <!-- ════════════════════════════════════════════════════════════════ -->
+  <!-- 5 · Estado expandido (sólo info extra, sin botones)               -->
+  <!-- ════════════════════════════════════════════════════════════════ -->
+  <section class="mt-10">
+    <h2 class="text-lg font-semibold mb-1">5 · Expandido — sólo info extra</h2>
+    <p class="text-xs text-muted mb-4 max-w-2xl">
+      Tap en la fila → la fila se "abre" debajo y muestra los campos extra. Sin botones de acción —
+      todas las acciones siguen viviendo en el menú "⋮" (que ahora también incluye Editar).
+    </p>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+
+      <!-- Movimiento común expandido -->
+      <div>
+        <p class="label-ex">Movimiento común — expandido</p>
+        <div class="phone">
+          <div class="card">
+            <!-- header (igual que la fila normal) -->
+            <div class="py-3 px-3">
+              <div class="flex items-center gap-3">
+                <div class="lead-dot" style="background:#D97706"></div>
+                <p class="flex-1 text-[15px] font-medium truncate">Hostinger — renovación anual</p>
+                <button class="p-1.5 text-muted -mr-1" aria-label="Más">⋮</button>
+              </div>
+              <div class="flex items-end justify-between gap-3 mt-1 pad-dot">
+                <p class="text-xs text-muted truncate flex-1 min-w-0">5 may · Visa ····4421</p>
+                <div class="flex items-center gap-2 flex-shrink-0">
+                  <span class="text-[15px] font-semibold tabular-nums leading-none">USD 5,00</span>
+                  <span class="badge badge-muted">Pendiente</span>
+                </div>
+              </div>
+            </div>
+            <div class="expansion">
+              <div class="expansion-row"><span class="k">Descripción</span><span class="v">Renovación plan anual hosting + dominio</span></div>
+              <div class="expansion-row"><span class="k">Cuenta</span><span class="v">Mercado Pago</span></div>
+              <div class="expansion-row"><span class="k">Tarjeta</span><span class="v">Visa ····4421</span></div>
+              <div class="expansion-row"><span class="k">Categoría</span><span class="v">Servicios online</span></div>
+              <div class="expansion-row"><span class="k">Equivalente</span><span class="v">≈ $ 6.250</span></div>
+              <div class="expansion-row"><span class="k">Origen</span><span class="v">IA · texto</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Transferencia expandida (caso clave) -->
+      <div>
+        <p class="label-ex">Transferencia — expandida</p>
+        <div class="phone">
+          <div class="card">
+            <div class="py-3 px-3">
+              <div class="flex items-center gap-3">
+                <div class="lead-tile" style="background:rgba(217,119,6,.1); color:#D97706;">
+                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                          d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/>
+                  </svg>
+                </div>
+                <p class="flex-1 text-[15px] font-medium truncate">Deel → Mercado Pago</p>
+                <button class="p-1.5 text-muted -mr-1" aria-label="Más">⋮</button>
+              </div>
+              <div class="flex items-end justify-between gap-3 mt-1 pad-tile">
+                <p class="text-xs text-muted truncate flex-1 min-w-0">29 abr · cross-currency</p>
+                <div class="flex flex-col items-end flex-shrink-0 gap-0.5">
+                  <span class="text-[13px] font-semibold tabular-nums text-danger leading-tight">−USD 100,00</span>
+                  <span class="text-[13px] font-semibold tabular-nums text-success leading-tight">+$ 135.000</span>
+                </div>
+              </div>
+            </div>
+            <div class="expansion">
+              <div class="expansion-row"><span class="k">De</span><span class="v">Deel · USD</span></div>
+              <div class="expansion-row"><span class="k">Salida</span><span class="v">−USD 100,00 · ≈ $ 125.000</span></div>
+              <div class="expansion-row"><span class="k">A</span><span class="v">Mercado Pago · ARS</span></div>
+              <div class="expansion-row"><span class="k">Entrada</span><span class="v">+$ 135.000</span></div>
+              <div class="expansion-row"><span class="k">Comisión</span><span class="v">USD 0,50 · ≈ $ 625</span></div>
+              <div class="expansion-row"><span class="k">Tipo de cambio</span><span class="v">implícito $ 1.350 / USD</span></div>
+              <div class="expansion-row"><span class="k">Fecha</span><span class="v">29 abr 2026</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tarjeta de fijo expandida -->
+      <div>
+        <p class="label-ex">Tarjeta de fijo — expandida</p>
+        <div class="phone">
+          <div class="card">
+            <div class="py-3 px-3">
+              <div class="flex items-center gap-3">
+                <div class="lead-date">
+                  <span class="text-[9px] font-semibold uppercase tracking-wide">Día</span>
+                  <span class="text-base font-bold mt-0.5">5</span>
+                </div>
+                <p class="flex-1 text-[15px] font-medium truncate">Hostinger email</p>
+                <button class="p-1.5 text-muted -mr-1" aria-label="Más">⋮</button>
+              </div>
+              <div class="flex items-end justify-between gap-3 mt-1 pad-date">
+                <p class="text-xs text-muted truncate flex-1 min-w-0">Mensual · Visa ····4421</p>
+                <div class="flex items-center gap-2 flex-shrink-0">
+                  <span class="text-[15px] font-semibold tabular-nums leading-none">USD 5,00</span>
+                  <span class="badge badge-muted">Pendiente</span>
+                </div>
+              </div>
+            </div>
+            <div class="expansion">
+              <div class="expansion-row"><span class="k">Descripción</span><span class="v">Casilla de mail comercial</span></div>
+              <div class="expansion-row"><span class="k">Cuenta</span><span class="v">Deel</span></div>
+              <div class="expansion-row"><span class="k">Tarjeta</span><span class="v">Visa ····4421</span></div>
+              <div class="expansion-row"><span class="k">Frecuencia</span><span class="v">Mensual · día 5</span></div>
+              <div class="expansion-row"><span class="k">Vigente desde</span><span class="v">enero 2025</span></div>
+              <div class="expansion-row"><span class="k">Aliases IA</span><span class="v">"hostinger.com", "h-mail"</span></div>
+              <div class="expansion-row"><span class="k">Equivalente</span><span class="v">≈ $ 6.250</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <footer class="mt-10 max-w-3xl mx-auto text-sm text-muted">
+    <p class="font-medium text-dark mb-2">Reglas del nuevo "⋮":</p>
+    <ul class="list-disc pl-5 space-y-1.5">
+      <li>Sigue siempre visible (un ícono por fila).</li>
+      <li>Items: <strong>Mostrar como</strong> (monedas), <strong>Editar</strong> <em>(nuevo)</em>, <strong>Eliminar</strong>.</li>
+      <li>Sólo en /fijos: agrega <strong>Historial</strong>.</li>
+      <li>El expandir/contraer es independiente del menú: tap en la fila (cualquier zona menos el "⋮") la abre/cierra.</li>
+    </ul>
+  </footer>
+
+</div>
+</body>
+</html>

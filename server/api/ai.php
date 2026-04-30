@@ -28,27 +28,44 @@ if ($ai_action === 'parse-transactions') {
 
 function handle_parse_transactions(PDO $pdo, string $user_id): void {
     $body = get_json_body();
-    $images = $body['images'] ?? [];
-
-    if (!is_array($images) || count($images) === 0) {
-        json_error('At least one image is required');
-    }
-    if (count($images) > 10) {
-        json_error('Maximum 10 images per request', 413);
+    // Default to 'image' so legacy clients (no `mode` field) keep working.
+    $mode = $body['mode'] ?? 'image';
+    if (!in_array($mode, ['image', 'audio'], true)) {
+        json_error('mode must be one of: image, audio');
     }
 
-    $total_b64 = 0;
-    foreach ($images as $i => $img) {
-        if (empty($img['mimeType']) || empty($img['data'])) {
-            json_error("Image $i: mimeType and data required");
+    $images = [];
+    $audio = null;
+
+    if ($mode === 'image') {
+        $images = $body['images'] ?? [];
+        if (!is_array($images) || count($images) === 0) {
+            json_error('At least one image is required');
         }
-        if (!str_starts_with($img['mimeType'], 'image/')) {
-            json_error("Image $i: not an image mimeType");
+        if (count($images) > 10) {
+            json_error('Maximum 10 images per request', 413);
         }
-        $total_b64 += strlen($img['data']);
-    }
-    if ($total_b64 > 6 * 1024 * 1024) {
-        json_error('Total image size exceeds 6MB (base64)', 413);
+
+        $total_b64 = 0;
+        foreach ($images as $i => $img) {
+            if (empty($img['mimeType']) || empty($img['data'])) {
+                json_error("Image $i: mimeType and data required");
+            }
+            if (!str_starts_with($img['mimeType'], 'image/')) {
+                json_error("Image $i: not an image mimeType");
+            }
+            $total_b64 += strlen($img['data']);
+        }
+        if ($total_b64 > 6 * 1024 * 1024) {
+            json_error('Total image size exceeds 6MB (base64)', 413);
+        }
+    } else { // audio
+        $mimeType = $body['mimeType'] ?? '';
+        $data = $body['data'] ?? '';
+        if (!$mimeType || !$data) json_error('mimeType and data are required for mode=audio');
+        if (!str_starts_with($mimeType, 'audio/')) json_error('mimeType must be audio/*');
+        if (strlen($data) > 8 * 1024 * 1024) json_error('audio exceeds 8MB (base64)', 413);
+        $audio = ['mimeType' => $mimeType, 'data' => $data];
     }
 
     $api_key = $_ENV['GEMINI_API_KEY'] ?? getenv('GEMINI_API_KEY') ?: '';
@@ -112,6 +129,7 @@ function handle_parse_transactions(PDO $pdo, string $user_id): void {
 
     $context = [
         'today' => $today,
+        'mode' => $mode,
         'existing_transactions_recent' => array_map(fn($p) => [
             'id' => $p['id'],
             'title' => $p['title'],
@@ -125,8 +143,12 @@ function handle_parse_transactions(PDO $pdo, string $user_id): void {
     ];
 
     $parts = [];
-    foreach ($images as $img) {
-        $parts[] = ['inlineData' => ['mimeType' => $img['mimeType'], 'data' => $img['data']]];
+    if ($mode === 'image') {
+        foreach ($images as $img) {
+            $parts[] = ['inlineData' => ['mimeType' => $img['mimeType'], 'data' => $img['data']]];
+        }
+    } else { // audio
+        $parts[] = ['inlineData' => ['mimeType' => $audio['mimeType'], 'data' => $audio['data']]];
     }
     $parts[] = ['text' => build_prompt($context)];
 
@@ -195,8 +217,10 @@ function handle_parse_transactions(PDO $pdo, string $user_id): void {
     json_response([
         'drafts' => $drafts,
         'unreadable_screenshot_idxs' => $unreadable,
+        'transcription' => $result['transcription'] ?? null,
         'meta' => [
-            'image_count' => count($images),
+            'mode' => $mode,
+            'image_count' => $mode === 'image' ? count($images) : 0,
             'processing_ms' => $elapsed_ms,
             'model_used' => $gem['model_used'] ?? null,
             'models_tried' => $gem['tried'] ?? [],
@@ -207,13 +231,61 @@ function handle_parse_transactions(PDO $pdo, string $user_id): void {
 function build_prompt(array $context): string {
     $context_json = json_encode($context, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
     $today = $context['today'];
+    $mode = $context['mode'] ?? 'image';
 
-    return <<<PROMPT
-Analiza las capturas de pantalla adjuntas (en orden, indices 0..N-1) y extrae TODAS las transacciones de GASTO (egreso de dinero) que aparezcan. Tu objetivo es ser EXHAUSTIVO: las capturas pueden tener listas densas, recorre cada una de arriba a abajo y NO te saltes ninguna fila de gasto.
+    $intro = $mode === 'audio'
+        ? "Te paso un audio en español argentino donde el usuario describe UNO O MAS GASTOS (egresos de dinero) que ya hizo o tiene pendientes. Tu objetivo: TRANSCRIBIR el audio completo en el campo 'transcription' y extraer CADA gasto mencionado como un draft separado. Un solo audio puede generar 1, 2, 5 o mas drafts segun cuantos gastos enumere el usuario. NO consolides varios gastos en uno; cada item mencionado va por separado."
+        : "Analiza las capturas de pantalla adjuntas (en orden, indices 0..N-1) y extrae TODAS las transacciones de GASTO (egreso de dinero) que aparezcan. Tu objetivo es ser EXHAUSTIVO: las capturas pueden tener listas densas, recorre cada una de arriba a abajo y NO te saltes ninguna fila de gasto.";
 
-CONTEXTO DEL USUARIO:
-$context_json
+    $source_idx_rule = $mode === 'audio'
+        ? "- screenshot_idx: en modo audio dejalo en null (no aplica)."
+        : "- screenshot_idx: indice 0..N-1 de la captura donde aparece la fila.";
 
+    $exhaustividad = $mode === 'audio'
+        ? <<<TXT
+EXHAUSTIVIDAD:
+- El audio puede listar varios gastos seguidos ("gaste 1500 en el super, 800 en el cafe, 12000 de alquiler"). Cada uno es un draft.
+- Si el usuario menciona el mismo gasto dos veces, devuelvelo una sola vez.
+- Si el usuario habla de algo que NO es un gasto (anecdota, recordatorio futuro sin monto, ingreso), ignoralo.
+TXT
+        : <<<TXT
+EXHAUSTIVIDAD:
+- Cada captura puede contener 5-30 filas. Extrae cada GASTO sin omitir ninguno.
+- Las capturas pueden solaparse: la misma transaccion puede aparecer en varias. Usa duplicate_in_batch_idx para señalarlo, no la omitas en la primera aparicion.
+- "Saldo del dia" NO es una transaccion, es un saldo. Ignoralo.
+TXT;
+
+    $unreadable_rule = $mode === 'audio'
+        ? "AUDIO NO PROCESABLE:\n- Si el audio no describe ningun gasto concreto (silencio, ruido, charla sin importes), devolve drafts=[] y dejalo asi. No uses unreadable_screenshot_idxs (queda vacio en modo audio)."
+        : "CAPTURAS NO LEIBLES:\n- Si una captura no se puede leer, no muestra transacciones, o solo muestra ingresos/saldos, agrega su indice a \"unreadable_screenshot_idxs\".";
+
+    $transcription_rule = $mode === 'audio'
+        ? "TRANSCRIPCION:\n- transcription: el texto completo de lo que dice el audio (en español argentino). Obligatorio en modo audio."
+        : "TRANSCRIPCION:\n- transcription: dejalo en null (no aplica fuera de audio).";
+
+    $parsing_rules = $mode === 'audio'
+        ? <<<TXT
+REGLAS DE PARSEO:
+- amount: numero (no string). El usuario suele decir cifras como "mil quinientos" (1500), "doce mil" (12000), "veinticinco mil pesos" (25000). Convertilo a numero.
+- title: max 80 chars. Usa el comercio o concepto que mencione el usuario (ej: "Coto", "cafe con juan", "alquiler"). Si dice nombre + apellido, usalo en mayusculas.
+- date: YYYY-MM-DD. Si no menciona fecha, usa $today. "ayer" = $today − 1, "anteayer" = $today − 2, "el lunes" se interpreta respecto a $today.
+- description: detalle adicional si el usuario lo dice (ej: "milanesa con gaseosa"), o null.
+- suggested_category_name: una EXACTA de la lista "categories" o null. NO inventes.
+$source_idx_rule
+TXT
+        : <<<TXT
+REGLAS DE PARSEO:
+- Argentina: el punto es separador de miles. "\$67.506" = 67506. "\$67.506,08" o "\$67.506⁰⁸" = 67506.08. Decimales pueden aparecer en superindice o tamaño chico al lado del monto principal.
+- Si la transaccion no muestra año, asumi $today.
+- title: max 80 chars. Usa el NOMBRE DEL DESTINATARIO/COMERCIO si existe (ej: "NAVARRO AMADEO ANDRES", "MINIMERCADO MAURI"). Si no, usa el concepto.
+- date: YYYY-MM-DD. Buscala en el encabezado de la seccion de la fila.
+- suggested_category_name: una EXACTA de la lista "categories" o null.
+$source_idx_rule
+TXT;
+
+    $income_rule = $mode === 'audio'
+        ? "DETECCION DE GASTO vs INGRESO:\n- Solo extraer egresos de dinero. Si el usuario dice \"cobre\", \"me transfirieron\", \"me devolvieron\", IGNORALO (no es gasto)."
+        : <<<TXT
 DETECCION DE GASTO vs INGRESO (CRITICO):
 
 GASTO (SI extraer) — indicadores visuales:
@@ -229,31 +301,33 @@ INGRESO (NO extraer, IGNORAR ABSOLUTAMENTE):
 - Texto: "Transferencia recibida", "Rendimientos", "Ingreso", "Cobro recibido", "Devolucion", "Reintegro", "Acreditacion"
 
 Si tenes duda sobre si una linea es gasto o ingreso, observa el COLOR y el SIGNO. Verde con "+" SIEMPRE es ingreso; negro/rojo con "-" SIEMPRE es gasto.
+TXT;
 
-REGLAS DE PARSEO:
-- Argentina: el punto es separador de miles. "\$67.506" = 67506. "\$67.506,08" o "\$67.506⁰⁸" = 67506.08. Decimales pueden aparecer en superindice o tamaño chico al lado del monto principal.
-- Si la transaccion no muestra año, asumi $today.
-- title: max 80 chars. Usa el NOMBRE DEL DESTINATARIO/COMERCIO si existe (ej: "NAVARRO AMADEO ANDRES", "MINIMERCADO MAURI"). Si no, usa el concepto.
-- date: YYYY-MM-DD. Buscala en el encabezado de la seccion de la fila.
-- suggested_category_name: una EXACTA de la lista "categories" o null.
+    return <<<PROMPT
+$intro
+
+CONTEXTO DEL USUARIO:
+$context_json
+
+$income_rule
+
+$parsing_rules
 
 MONEDA:
-- detected_currency: una de "ARS", "USD", "USDT". Detecta la moneda del gasto a partir de signos visuales o textuales: "USD", "U\$D", "u\$s", "dolares", "USDT", "tether" → no-ARS. Default a "ARS" si no hay señal explicita. La lista "accounts" muestra las cuentas del usuario con su moneda; si una captura coincide con una cuenta no-ARS, usa esa moneda.
+- detected_currency: una de "ARS", "USD", "USDT". Detecta la moneda del gasto a partir de signos visuales o textuales: "USD", "U\$D", "u\$s", "dolares", "USDT", "tether" → no-ARS. Default a "ARS" si no hay señal explicita. La lista "accounts" muestra las cuentas del usuario con su moneda; si el gasto coincide con una cuenta no-ARS, usa esa moneda.
 
 DEDUPLICACION Y MATCHING:
 - existing_transaction_id: si este gasto ya esta en "existing_transactions_recent" (titulo similar + monto cercano + fecha cercana), poner el id; si no, null.
 - recurrent_match_id: si el destinatario o concepto coincide con el "title" O CUALQUIERA de los "aliases" de un recurrent, poner el id de ese recurrent. EJEMPLO: si un recurrent tiene title "Clases de running" y aliases ["NAVARRO AMADEO ANDRES"], y la transaccion es "Transferencia enviada NAVARRO AMADEO ANDRES", DEBE matchear ese recurrent_id. El monto puede variar ±20% (no exigir match exacto en plata).
 - recurrent_match_confidence: "high" si el destinatario coincide casi exacto con title/alias. "medium" si es similar. "low" si solo coincide parcialmente o por monto.
-- duplicate_in_batch_idx: si esta misma transaccion ya aparece en un draft anterior de esta respuesta (mismo monto + fecha + destinatario en otra captura), poner el indice del draft anterior; si no, null.
+- duplicate_in_batch_idx: si esta misma transaccion ya aparece en un draft anterior de esta respuesta (mismo monto + fecha + destinatario), poner el indice del draft anterior; si no, null.
 - Si una transaccion coincide con AMBOS (existing_transaction_id Y recurrent_match_id), prioriza existing_transaction_id (ya esta en la tabla).
 
-EXHAUSTIVIDAD:
-- Cada captura puede contener 5-30 filas. Extrae cada GASTO sin omitir ninguno.
-- Las capturas pueden solaparse: la misma transaccion puede aparecer en varias. Usa duplicate_in_batch_idx para señalarlo, no la omitas en la primera aparicion.
-- "Saldo del dia" NO es una transaccion, es un saldo. Ignoralo.
+$exhaustividad
 
-CAPTURAS NO LEIBLES:
-- Si una captura no se puede leer, no muestra transacciones, o solo muestra ingresos/saldos, agrega su indice a "unreadable_screenshot_idxs".
+$transcription_rule
+
+$unreadable_rule
 PROMPT;
 }
 
@@ -266,7 +340,7 @@ function build_schema(): array {
                 'items' => [
                     'type' => 'OBJECT',
                     'properties' => [
-                        'screenshot_idx' => ['type' => 'INTEGER'],
+                        'screenshot_idx' => ['type' => 'INTEGER', 'nullable' => true],
                         'title' => ['type' => 'STRING'],
                         'amount' => ['type' => 'NUMBER'],
                         'date' => ['type' => 'STRING'],
@@ -278,13 +352,14 @@ function build_schema(): array {
                         'duplicate_in_batch_idx' => ['type' => 'INTEGER', 'nullable' => true],
                         'detected_currency' => ['type' => 'STRING', 'enum' => ['ARS', 'USD', 'USDT']],
                     ],
-                    'required' => ['screenshot_idx', 'title', 'amount', 'date', 'recurrent_match_confidence', 'detected_currency'],
+                    'required' => ['title', 'amount', 'date', 'recurrent_match_confidence', 'detected_currency'],
                 ],
             ],
             'unreadable_screenshot_idxs' => [
                 'type' => 'ARRAY',
                 'items' => ['type' => 'INTEGER'],
             ],
+            'transcription' => ['type' => 'STRING', 'nullable' => true],
         ],
         'required' => ['drafts', 'unreadable_screenshot_idxs'],
     ];

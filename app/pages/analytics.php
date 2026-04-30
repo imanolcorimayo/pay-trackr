@@ -1,10 +1,21 @@
-<!-- Page header -->
-<div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
+<!-- Page header (desktop only — mobile topbar shows the page title) -->
+<div class="hidden lg:flex items-center justify-between gap-3 mb-6">
     <div>
         <h1 class="text-2xl font-semibold">Analisis</h1>
         <p class="text-sm text-muted mt-1">Como gastas tu plata <span class="italic">— sólo ARS por ahora</span></p>
     </div>
     <select id="period-select" class="input sm:max-w-[220px]">
+        <option value="3m">Ultimos 3 meses</option>
+        <option value="6m" selected>Ultimos 6 meses</option>
+        <option value="12m">Ultimos 12 meses</option>
+        <option value="ytd">Este año</option>
+        <option value="all">Todo</option>
+    </select>
+</div>
+
+<!-- Mobile period selector -->
+<div class="lg:hidden mb-3">
+    <select id="period-select-mobile" class="input w-full">
         <option value="3m">Ultimos 3 meses</option>
         <option value="6m" selected>Ultimos 6 meses</option>
         <option value="12m">Ultimos 12 meses</option>
@@ -377,12 +388,15 @@ mangosAuth.ready.then(user => {
     if (!user) return;
 
     readUrlState();
-    document.getElementById('period-select').value = period;
-
-    document.getElementById('period-select').addEventListener('change', (e) => {
-        period = e.target.value;
-        writeUrlState();
-        loadAll();
+    const periodSelects = ['period-select', 'period-select-mobile'].map(id => document.getElementById(id));
+    periodSelects.forEach(sel => { sel.value = period; });
+    periodSelects.forEach(sel => {
+        sel.addEventListener('change', (e) => {
+            period = e.target.value;
+            periodSelects.forEach(s => { if (s !== e.target) s.value = period; });
+            writeUrlState();
+            loadAll();
+        });
     });
 
     loadAll();

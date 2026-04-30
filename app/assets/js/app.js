@@ -3,13 +3,24 @@
  */
 
 // ── Currency formatting ──────────────────────────
-window.formatPrice = function (amount) {
+// ARS: native currency style with 0 decimals ("$ 1.234").
+// Non-ARS (USD, USDT, …): "USD 1.234,56" — 2 decimals, code as prefix. Keeping
+// the prefix style instead of style:'currency' avoids surprising symbols
+// (US$ vs $) and keeps numbers aligned with the ARS column visually.
+window.formatPrice = function (amount, currency) {
   const num = Number(amount) || 0;
-  return num.toLocaleString('es-AR', {
-    style: 'currency',
-    currency: 'ARS',
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
+  const cur = currency || 'ARS';
+  if (cur === 'ARS') {
+    return num.toLocaleString('es-AR', {
+      style: 'currency',
+      currency: 'ARS',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    });
+  }
+  return cur + ' ' + num.toLocaleString('es-AR', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
   });
 };
 
