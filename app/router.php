@@ -42,7 +42,7 @@ switch ($route) {
         break;
 
     case '/capturar':
-        $pageTitle = 'Capturar';
+        $pageTitle = 'Carga masiva';
         require __DIR__ . '/pages/capture.php';
         break;
 

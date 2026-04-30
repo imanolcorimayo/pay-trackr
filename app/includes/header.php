@@ -28,6 +28,7 @@
     <script src="<?= asset('/assets/js/app.js') ?>"></script>
     <script src="<?= asset('/assets/js/fx.js') ?>"></script>
     <script src="<?= asset('/assets/js/row-menu.js') ?>"></script>
+    <script src="<?= asset('/assets/js/sum-input.js') ?>"></script>
     <script src="<?= asset('/assets/js/account-card-picker.js') ?>"></script>
 </head>
 <body class="min-h-screen">
@@ -75,7 +76,7 @@ $isActive = function($href) use ($route) {
                 ['/', 'Dashboard'],
                 ['/fijos', 'Gastos Fijos'],
                 ['/movimientos', 'Movimientos'],
-                ['/capturar', 'Capturar'],
+                ['/capturar', 'Carga masiva'],
                 ['/categorias', 'Categorias'],
                 ['/tarjetas', 'Tarjetas'],
                 ['/cuentas', 'Cuentas'],

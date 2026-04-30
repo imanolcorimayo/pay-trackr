@@ -1,8 +1,8 @@
 <!-- Page header -->
 <div class="flex items-center justify-between mb-8">
     <div>
-        <h1 class="text-2xl font-semibold">Capturar</h1>
-        <p class="text-sm text-muted mt-1">Sube capturas de tus transacciones y la IA arma los movimientos por vos</p>
+        <h1 class="text-2xl font-semibold">Carga masiva</h1>
+        <p class="text-sm text-muted mt-1">Sube capturas o un audio y la IA arma los movimientos por vos</p>
     </div>
     <a href="/movimientos" class="btn btn-ghost">
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -14,17 +14,61 @@
 
 <!-- Step 1: Upload zone -->
 <section id="upload-section" class="card mb-6">
-    <div id="drop-zone" class="border-2 border-dashed border-border rounded-lg p-8 text-center cursor-pointer hover:border-accent hover:bg-accent/5 transition-colors">
-        <svg class="w-12 h-12 mx-auto text-muted mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
-                  d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
-        </svg>
-        <p class="text-sm font-medium text-dark">Arrastra capturas o haz click para elegir</p>
-        <p class="text-xs text-muted mt-1">PNG, JPG · hasta 10 imagenes · max 6MB total</p>
-        <input type="file" id="file-input" accept="image/*" multiple class="hidden">
+    <!-- Mode tabs (image active by default — JS keeps these classes in sync) -->
+    <div class="flex gap-1 p-1 bg-dark/5 rounded-lg mb-4">
+        <button type="button" data-mode="image" class="capture-mode-tab flex-1 text-sm py-2 rounded-md transition-colors bg-white shadow-sm text-dark font-medium">Imagenes</button>
+        <button type="button" data-mode="audio" class="capture-mode-tab flex-1 text-sm py-2 rounded-md transition-colors text-muted">Audio</button>
     </div>
 
-    <div id="thumbs" class="hidden mt-4 grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2"></div>
+    <!-- Image mode -->
+    <div id="capture-mode-image" class="capture-mode-pane">
+        <div id="drop-zone" class="border-2 border-dashed border-border rounded-lg p-8 text-center cursor-pointer hover:border-accent hover:bg-accent/5 transition-colors">
+            <svg class="w-12 h-12 mx-auto text-muted mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                      d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
+            </svg>
+            <p class="text-sm font-medium text-dark">Arrastra capturas o haz click para elegir</p>
+            <p class="text-xs text-muted mt-1">PNG, JPG · hasta 10 imagenes · max 6MB total</p>
+            <input type="file" id="file-input" accept="image/*" multiple class="hidden">
+        </div>
+
+        <div id="thumbs" class="hidden mt-4 grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2"></div>
+    </div>
+
+    <!-- Audio mode (record in place) -->
+    <div id="capture-mode-audio" class="capture-mode-pane hidden">
+        <!-- Idle -->
+        <div id="cap-audio-idle" class="border-2 border-dashed border-border rounded-lg p-8 text-center">
+            <button type="button" id="cap-audio-start"
+                    class="w-16 h-16 mx-auto rounded-full bg-accent text-white flex items-center justify-center shadow hover:bg-accent/90 active:scale-95 transition">
+                <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-14 0m7 7v4m-4 0h8m-4-8a3 3 0 01-3-3V6a3 3 0 116 0v5a3 3 0 01-3 3z"/>
+                </svg>
+            </button>
+            <p class="text-sm font-medium mt-3">Grabar audio</p>
+            <p class="text-xs text-muted mt-1">Listá tus gastos uno tras otro. Max 2 min.</p>
+        </div>
+        <!-- Recording -->
+        <div id="cap-audio-recording" class="hidden border-2 border-danger/40 bg-danger/5 rounded-lg p-8 text-center">
+            <div class="w-16 h-16 mx-auto rounded-full bg-danger text-white flex items-center justify-center animate-pulse">
+                <span class="w-5 h-5 rounded-sm bg-white"></span>
+            </div>
+            <p class="text-sm font-medium text-danger mt-3">Grabando...</p>
+            <p id="cap-audio-timer" class="text-2xl font-mono text-danger mt-1">0:00</p>
+            <button type="button" id="cap-audio-stop" class="btn btn-outline mt-3 py-1.5 px-4 text-sm">Detener</button>
+        </div>
+        <!-- Recorded -->
+        <div id="cap-audio-recorded" class="hidden border border-border rounded-lg p-4">
+            <div class="flex items-center gap-3 mb-2">
+                <svg class="w-5 h-5 text-success flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                </svg>
+                <span class="text-sm font-medium">Grabado · <span id="cap-audio-duration">0:00</span></span>
+                <button type="button" id="cap-audio-redo" class="ml-auto text-xs text-muted hover:text-dark">Re-grabar</button>
+            </div>
+            <audio id="cap-audio-playback" controls class="w-full"></audio>
+        </div>
+    </div>
 
     <div id="upload-actions" class="hidden mt-4 flex justify-between items-center">
         <p id="upload-summary" class="text-sm text-muted"></p>
@@ -45,7 +89,7 @@
     <div class="flex items-center gap-4 py-8 px-4">
         <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-accent"></div>
         <div>
-            <p class="text-sm font-medium">Analizando capturas...</p>
+            <p id="loading-label" class="text-sm font-medium">Analizando capturas...</p>
             <p class="text-xs text-muted mt-0.5">Esto puede tardar unos segundos</p>
         </div>
     </div>
@@ -83,8 +127,11 @@
 const SVG_NS = 'http://www.w3.org/2000/svg';
 const STORAGE_KEY = 'mangos.capture.drafts';
 
+let mode = 'image';
 let images = [];
+let audio = null; // { name, mimeType, base64, durationSec, dataUrl }
 let drafts = [];
+let lastTranscription = null;
 let categories = [];
 let recurrents = [];
 let cards = [];
@@ -150,6 +197,171 @@ async function addFiles(fileList) {
 function clearImages() {
     images = [];
     renderThumbs();
+}
+
+// ── Audio recording ─────────────────────────────────────
+const audioRec = { recorder: null, stream: null, chunks: [], startTime: 0, mimeType: null, timerInterval: null, autoStopTimeout: null };
+const AUDIO_MAX_SEC = 120; // 2 minutes — issue #55 cap
+
+function formatAudioDuration(sec) {
+    const m = Math.floor(sec / 60);
+    const s = sec % 60;
+    return `${m}:${String(s).padStart(2, '0')}`;
+}
+
+function pickAudioMimeType() {
+    if (typeof MediaRecorder === 'undefined') return '';
+    const candidates = ['audio/ogg;codecs=opus', 'audio/mp4', 'audio/webm;codecs=opus', 'audio/webm'];
+    for (const m of candidates) {
+        if (MediaRecorder.isTypeSupported(m)) return m;
+    }
+    return '';
+}
+
+function showAudioState(state) {
+    document.getElementById('cap-audio-idle').classList.toggle('hidden', state !== 'idle');
+    document.getElementById('cap-audio-recording').classList.toggle('hidden', state !== 'recording');
+    document.getElementById('cap-audio-recorded').classList.toggle('hidden', state !== 'recorded');
+}
+
+function updateAudioTimer() {
+    const elapsed = Math.floor((Date.now() - audioRec.startTime) / 1000);
+    document.getElementById('cap-audio-timer').textContent = formatAudioDuration(elapsed);
+}
+
+async function startAudioRecording() {
+    if (!navigator.mediaDevices?.getUserMedia) {
+        toast('Tu navegador no soporta grabacion de audio', 'error');
+        return;
+    }
+    let stream;
+    try {
+        stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    } catch (e) {
+        if (e.name === 'NotAllowedError' || e.name === 'PermissionDeniedError') {
+            toast('Permitir el acceso al microfono para grabar', 'error');
+        } else {
+            console.error(e);
+            toast('No se pudo acceder al microfono', 'error');
+        }
+        return;
+    }
+
+    const mimeType = pickAudioMimeType();
+    let recorder;
+    try {
+        recorder = mimeType ? new MediaRecorder(stream, { mimeType }) : new MediaRecorder(stream);
+    } catch (e) {
+        console.error(e);
+        stream.getTracks().forEach(t => t.stop());
+        toast('No se pudo iniciar la grabacion', 'error');
+        return;
+    }
+
+    audioRec.recorder = recorder;
+    audioRec.stream = stream;
+    audioRec.chunks = [];
+    audioRec.mimeType = recorder.mimeType || mimeType || 'audio/webm';
+    audioRec.startTime = Date.now();
+
+    recorder.addEventListener('dataavailable', e => {
+        if (e.data && e.data.size > 0) audioRec.chunks.push(e.data);
+    });
+    recorder.addEventListener('stop', onAudioRecordingStop);
+    recorder.start();
+
+    showAudioState('recording');
+    audioRec.timerInterval = setInterval(updateAudioTimer, 250);
+    updateAudioTimer();
+    audioRec.autoStopTimeout = setTimeout(() => {
+        if (audioRec.recorder?.state === 'recording') stopAudioRecording();
+    }, AUDIO_MAX_SEC * 1000);
+}
+
+function stopAudioRecording() {
+    if (audioRec.recorder?.state === 'recording') audioRec.recorder.stop();
+    if (audioRec.stream) {
+        audioRec.stream.getTracks().forEach(t => t.stop());
+        audioRec.stream = null;
+    }
+    if (audioRec.timerInterval) { clearInterval(audioRec.timerInterval); audioRec.timerInterval = null; }
+    if (audioRec.autoStopTimeout) { clearTimeout(audioRec.autoStopTimeout); audioRec.autoStopTimeout = null; }
+}
+
+function clearAudio() {
+    stopAudioRecording();
+    audioRec.chunks = [];
+    audioRec.recorder = null;
+    audio = null;
+    const playback = document.getElementById('cap-audio-playback');
+    if (playback) {
+        try { playback.pause(); } catch (_) {}
+        playback.src = '';
+    }
+    showAudioState('idle');
+    if (mode === 'audio') {
+        document.getElementById('upload-actions').classList.add('hidden');
+    }
+}
+
+function onAudioRecordingStop() {
+    const blob = new Blob(audioRec.chunks, { type: audioRec.mimeType });
+    const durationSec = Math.max(1, Math.round((Date.now() - audioRec.startTime) / 1000));
+
+    const reader = new FileReader();
+    reader.onload = () => {
+        const dataUrl = reader.result;
+        const base64 = dataUrl.split(',', 2)[1] || '';
+        if (base64.length > 8 * 1024 * 1024) {
+            toast('El audio supera los 8MB. Probá con uno mas corto.', 'error');
+            clearAudio();
+            return;
+        }
+        audio = { mimeType: audioRec.mimeType, base64, durationSec, dataUrl };
+        document.getElementById('cap-audio-playback').src = dataUrl;
+        document.getElementById('cap-audio-duration').textContent = formatAudioDuration(durationSec);
+        showAudioState('recorded');
+        const kb = Math.round(base64.length / 1024);
+        document.getElementById('upload-summary').textContent = `Audio · ${formatAudioDuration(durationSec)} · ~${kb} KB en base64`;
+        document.getElementById('upload-actions').classList.remove('hidden');
+    };
+    reader.onerror = () => {
+        toast('No se pudo leer el audio grabado', 'error');
+        clearAudio();
+    };
+    reader.readAsDataURL(blob);
+}
+
+function renderAudioPreview() {
+    // Drives action-bar visibility when switching tabs. State of the panes is
+    // owned by showAudioState — don't toggle them here.
+    const actions = document.getElementById('upload-actions');
+    if (audio) actions.classList.remove('hidden');
+    else actions.classList.add('hidden');
+}
+
+// ── Mode switch ─────────────────────────────────────────
+function selectMode(m) {
+    if (m !== 'image' && m !== 'audio') return;
+    // Switching away from audio mid-recording would leave the mic open and
+    // produce an unreviewable blob. Cancel cleanly.
+    if (mode === 'audio' && m !== 'audio' && audioRec.recorder?.state === 'recording') {
+        clearAudio();
+    }
+    mode = m;
+    document.querySelectorAll('.capture-mode-tab').forEach(btn => {
+        const active = btn.dataset.mode === m;
+        btn.classList.toggle('bg-white', active);
+        btn.classList.toggle('shadow-sm', active);
+        btn.classList.toggle('text-dark', active);
+        btn.classList.toggle('font-medium', active);
+        btn.classList.toggle('text-muted', !active);
+    });
+    document.querySelectorAll('.capture-mode-pane').forEach(p => p.classList.add('hidden'));
+    document.getElementById('capture-mode-' + m).classList.remove('hidden');
+    // Refresh action-bar visibility for current mode.
+    if (m === 'image') renderThumbs();
+    else renderAudioPreview();
 }
 function renderThumbs() {
     const thumbs = document.getElementById('thumbs');
@@ -240,22 +452,45 @@ function setupDropZone() {
     });
 }
 
+function setupAudioZone() {
+    document.getElementById('cap-audio-start').addEventListener('click', startAudioRecording);
+    document.getElementById('cap-audio-stop').addEventListener('click', stopAudioRecording);
+    document.getElementById('cap-audio-redo').addEventListener('click', clearAudio);
+}
+
+function setupModeTabs() {
+    document.querySelectorAll('.capture-mode-tab').forEach(btn => {
+        btn.addEventListener('click', () => selectMode(btn.dataset.mode));
+    });
+}
+
 // ── Analyze ─────────────────────────────────────────────
 async function analyze() {
-    if (images.length === 0) return;
-
-    const total = images.reduce((s, i) => s + i.base64.length, 0);
-    if (total > 6 * 1024 * 1024) {
-        toast('Total excede 6MB. Quita alguna imagen', 'error');
-        return;
+    let payload;
+    if (mode === 'image') {
+        if (images.length === 0) return;
+        const total = images.reduce((s, i) => s + i.base64.length, 0);
+        if (total > 6 * 1024 * 1024) {
+            toast('Total excede 6MB. Quita alguna imagen', 'error');
+            return;
+        }
+        payload = {
+            mode: 'image',
+            images: images.map(i => ({ mimeType: i.mimeType, data: i.base64 })),
+        };
+    } else {
+        if (!audio) return;
+        payload = {
+            mode: 'audio',
+            mimeType: audio.mimeType,
+            data: audio.base64,
+        };
     }
 
     document.getElementById('upload-section').classList.add('hidden');
     document.getElementById('loading-section').classList.remove('hidden');
-
-    const payload = {
-        images: images.map(i => ({ mimeType: i.mimeType, data: i.base64 }))
-    };
+    document.getElementById('loading-label').textContent =
+        mode === 'audio' ? 'Transcribiendo audio...' : 'Analizando capturas...';
 
     let result;
     try {
@@ -288,12 +523,14 @@ async function analyze() {
             card_id: null,
             account_id: matchByCurrency?.id || defaultAccount()?.id || null,
             currency: detectedCur,
+            is_paid: true,
             action: defaultActionFor(d),
             update_recurrent_amount: shouldUpdateRecurrentAmount(d),
             showOptions: false,
         };
     });
 
+    lastTranscription = result.transcription || null;
     persistDrafts(result.unreadable_screenshot_idxs || []);
     renderReview(result.unreadable_screenshot_idxs || []);
 }
@@ -338,6 +575,19 @@ function renderReview(unreadableIdxs) {
         const p = document.createElement('p');
         p.className = 'text-sm text-accent';
         p.textContent = `${unreadableIdxs.length} captura(s) no se pudieron leer (indices: ${unreadableIdxs.join(', ')})`;
+        w.appendChild(p);
+        warnEl.appendChild(w);
+    }
+    if (lastTranscription) {
+        const w = document.createElement('div');
+        w.className = 'card mb-4 bg-dark/[0.03] border-border';
+        const lab = document.createElement('p');
+        lab.className = 'text-[11px] font-semibold uppercase tracking-wide text-muted mb-1';
+        lab.textContent = 'Transcripcion';
+        w.appendChild(lab);
+        const p = document.createElement('p');
+        p.className = 'text-sm whitespace-pre-wrap';
+        p.textContent = lastTranscription;
         w.appendChild(p);
         warnEl.appendChild(w);
     }
@@ -421,15 +671,26 @@ function buildDraftRow(d, idx) {
     titleInp.addEventListener('input', () => { d.title = titleInp.value; });
     fields.appendChild(titleInp);
 
-    // Amount — col-5 mobile, 2 desktop
+    // Amount — col-5 mobile, 2 desktop. data-amount enables sum-on-input
+    // (e.g. typing "1500+800" resolves to 2300 on blur).
     const amtInp = document.createElement('input');
     amtInp.type = 'text';
     amtInp.className = 'input-sm font-mono col-span-5 sm:col-span-2 text-right';
     amtInp.value = formatAmountForInput(Math.abs(d.amount));
     amtInp.inputMode = 'decimal';
+    amtInp.setAttribute('data-amount', '');
+    amountInput.attach(amtInp);
+    // recurrentLabelEl is set later when the "Actualizar fijo" subtitle exists;
+    // keeping the ref lets us refresh the "→ <new>" portion without re-rendering.
+    let recurrentLabelEl = null;
+    let recurrentDiffRef = null;
     amtInp.addEventListener('input', () => {
         d.amount = Math.abs(parseAmount(amtInp.value) || 0);
         updateFooterSummary();
+        if (recurrentLabelEl && recurrentDiffRef) {
+            recurrentLabelEl.textContent =
+                `Actualizar fijo: ${formatPrice(Math.abs(recurrentDiffRef.amount))} → ${formatPrice(Math.abs(d.amount))}`;
+        }
     });
     fields.appendChild(amtInp);
 
@@ -522,6 +783,8 @@ function buildDraftRow(d, idx) {
             t.textContent = `Actualizar fijo: ${formatPrice(Math.abs(recurrentDiff.amount))} → ${formatPrice(Math.abs(d.amount))}`;
             lbl.appendChild(t);
             sub.appendChild(lbl);
+            recurrentLabelEl = t;
+            recurrentDiffRef = recurrentDiff;
         }
 
         row.appendChild(sub);
@@ -636,6 +899,25 @@ function buildDraftRow(d, idx) {
         curWrap.appendChild(curSel);
         more.appendChild(curWrap);
 
+        // Pagado — toggle. When on, the row's date is the paid date (default).
+        // When off, the gasto is treated as pending (due_ts kept, paid_ts = null).
+        const paidWrap = document.createElement('div');
+        paidWrap.className = 'col-span-12';
+        const paidLab = document.createElement('label');
+        paidLab.className = 'flex items-center gap-2 cursor-pointer';
+        const paidCb = document.createElement('input');
+        paidCb.type = 'checkbox';
+        paidCb.className = 'w-4 h-4 rounded border-border accent-accent';
+        paidCb.checked = d.is_paid !== false;
+        paidCb.addEventListener('change', () => { d.is_paid = paidCb.checked; });
+        paidLab.appendChild(paidCb);
+        const paidTxt = document.createElement('span');
+        paidTxt.className = 'text-sm';
+        paidTxt.textContent = 'Pagado (la fecha del gasto se usa como fecha de pago)';
+        paidLab.appendChild(paidTxt);
+        paidWrap.appendChild(paidLab);
+        more.appendChild(paidWrap);
+
         // Descripcion
         const descWrap = document.createElement('div');
         descWrap.className = 'col-span-12';
@@ -710,6 +992,7 @@ async function commit() {
                 update_recurrent_amount: !!d.update_recurrent_amount,
             };
         }
+        const isPaid = d.is_paid !== false;
         return {
             action: 'create',
             title: d.title,
@@ -720,8 +1003,8 @@ async function commit() {
             account_id: d.account_id,
             currency: d.currency || 'ARS',
             transaction_type: 'one-time',
-            is_paid: true,
-            paid_ts,
+            is_paid: isPaid,
+            paid_ts: isPaid ? paid_ts : null,
             due_ts: paid_ts,
         };
     });
@@ -756,6 +1039,8 @@ function discard() {
     if (!window.confirm('Vas a descartar la revision actual. Continuar?')) return;
     drafts = [];
     images = [];
+    lastTranscription = null;
+    clearAudio();
     clearPersistedDrafts();
     backToUpload();
     renderThumbs();
@@ -777,8 +1062,13 @@ mangosAuth.ready.then(async user => {
     accounts = accs || [];
 
     setupDropZone();
+    setupAudioZone();
+    setupModeTabs();
     document.getElementById('analyze-btn').addEventListener('click', analyze);
-    document.getElementById('clear-images').addEventListener('click', clearImages);
+    document.getElementById('clear-images').addEventListener('click', () => {
+        if (mode === 'audio') clearAudio();
+        else clearImages();
+    });
     document.getElementById('confirm-btn').addEventListener('click', commit);
     document.getElementById('discard-btn').addEventListener('click', discard);
 

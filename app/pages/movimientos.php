@@ -10,12 +10,12 @@ $openAIOnLoad = !empty($_GET['ai']);
         <p class="text-sm text-muted mt-1">Todos tus movimientos del mes</p>
     </div>
     <div class="flex items-center gap-2">
-        <a href="/capturar" class="btn btn-outline" title="Capturar batch de imagenes con IA">
+        <a href="/capturar" class="btn btn-outline" title="Carga masiva con IA (imagenes o audio)">
             <svg class="w-4 h-4 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                       d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-6.857 2.286L12 21l-2.286-6.857L3 12l6.857-2.286L12 3z"/>
             </svg>
-            Capturar
+            Carga masiva
         </a>
         <button class="btn btn-primary" onclick="openAIModal()" title="Agregar un gasto con IA">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -39,16 +39,16 @@ $openAIOnLoad = !empty($_GET['ai']);
     </div>
 </div>
 
-<!-- Mobile action row (Capturar + Transferir + Nuevo manual; AI lives on the bottom-nav FAB).
+<!-- Mobile action row (Carga masiva + Transferir + Nuevo manual; AI lives on the bottom-nav FAB).
      Grid keeps all three buttons on-screen on narrow phones — a flex row with
      justify-end pushed the rightmost button off-screen on widths ≤375px. -->
 <div class="lg:hidden grid grid-cols-3 gap-2 mb-3">
-    <a href="/capturar" class="inline-flex items-center justify-center gap-1.5 px-2 py-2 rounded-lg border border-border text-sm text-dark hover:bg-dark/5 active:scale-95 transition" title="Capturar batch de imagenes">
+    <a href="/capturar" class="inline-flex items-center justify-center gap-1.5 px-2 py-2 rounded-lg border border-border text-sm text-dark hover:bg-dark/5 active:scale-95 transition" title="Carga masiva con IA (imagenes o audio)">
         <svg class="w-4 h-4 text-accent flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                   d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-6.857 2.286L12 21l-2.286-6.857L3 12l6.857-2.286L12 3z"/>
         </svg>
-        <span>Capturar</span>
+        <span class="truncate">Carga masiva</span>
     </a>
     <button type="button" onclick="openTransferModal()" class="inline-flex items-center justify-center gap-1.5 px-2 py-2 rounded-lg border border-border text-sm text-dark hover:bg-dark/5 active:scale-95 transition" title="Transferir entre cuentas">
         <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -206,7 +206,7 @@ $openAIOnLoad = !empty($_GET['ai']);
                 <div class="grid grid-cols-2 gap-3">
                     <div>
                         <label for="pmt-amount" class="block text-sm font-medium mb-1.5">Monto <span class="text-danger">*</span></label>
-                        <input type="text" id="pmt-amount" class="input" placeholder="1234,56" inputmode="decimal" required>
+                        <input type="text" id="pmt-amount" class="input" placeholder="1234,56" inputmode="decimal" data-amount required>
                     </div>
                     <div>
                         <label for="pmt-due" class="block text-sm font-medium mb-1.5">Fecha</label>
@@ -385,14 +385,14 @@ $openAIOnLoad = !empty($_GET['ai']);
                             Monto enviado <span class="text-danger">*</span>
                             <span id="trf-sent-cur" class="text-xs text-muted ml-1"></span>
                         </label>
-                        <input type="text" id="trf-sent" class="input" placeholder="100,00" inputmode="decimal" required>
+                        <input type="text" id="trf-sent" class="input" placeholder="100,00" inputmode="decimal" data-amount required>
                     </div>
                     <div>
                         <label for="trf-received" class="block text-sm font-medium mb-1.5">
                             Monto recibido <span class="text-danger">*</span>
                             <span id="trf-received-cur" class="text-xs text-muted ml-1"></span>
                         </label>
-                        <input type="text" id="trf-received" class="input" placeholder="85.000,00" inputmode="decimal" required>
+                        <input type="text" id="trf-received" class="input" placeholder="85.000,00" inputmode="decimal" data-amount required>
                     </div>
                 </div>
 
@@ -402,7 +402,7 @@ $openAIOnLoad = !empty($_GET['ai']);
                             Comisión
                             <span id="trf-fee-cur" class="text-xs text-muted ml-1"></span>
                         </label>
-                        <input type="text" id="trf-fee" class="input" placeholder="Opcional" inputmode="decimal">
+                        <input type="text" id="trf-fee" class="input" placeholder="Opcional" inputmode="decimal" data-amount>
                     </div>
                     <div>
                         <label for="trf-fee-cat" class="block text-sm font-medium mb-1.5">Categoría comisión</label>
@@ -898,9 +898,10 @@ function sortedCurrencyCodes(buckets) {
     });
 }
 
-// Replaces the element's contents with one line per currency. ARS is the
-// primary line (full size); other currencies render smaller and muted so the
-// card still has a clear hero number when most data is ARS.
+// Hero is the ARS grand total (everything converted via fx). Below it,
+// secondary line shows the same total expressed in USD + USDT. When the
+// bucket spans more than one currency, a third tiny line lists the pure
+// per-currency amounts so the conversions can be reconciled.
 function renderStackedAmount(elId, buckets, key, fallbackCur) {
     const el = document.getElementById(elId);
     el.textContent = '';
@@ -909,16 +910,37 @@ function renderStackedAmount(elId, buckets, key, fallbackCur) {
         el.textContent = formatPrice(0, fallbackCur || 'ARS');
         return;
     }
-    codes.forEach((code, i) => {
-        const line = document.createElement('span');
-        // First line keeps the card's hero size (inherits from <p>); others are
-        // smaller secondary lines so the card hierarchy stays readable.
-        line.className = i === 0
-            ? 'block'
-            : 'block text-sm font-semibold text-muted -mt-0.5';
-        line.textContent = formatPrice(buckets[code][key], code);
-        el.appendChild(line);
+
+    // Sum to ARS, then divide by target rate for USD / USDT.
+    const totalArs = codes.reduce((a, c) => a + buckets[c][key] * fx.rateFor(c), 0);
+    const isPureSingle = (cur) => codes.length === 1 && codes[0] === cur;
+
+    const hero = document.createElement('span');
+    hero.className = 'block';
+    hero.textContent = (isPureSingle('ARS') ? '' : '≈ ') + formatPrice(totalArs, 'ARS');
+    el.appendChild(hero);
+
+    const convParts = [];
+    ['USD', 'USDT'].forEach(target => {
+        const r = fx.rates[target];
+        if (!r) return;  // rate not loaded yet — skip; renderSummary re-runs after fx.ready
+        const v = totalArs / r;
+        if (!Number.isFinite(v)) return;
+        convParts.push((isPureSingle(target) ? '' : '≈ ') + formatPrice(v, target));
     });
+    if (convParts.length) {
+        const conv = document.createElement('span');
+        conv.className = 'block text-sm font-semibold text-muted -mt-0.5';
+        conv.textContent = convParts.join(' · ');
+        el.appendChild(conv);
+    }
+
+    if (codes.length > 1) {
+        const pure = document.createElement('span');
+        pure.className = 'block text-xs text-muted -mt-0.5';
+        pure.textContent = codes.map(c => formatPrice(buckets[c][key], c)).join(' · ');
+        el.appendChild(pure);
+    }
 }
 
 // Sums a per-currency field across all buckets, used for the count subline.

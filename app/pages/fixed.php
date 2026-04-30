@@ -1,16 +1,16 @@
-<!-- Page header -->
-<div class="flex items-center justify-between mb-8">
+<!-- Page header (desktop only — mobile topbar shows the page title) -->
+<div class="hidden lg:flex items-center justify-between mb-6">
     <div>
         <h1 class="text-2xl font-semibold">Gastos Fijos</h1>
         <p class="text-sm text-muted mt-1">Movimientos recurrentes que se repiten cada mes</p>
     </div>
     <div class="flex items-center gap-2">
-        <a href="/capturar" class="btn btn-outline" title="Capturar con IA desde una imagen">
+        <a href="/capturar" class="btn btn-outline" title="Carga masiva con IA (imagenes o audio)">
             <svg class="w-4 h-4 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                       d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-6.857 2.286L12 21l-2.286-6.857L3 12l6.857-2.286L12 3z"/>
             </svg>
-            Capturar
+            Carga masiva
         </a>
         <button class="btn btn-primary" onclick="openRecurrentModal()">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -19,6 +19,23 @@
             Nuevo
         </button>
     </div>
+</div>
+
+<!-- Mobile action row (Carga masiva + Nuevo) -->
+<div class="lg:hidden grid grid-cols-2 gap-2 mb-3">
+    <a href="/capturar" class="inline-flex items-center justify-center gap-1.5 px-2 py-2 rounded-lg border border-border text-sm text-dark hover:bg-dark/5 active:scale-95 transition" title="Carga masiva con IA (imagenes o audio)">
+        <svg class="w-4 h-4 text-accent flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-6.857 2.286L12 21l-2.286-6.857L3 12l6.857-2.286L12 3z"/>
+        </svg>
+        <span>Carga masiva</span>
+    </a>
+    <button type="button" onclick="openRecurrentModal()" class="inline-flex items-center justify-center gap-1.5 px-2 py-2 rounded-lg bg-accent text-white text-sm font-medium hover:opacity-90 active:scale-95 transition" title="Nuevo gasto fijo">
+        <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+        </svg>
+        <span>Nuevo</span>
+    </button>
 </div>
 
 <!-- FX rate strip (shown once rates load; hidden when only ARS is in use) -->
@@ -69,9 +86,13 @@
 </div>
 
 <!-- ─────────────────────────── Form modal ─────────────────────────── -->
-<div id="recurrent-modal" class="fixed inset-0 z-50 hidden bg-dark/40 overflow-y-auto">
-    <div class="min-h-full flex items-center justify-center p-4">
-        <div class="bg-white rounded-xl border border-border w-full max-w-lg">
+<div id="recurrent-modal" class="fixed inset-0 z-50 hidden bg-dark/40">
+    <div class="absolute inset-x-0 bottom-0 sm:inset-0 sm:flex sm:items-center sm:justify-center sm:p-4"
+         style="bottom: var(--keyboard-inset, 0px);">
+        <div class="bg-white rounded-t-2xl sm:rounded-xl border-t sm:border border-border w-full sm:max-w-lg max-h-[85dvh] sm:max-h-[92vh] overflow-y-auto safe-bottom">
+            <button type="button" onclick="closeRecurrentModal()" class="w-full pt-2 pb-1 flex justify-center sm:hidden" aria-label="Cerrar">
+                <div class="w-10 h-1 rounded-full bg-border"></div>
+            </button>
             <header class="px-5 py-4 border-b border-border flex items-center justify-between">
                 <h2 id="recurrent-modal-title" class="text-lg font-semibold">Nuevo gasto fijo</h2>
                 <button type="button" onclick="closeRecurrentModal()" class="text-muted hover:text-dark p-1 -m-1">
@@ -92,7 +113,7 @@
                 <div class="grid grid-cols-2 gap-3">
                     <div>
                         <label for="rec-amount" class="block text-sm font-medium mb-1.5">Monto <span class="text-danger">*</span></label>
-                        <input type="text" id="rec-amount" class="input" placeholder="1234,56" inputmode="decimal" required>
+                        <input type="text" id="rec-amount" class="input" placeholder="1234,56" inputmode="decimal" data-amount required>
                     </div>
                     <div>
                         <label for="rec-due-day" class="block text-sm font-medium mb-1.5">Vence dia <span class="text-danger">*</span></label>
@@ -174,9 +195,12 @@
 </div>
 
 <!-- ─────────────────────────── History modal ─────────────────────────── -->
-<div id="recurrent-history-modal" class="fixed inset-0 z-50 hidden bg-dark/40 overflow-y-auto">
-    <div class="min-h-full flex items-center justify-center p-4">
-        <div class="bg-white rounded-xl border border-border w-full max-w-lg">
+<div id="recurrent-history-modal" class="fixed inset-0 z-50 hidden bg-dark/40">
+    <div class="absolute inset-x-0 bottom-0 sm:inset-0 sm:flex sm:items-center sm:justify-center sm:p-4">
+        <div class="bg-white rounded-t-2xl sm:rounded-xl border-t sm:border border-border w-full sm:max-w-lg max-h-[85dvh] sm:max-h-[92vh] overflow-y-auto safe-bottom">
+            <button type="button" onclick="closeRecurrentHistory()" class="w-full pt-2 pb-1 flex justify-center sm:hidden" aria-label="Cerrar">
+                <div class="w-10 h-1 rounded-full bg-border"></div>
+            </button>
             <header class="px-5 py-4 border-b border-border flex items-center justify-between">
                 <div class="min-w-0">
                     <h2 class="text-lg font-semibold truncate" id="rec-history-title">Historial</h2>
@@ -197,16 +221,21 @@
 
 <!-- ─────────────────────────── Confirm delete ─────────────────────────── -->
 <div id="recurrent-delete-modal" class="fixed inset-0 z-50 hidden bg-dark/40">
-    <div class="min-h-full flex items-center justify-center p-4">
-        <div class="bg-white rounded-xl border border-border w-full max-w-sm p-5">
-            <h2 class="text-lg font-semibold">Eliminar gasto fijo</h2>
-            <p class="text-sm text-muted mt-2">
-                Vas a eliminar <span id="rec-delete-name" class="font-medium text-dark"></span>.
-                Tambien se eliminaran sus movimientos asociados (de cualquier mes).
-            </p>
-            <div class="flex justify-end gap-2 mt-5">
-                <button type="button" onclick="closeRecurrentDelete()" class="btn btn-ghost">Cancelar</button>
-                <button type="button" onclick="confirmRecurrentDelete()" id="rec-delete-submit" class="btn btn-danger">Eliminar</button>
+    <div class="absolute inset-x-0 bottom-0 sm:inset-0 sm:flex sm:items-center sm:justify-center sm:p-4">
+        <div class="bg-white rounded-t-2xl sm:rounded-xl border-t sm:border border-border w-full sm:max-w-sm max-h-[85dvh] sm:max-h-[92vh] overflow-y-auto safe-bottom">
+            <button type="button" onclick="closeRecurrentDelete()" class="w-full pt-2 pb-1 flex justify-center sm:hidden" aria-label="Cerrar">
+                <div class="w-10 h-1 rounded-full bg-border"></div>
+            </button>
+            <div class="p-5">
+                <h2 class="text-lg font-semibold">Eliminar gasto fijo</h2>
+                <p class="text-sm text-muted mt-2">
+                    Vas a eliminar <span id="rec-delete-name" class="font-medium text-dark"></span>.
+                    Tambien se eliminaran sus movimientos asociados (de cualquier mes).
+                </p>
+                <div class="flex justify-end gap-2 mt-5">
+                    <button type="button" onclick="closeRecurrentDelete()" class="btn btn-ghost">Cancelar</button>
+                    <button type="button" onclick="confirmRecurrentDelete()" id="rec-delete-submit" class="btn btn-danger">Eliminar</button>
+                </div>
             </div>
         </div>
     </div>
@@ -410,8 +439,10 @@ function sortedCurrencyCodes(buckets) {
     });
 }
 
-// Replaces the element's contents with one line per currency. ARS keeps the
-// hero size; other currencies render smaller and muted underneath.
+// Hero is the ARS grand total (everything converted via fx). Below it,
+// secondary line shows the same total expressed in USD + USDT. When the
+// bucket spans more than one currency, a third tiny line lists the pure
+// per-currency amounts so the conversions can be reconciled.
 function renderStackedAmount(elId, buckets, key) {
     const el = document.getElementById(elId);
     el.textContent = '';
@@ -420,14 +451,36 @@ function renderStackedAmount(elId, buckets, key) {
         el.textContent = formatPrice(0, 'ARS');
         return;
     }
-    codes.forEach((code, i) => {
-        const line = document.createElement('span');
-        line.className = i === 0
-            ? 'block'
-            : 'block text-base font-semibold text-muted -mt-0.5';
-        line.textContent = formatPrice(Math.abs(buckets[code][key]), code);
-        el.appendChild(line);
+
+    const totalArs = codes.reduce((a, c) => a + Math.abs(buckets[c][key]) * fx.rateFor(c), 0);
+    const isPureSingle = (cur) => codes.length === 1 && codes[0] === cur;
+
+    const hero = document.createElement('span');
+    hero.className = 'block';
+    hero.textContent = (isPureSingle('ARS') ? '' : '≈ ') + formatPrice(totalArs, 'ARS');
+    el.appendChild(hero);
+
+    const convParts = [];
+    ['USD', 'USDT'].forEach(target => {
+        const r = fx.rates[target];
+        if (!r) return;
+        const v = totalArs / r;
+        if (!Number.isFinite(v)) return;
+        convParts.push((isPureSingle(target) ? '' : '≈ ') + formatPrice(v, target));
     });
+    if (convParts.length) {
+        const conv = document.createElement('span');
+        conv.className = 'block text-sm font-semibold text-muted -mt-0.5';
+        conv.textContent = convParts.join(' · ');
+        el.appendChild(conv);
+    }
+
+    if (codes.length > 1) {
+        const pure = document.createElement('span');
+        pure.className = 'block text-xs text-muted -mt-0.5';
+        pure.textContent = codes.map(c => formatPrice(Math.abs(buckets[c][key]), c)).join(' · ');
+        el.appendChild(pure);
+    }
 }
 
 function renderFxStrip() {
@@ -1024,7 +1077,7 @@ function renderRecurrentHistory() {
     const sorted = [...items].sort((a, b) => b.dueDate - a.dueDate);
 
     const wrap = document.createElement('div');
-    wrap.className = 'divide-y divide-border max-h-[60vh] overflow-y-auto -mx-1';
+    wrap.className = 'divide-y divide-border -mx-1';
     sorted.forEach(occ => wrap.appendChild(buildHistoryRow(r, occ, today)));
     listEl.appendChild(wrap);
 }
