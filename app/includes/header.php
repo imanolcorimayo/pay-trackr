@@ -119,7 +119,7 @@ $isActive = function($href) use ($route) {
         </header>
 
         <!-- Page content -->
-        <main class="flex-1 px-4 py-5 sm:p-6 lg:p-8 w-full pb-[calc(5rem+env(safe-area-inset-bottom))] lg:pb-8">
+        <main class="flex-1 px-4 py-5 sm:p-6 lg:p-8 w-full pb-[calc(6rem+env(safe-area-inset-bottom))] lg:pb-8">
 <?php endif; ?>
 
 <?php if ($isMinimal): ?>

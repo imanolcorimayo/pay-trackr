@@ -37,6 +37,16 @@
     </div>
 </div>
 
+<!-- Search filter -->
+<div class="card mb-4 py-3">
+    <div class="relative">
+        <svg class="w-4 h-4 absolute left-2.5 top-1/2 -translate-y-1/2 text-muted pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-4.35-4.35M11 19a8 8 0 100-16 8 8 0 000 16z"/>
+        </svg>
+        <input type="search" id="filter-search" class="input pl-8" placeholder="Buscar por titulo, monto, cuenta…" autocomplete="off">
+    </div>
+</div>
+
 <!-- List -->
 <div class="card">
     <div id="recurrents-list">
@@ -162,6 +172,28 @@
     </div>
 </div>
 
+<!-- ─────────────────────────── History modal ─────────────────────────── -->
+<div id="recurrent-history-modal" class="fixed inset-0 z-50 hidden bg-dark/40 overflow-y-auto">
+    <div class="min-h-full flex items-center justify-center p-4">
+        <div class="bg-white rounded-xl border border-border w-full max-w-lg">
+            <header class="px-5 py-4 border-b border-border flex items-center justify-between">
+                <div class="min-w-0">
+                    <h2 class="text-lg font-semibold truncate" id="rec-history-title">Historial</h2>
+                    <p class="text-xs text-muted mt-0.5" id="rec-history-subtitle"></p>
+                </div>
+                <button type="button" onclick="closeRecurrentHistory()" class="text-muted hover:text-dark p-1 -m-1">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                    </svg>
+                </button>
+            </header>
+            <div class="p-5">
+                <div id="rec-history-list"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- ─────────────────────────── Confirm delete ─────────────────────────── -->
 <div id="recurrent-delete-modal" class="fixed inset-0 z-50 hidden bg-dark/40">
     <div class="min-h-full flex items-center justify-center p-4">
@@ -183,6 +215,10 @@
 const SVG_NS = 'http://www.w3.org/2000/svg';
 const ICON_EDIT = 'M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z';
 const ICON_TRASH = 'M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6M1 7h22M9 7V4a1 1 0 011-1h4a1 1 0 011 1v3';
+const ICON_HISTORY = 'M12 8v4l3 2m6-2a9 9 0 11-18 0 9 9 0 0118 0z';
+
+const MONTH_LABEL = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+const HISTORY_MAX_BUCKETS = 240;  // hard cap to avoid runaway loops on bad data
 
 const PERIOD_LABEL = { monthly: 'Mensual', yearly: 'Anual', weekly: 'Semanal', biweekly: 'Quincenal' };
 
@@ -193,6 +229,50 @@ let accounts = [];
 let monthlyPayments = [];   // transactions for current month, used for paid status
 let editingId = null;
 let pendingDeleteId = null;
+let searchQuery = '';       // free-text substring filter (case-insensitive)
+
+function readUrlState() {
+    const p = new URLSearchParams(window.location.search);
+    if (p.has('q')) searchQuery = p.get('q');
+}
+
+function writeUrlState() {
+    const params = new URLSearchParams();
+    if (searchQuery) params.set('q', searchQuery);
+    const qs = params.toString();
+    history.replaceState(null, '', window.location.pathname + (qs ? '?' + qs : ''));
+}
+
+function recurrentSearchableText(r) {
+    const parts = [
+        r.title,
+        r.description,
+        r.currency,
+        r.time_period,
+        PERIOD_LABEL[r.time_period],
+        categoryById(r.expense_category_id)?.name,
+    ];
+    const card = cardById(r.card_id);
+    if (card) {
+        parts.push(card.name);
+        if (card.last_four) parts.push(card.last_four);
+    }
+    const account = accountById(r.account_id);
+    if (account) parts.push(account.name);
+    if (r.amount != null) {
+        const abs = Math.abs(Number(r.amount));
+        parts.push(formatPrice(abs), String(abs));
+    }
+    if (r.due_date_day) parts.push(`vence el ${r.due_date_day}`, String(r.due_date_day));
+    if (Array.isArray(r.aliases)) parts.push(...r.aliases);
+    return parts.filter(Boolean).join(' ').toLowerCase();
+}
+
+function applySearchFilter(list) {
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) return list;
+    return list.filter(r => recurrentSearchableText(r).includes(q));
+}
 
 // ── Helpers ─────────────────────────────────────────────────────────
 function svgIcon(pathD, sizeCls = 'w-4 h-4') {
@@ -297,7 +377,7 @@ function renderSummary() {
         monthlyPayments.filter(p => p.is_paid == 1 && p.recurrent_id).map(p => p.recurrent_id)
     );
 
-    recurrents.forEach(r => {
+    applySearchFilter(recurrents).forEach(r => {
         // Annualize yearly: amount/12 contributes to monthly total
         const monthlyEquivalent = r.time_period === 'yearly' ? Number(r.amount) / 12 : Number(r.amount);
         total += monthlyEquivalent;
@@ -330,8 +410,21 @@ function renderRecurrents() {
         return;
     }
 
+    const filtered = applySearchFilter(recurrents);
+
+    if (filtered.length === 0) {
+        const empty = document.createElement('div');
+        empty.className = 'text-center py-12';
+        const msg = document.createElement('p');
+        msg.className = 'text-sm text-muted';
+        msg.textContent = 'Sin resultados para tu busqueda.';
+        empty.appendChild(msg);
+        listEl.appendChild(empty);
+        return;
+    }
+
     // Sort by due_date_day ascending so upcoming bills surface first
-    const sorted = [...recurrents].sort((a, b) => a.due_date_day - b.due_date_day);
+    const sorted = [...filtered].sort((a, b) => a.due_date_day - b.due_date_day);
 
     const paidRecIds = new Set(
         monthlyPayments.filter(p => p.is_paid == 1 && p.recurrent_id).map(p => p.recurrent_id)
@@ -404,6 +497,7 @@ function buildRecurrentRow(r, isPaid, isOverdue, isLast) {
 
     const actions = document.createElement('div');
     actions.className = 'flex gap-0.5 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity';
+    actions.appendChild(iconButton(ICON_HISTORY, 'text-muted hover:text-dark', () => openRecurrentHistory(r)));
     actions.appendChild(iconButton(ICON_EDIT, 'text-muted hover:text-dark', () => openRecurrentModal(r)));
     actions.appendChild(iconButton(ICON_TRASH, 'text-muted hover:text-danger', () => openRecurrentDelete(r)));
     right.appendChild(actions);
@@ -576,6 +670,248 @@ async function submitRecurrentForm(e) {
     }
 }
 
+// ── Modal: history ──────────────────────────────────────────────────
+// "Virtual" history: occurrences are computed from start_date + due_date_day +
+// time_period, then matched against transactions tied to this recurrent.
+// No table is materialized. Guarded against bad data (missing start, weird
+// period, runaway loops) so we never render an unbounded list.
+
+let historyRecurrent = null;
+let historyTxs = [];
+
+function buildOccurrences(r) {
+    if (!r.start_date) return { error: 'Configura una fecha de inicio para ver el historial.', items: [] };
+
+    const day = Number(r.due_date_day);
+    if (!Number.isInteger(day) || day < 1 || day > 31) {
+        return { error: 'Dia de vencimiento invalido.', items: [] };
+    }
+
+    const period = r.time_period || 'monthly';
+    if (period !== 'monthly' && period !== 'yearly') {
+        return { error: `Frecuencia "${period}" todavia no soportada en el historial.`, items: [] };
+    }
+
+    const start = new Date(r.start_date + 'T00:00:00');
+    if (isNaN(start.getTime())) return { error: 'Fecha de inicio invalida.', items: [] };
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    let endLimit = today;
+    if (r.end_date) {
+        const e = new Date(r.end_date + 'T00:00:00');
+        if (!isNaN(e.getTime()) && e < endLimit) endLimit = e;
+    }
+
+    if (start > endLimit) return { error: null, items: [] };
+
+    const items = [];
+    let y = start.getFullYear();
+    let m = start.getMonth();
+    const stepMonths = period === 'yearly' ? 12 : 1;
+
+    while (items.length < HISTORY_MAX_BUCKETS) {
+        // Stop once we pass the end limit
+        if (y > endLimit.getFullYear() ||
+            (y === endLimit.getFullYear() && m > endLimit.getMonth())) break;
+
+        const lastDayOfMonth = new Date(y, m + 1, 0).getDate();
+        const dueDay = Math.min(day, lastDayOfMonth);
+        const dueDate = new Date(y, m, dueDay);
+
+        items.push({ year: y, month: m, dueDate });
+
+        m += stepMonths;
+        while (m > 11) { m -= 12; y += 1; }
+    }
+
+    return { error: null, items };
+}
+
+async function openRecurrentHistory(r) {
+    historyRecurrent = r;
+    historyTxs = [];
+
+    document.getElementById('rec-history-title').textContent = `Historial · ${r.title}`;
+    const sub = [`Vence el ${r.due_date_day}`];
+    if (r.time_period && r.time_period !== 'monthly') {
+        sub.push((PERIOD_LABEL[r.time_period] || r.time_period).toLowerCase());
+    }
+    if (r.start_date) sub.push(`desde ${formatDateLong(r.start_date)}`);
+    document.getElementById('rec-history-subtitle').textContent = sub.join(' · ');
+
+    const listEl = document.getElementById('rec-history-list');
+    listEl.textContent = '';
+    const loading = document.createElement('p');
+    loading.className = 'text-sm text-muted text-center py-6';
+    loading.textContent = 'Cargando historial…';
+    listEl.appendChild(loading);
+
+    document.getElementById('recurrent-history-modal').classList.remove('hidden');
+
+    try {
+        historyTxs = await api.get('/transactions', { recurrent_id: r.id }) || [];
+    } catch (err) {
+        console.error(err);
+        historyTxs = [];
+    }
+    renderRecurrentHistory();
+}
+
+function closeRecurrentHistory() {
+    document.getElementById('recurrent-history-modal').classList.add('hidden');
+    historyRecurrent = null;
+    historyTxs = [];
+}
+
+function findTxForOccurrence(occ) {
+    // Match by (year, month) of due_ts. If multiple, prefer paid > unpaid, then most recent.
+    const matches = historyTxs.filter(t => {
+        if (!t.due_ts) return false;
+        const d = new Date(t.due_ts.replace(' ', 'T'));
+        return d.getFullYear() === occ.year && d.getMonth() === occ.month;
+    });
+    if (matches.length === 0) return null;
+    matches.sort((a, b) => {
+        const pa = Number(a.is_paid) === 1 ? 1 : 0;
+        const pb = Number(b.is_paid) === 1 ? 1 : 0;
+        if (pa !== pb) return pb - pa;
+        return (b.due_ts || '').localeCompare(a.due_ts || '');
+    });
+    return matches[0];
+}
+
+function renderRecurrentHistory() {
+    const r = historyRecurrent;
+    if (!r) return;
+    const listEl = document.getElementById('rec-history-list');
+    listEl.textContent = '';
+
+    const { error, items } = buildOccurrences(r);
+
+    if (error) {
+        const msg = document.createElement('p');
+        msg.className = 'text-sm text-muted text-center py-6';
+        msg.textContent = error;
+        listEl.appendChild(msg);
+        return;
+    }
+
+    if (items.length === 0) {
+        const msg = document.createElement('p');
+        msg.className = 'text-sm text-muted text-center py-6';
+        msg.textContent = 'Aun no hay vencimientos para este gasto fijo.';
+        listEl.appendChild(msg);
+        return;
+    }
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    // Newest first
+    const sorted = [...items].sort((a, b) => b.dueDate - a.dueDate);
+
+    const wrap = document.createElement('div');
+    wrap.className = 'divide-y divide-border max-h-[60vh] overflow-y-auto -mx-1';
+    sorted.forEach(occ => wrap.appendChild(buildHistoryRow(r, occ, today)));
+    listEl.appendChild(wrap);
+}
+
+function buildHistoryRow(r, occ, today) {
+    const tx = findTxForOccurrence(occ);
+    const isPaid = tx && Number(tx.is_paid) === 1;
+    const isPast = occ.dueDate < today;
+
+    const row = document.createElement('div');
+    row.className = 'flex items-center gap-3 py-3 px-1';
+
+    const info = document.createElement('div');
+    info.className = 'flex-1 min-w-0';
+    const label = document.createElement('p');
+    label.className = 'text-sm font-medium';
+    label.textContent = `${MONTH_LABEL[occ.month]} ${occ.year}`;
+    info.appendChild(label);
+
+    const sub = document.createElement('p');
+    sub.className = 'text-xs text-muted';
+    const subParts = [`Vence ${formatDate(occ.dueDate.toISOString().slice(0, 10))}`];
+    if (tx) {
+        const txAmount = Math.abs(Number(tx.amount));
+        if (txAmount && txAmount !== Math.abs(Number(r.amount))) {
+            subParts.push(`pagado ${formatPrice(txAmount)}`);
+        }
+    }
+    sub.textContent = subParts.join(' · ');
+    info.appendChild(sub);
+
+    row.appendChild(info);
+
+    const right = document.createElement('div');
+    right.className = 'flex items-center gap-2 flex-shrink-0';
+
+    const badge = document.createElement('span');
+    badge.className = 'badge ' + (isPaid ? 'badge-success' : (isPast ? 'badge-danger' : 'badge-muted'));
+    badge.textContent = isPaid ? 'Pagado' : (isPast ? 'Vencido' : 'Pendiente');
+    right.appendChild(badge);
+
+    const action = document.createElement('button');
+    action.type = 'button';
+    action.className = 'btn btn-ghost text-xs px-2 py-1 disabled:opacity-50 disabled:cursor-wait';
+    action.textContent = isPaid ? 'Anular' : 'Marcar pagada';
+    action.addEventListener('click', () => toggleHistoryOccurrence(r, occ, tx, action));
+    right.appendChild(action);
+
+    row.appendChild(right);
+    return row;
+}
+
+async function toggleHistoryOccurrence(r, occ, tx, btn) {
+    btn.disabled = true;
+    const wasPaid = tx && Number(tx.is_paid) === 1;
+
+    try {
+        let result;
+        if (tx) {
+            result = await api.put('/transactions', { is_paid: !wasPaid }, { id: tx.id });
+        } else {
+            const lastDay = new Date(occ.year, occ.month + 1, 0).getDate();
+            const day = Math.min(Number(r.due_date_day), lastDay);
+            const due_ts = `${occ.year}-${String(occ.month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')} 00:00:00`;
+            result = await api.post('/transactions', {
+                title: r.title,
+                description: r.description || '',
+                amount: r.amount,
+                expense_category_id: r.expense_category_id || null,
+                card_id: r.card_id || null,
+                account_id: r.account_id || null,
+                currency: r.currency || 'ARS',
+                recurrent_id: r.id,
+                transaction_type: 'recurrent',
+                due_ts,
+                is_paid: true,
+            });
+        }
+
+        if (!result || result.error) {
+            toast(result?.error || 'No se pudo actualizar', 'error');
+            btn.disabled = false;
+            return;
+        }
+
+        toast(wasPaid ? 'Marcado como pendiente' : 'Marcado como pagado', 'success');
+
+        // Refresh history list + the page-level data (summary, current month badges).
+        historyTxs = await api.get('/transactions', { recurrent_id: r.id }) || [];
+        renderRecurrentHistory();
+        await loadAll();
+    } catch (err) {
+        console.error(err);
+        toast('Error de red', 'error');
+        btn.disabled = false;
+    }
+}
+
 // ── Modal: delete ───────────────────────────────────────────────────
 function openRecurrentDelete(r) {
     pendingDeleteId = r.id;
@@ -615,7 +951,23 @@ async function confirmRecurrentDelete() {
 // ── Init ────────────────────────────────────────────────────────────
 mangosAuth.ready.then(user => {
     if (!user) return;
+    readUrlState();
     loadAll();
+
+    const searchInput = document.getElementById('filter-search');
+    searchInput.value = searchQuery;
+    let searchDebounce;
+    searchInput.addEventListener('input', e => {
+        clearTimeout(searchDebounce);
+        const value = e.target.value;
+        searchDebounce = setTimeout(() => {
+            searchQuery = value;
+            writeUrlState();
+            renderSummary();
+            renderRecurrents();
+        }, 150);
+    });
+
     document.getElementById('recurrent-form').addEventListener('submit', submitRecurrentForm);
     document.getElementById('rec-account').addEventListener('change', e => {
         const a = accountById(e.target.value);
@@ -634,6 +986,7 @@ mangosAuth.ready.then(user => {
     document.addEventListener('keydown', e => {
         if (e.key !== 'Escape') return;
         if (!document.getElementById('recurrent-modal').classList.contains('hidden')) closeRecurrentModal();
+        else if (!document.getElementById('recurrent-history-modal').classList.contains('hidden')) closeRecurrentHistory();
         else if (!document.getElementById('recurrent-delete-modal').classList.contains('hidden')) closeRecurrentDelete();
     });
 });

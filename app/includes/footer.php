@@ -34,10 +34,12 @@
                     <span class="text-[10px] font-medium leading-none">Movimientos</span>
                 </a>
 
-                <!-- Agregar con IA (raised center FAB).
-                     If already on /movimientos, opens the modal in place. Otherwise navigates. -->
-                <a href="/movimientos?ai=1" onclick="return mangosOpenAIFab(event)"
-                   class="flex items-center justify-center" aria-label="Agregar con IA"
+                <!-- Agregar (raised center FAB).
+                     On /fijos, opens the recurrent modal. On /movimientos, opens the AI
+                     modal in place. Otherwise navigates to /movimientos?ai=1. -->
+                <?php $fabHref = $route === '/fijos' ? '/fijos' : '/movimientos?ai=1'; ?>
+                <a href="<?= $fabHref ?>" onclick="return mangosOpenAIFab(event)"
+                   class="flex items-center justify-center" aria-label="Agregar"
                    style="touch-action: manipulation;">
                     <span class="-mt-6 w-14 h-14 rounded-full bg-accent text-white flex items-center justify-center shadow-lg active:scale-95 transition-transform ring-4 ring-light">
                         <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -147,9 +149,14 @@
 <?php endif; ?>
 
 <script>
-// Bottom-nav FAB: when already on /movimientos, openAIModal is defined — call it
-// directly to avoid a full page reload. Otherwise let the link navigate normally.
+// Bottom-nav FAB: open the right modal in place when the page exposes one,
+// to avoid a full page reload. Otherwise let the link navigate normally.
 function mangosOpenAIFab(e) {
+    if (typeof window.openRecurrentModal === 'function') {
+        e.preventDefault();
+        window.openRecurrentModal();
+        return false;
+    }
     if (typeof window.openAIModal === 'function') {
         e.preventDefault();
         window.openAIModal();

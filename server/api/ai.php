@@ -56,11 +56,14 @@ function handle_parse_transactions(PDO $pdo, string $user_id): void {
 
     $tz = new DateTimeZone('America/Argentina/Buenos_Aires');
     $now = new DateTime('now', $tz);
-    $month_start = $now->format('Y-m-01 00:00:00');
-    $month_end = $now->format('Y-m-t 23:59:59');
     $today = $now->format('Y-m-d');
+    // Rolling 60-day window: covers backlog uploads without ballooning the
+    // prompt. Late reconcilers can still process last-month receipts; the
+    // model gets enough recent rows to spot dedup + recurring vendors.
+    $window_start = (clone $now)->modify('-60 days')->format('Y-m-d 00:00:00');
+    $window_end = $now->format('Y-m-d 23:59:59');
 
-    // Current month transactions. ABS() so the amount handed to Gemini is the
+    // Recent transactions. ABS() so the amount handed to Gemini is the
     // displayed (positive) magnitude, matching what the user sees on screen.
     $stmt = $pdo->prepare(
         "SELECT id, title, ABS(amount) AS amount, DATE(due_ts) AS due_date, DATE(paid_ts) AS paid_date,
@@ -69,7 +72,7 @@ function handle_parse_transactions(PDO $pdo, string $user_id): void {
          WHERE user_id = ? AND due_ts BETWEEN ? AND ?
          ORDER BY due_ts"
     );
-    $stmt->execute([$user_id, $month_start, $month_end]);
+    $stmt->execute([$user_id, $window_start, $window_end]);
     $existing = $stmt->fetchAll();
 
     // Recurrents + their aliases (LEFT JOIN, group by recurrent)
@@ -109,7 +112,7 @@ function handle_parse_transactions(PDO $pdo, string $user_id): void {
 
     $context = [
         'today' => $today,
-        'existing_transactions_this_month' => array_map(fn($p) => [
+        'existing_transactions_recent' => array_map(fn($p) => [
             'id' => $p['id'],
             'title' => $p['title'],
             'amount' => (float)$p['amount'],
@@ -238,7 +241,7 @@ MONEDA:
 - detected_currency: una de "ARS", "USD", "USDT". Detecta la moneda del gasto a partir de signos visuales o textuales: "USD", "U\$D", "u\$s", "dolares", "USDT", "tether" → no-ARS. Default a "ARS" si no hay señal explicita. La lista "accounts" muestra las cuentas del usuario con su moneda; si una captura coincide con una cuenta no-ARS, usa esa moneda.
 
 DEDUPLICACION Y MATCHING:
-- existing_transaction_id: si este gasto ya esta en "existing_transactions_this_month" (titulo similar + monto cercano + fecha cercana), poner el id; si no, null.
+- existing_transaction_id: si este gasto ya esta en "existing_transactions_recent" (titulo similar + monto cercano + fecha cercana), poner el id; si no, null.
 - recurrent_match_id: si el destinatario o concepto coincide con el "title" O CUALQUIERA de los "aliases" de un recurrent, poner el id de ese recurrent. EJEMPLO: si un recurrent tiene title "Clases de running" y aliases ["NAVARRO AMADEO ANDRES"], y la transaccion es "Transferencia enviada NAVARRO AMADEO ANDRES", DEBE matchear ese recurrent_id. El monto puede variar ±20% (no exigir match exacto en plata).
 - recurrent_match_confidence: "high" si el destinatario coincide casi exacto con title/alias. "medium" si es similar. "low" si solo coincide parcialmente o por monto.
 - duplicate_in_batch_idx: si esta misma transaccion ya aparece en un draft anterior de esta respuesta (mismo monto + fecha + destinatario en otra captura), poner el indice del draft anterior; si no, null.

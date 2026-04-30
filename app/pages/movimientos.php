@@ -96,6 +96,14 @@ $openAIOnLoad = !empty($_GET['ai']);
     <select id="filter-category" class="input sm:max-w-[200px]">
         <option value="">Todas las categorias</option>
     </select>
+
+    <!-- Search filter -->
+    <div class="relative sm:max-w-[220px] flex-1">
+        <svg class="w-4 h-4 absolute left-2.5 top-1/2 -translate-y-1/2 text-muted pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-4.35-4.35M11 19a8 8 0 100-16 8 8 0 000 16z"/>
+        </svg>
+        <input type="search" id="filter-search" class="input pl-8" placeholder="Buscar…" autocomplete="off">
+    </div>
 </div>
 
 <!-- Summary
@@ -582,6 +590,7 @@ let aiAudio = { recorder: null, stream: null, chunks: [], startTime: 0, mimeType
 let viewMonth = startOfMonth(new Date());
 let statusFilter = 'all';   // all | paid | unpaid
 let categoryFilter = '';
+let searchQuery = '';       // free-text substring search (case-insensitive)
 
 function readUrlState() {
     const p = new URLSearchParams(window.location.search);
@@ -593,6 +602,7 @@ function readUrlState() {
         statusFilter = p.get('status');
     }
     if (p.has('category')) categoryFilter = p.get('category');
+    if (p.has('q')) searchQuery = p.get('q');
 }
 
 // Mobile FAB lands on /movimientos?ai=1 (or legacy /movimientos#ai) when the user wants the
@@ -614,6 +624,7 @@ function writeUrlState() {
     params.set('month', `${y}-${m}`);
     if (statusFilter !== 'all') params.set('status', statusFilter);
     if (categoryFilter) params.set('category', categoryFilter);
+    if (searchQuery) params.set('q', searchQuery);
     const qs = params.toString();
     history.replaceState(null, '', window.location.pathname + (qs ? '?' + qs : ''));
 }
@@ -786,11 +797,43 @@ function makeOption(value, label) {
     return o;
 }
 
+// Concatenated lowercase string of every visible field, used for substring search.
+// Built lazily per row inside applyFilters; if searchQuery is empty we skip it.
+function paymentSearchableText(p) {
+    const parts = [
+        p.title,
+        p.description,
+        p.currency,
+        labelForSource(p.source),
+        categoryById(p.expense_category_id)?.name,
+    ];
+    const card = cardById(p.card_id);
+    if (card) {
+        parts.push(card.name);
+        if (card.last_four) parts.push(card.last_four);
+    }
+    const account = accountById(p.account_id);
+    if (account) parts.push(account.name);
+    if (p.amount != null) {
+        const abs = Math.abs(Number(p.amount));
+        parts.push(formatPrice(abs), String(abs));
+    }
+    if (p.due_ts) {
+        parts.push(p.due_ts, formatDate(p.due_ts), formatDateLong(p.due_ts));
+    }
+    if (p.paid_ts) {
+        parts.push(p.paid_ts, formatDate(p.paid_ts), formatDateLong(p.paid_ts));
+    }
+    return parts.filter(Boolean).join(' ').toLowerCase();
+}
+
 function applyFilters(list) {
+    const q = searchQuery.trim().toLowerCase();
     return list.filter(p => {
         if (statusFilter === 'paid' && p.is_paid != 1) return false;
         if (statusFilter === 'unpaid' && p.is_paid == 1) return false;
         if (categoryFilter && p.expense_category_id !== categoryFilter) return false;
+        if (q && !paymentSearchableText(p).includes(q)) return false;
         return true;
     });
 }
@@ -1942,6 +1985,20 @@ mangosAuth.ready.then(user => {
         writeUrlState();
         renderSummary();
         renderPayments();
+    });
+
+    const searchInput = document.getElementById('filter-search');
+    searchInput.value = searchQuery;
+    let searchDebounce;
+    searchInput.addEventListener('input', e => {
+        clearTimeout(searchDebounce);
+        const value = e.target.value;
+        searchDebounce = setTimeout(() => {
+            searchQuery = value;
+            writeUrlState();
+            renderSummary();
+            renderPayments();
+        }, 150);
     });
 
     document.getElementById('payment-form').addEventListener('submit', submitPaymentForm);
