@@ -11,6 +11,10 @@
     font-variant-numeric: tabular-nums;
     text-size-adjust: 100%;
     -webkit-text-size-adjust: 100%;
+    /* Kill the grey rectangle Mobile Safari/Chrome paint on tap. We provide
+       our own active states (active:scale-95, hover:bg-*) so this default
+       just gets in the way. */
+    -webkit-tap-highlight-color: transparent;
   }
 
   /* Prevent iOS auto-zoom on input focus: any field below 16px triggers zoom.
@@ -243,7 +247,7 @@
     cursor: pointer;
     transition: .15s;
     text-align: left;
-    min-height: 38px;
+    min-height: 44px;
     --c: #292524;
   }
   .picker-chip:hover { border-color: #292524; box-shadow: 0 1px 3px rgba(41,37,36,.06); }
@@ -293,6 +297,17 @@
 }
 
 @layer utilities {
+  /* Bottom-sheet height cap that contracts when the keyboard is up so the
+     modal never extends above the visible area on iOS. Pairs with the
+     `bottom: var(--keyboard-inset)` style on the sheet wrapper. */
+  .max-h-sheet {
+    max-height: calc(85dvh - var(--keyboard-inset, 0px));
+  }
+  @media (min-width: 640px) {
+    .max-h-sheet {
+      max-height: 92vh;
+    }
+  }
   .safe-top {
     padding-top: env(safe-area-inset-top);
   }

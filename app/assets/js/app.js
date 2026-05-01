@@ -222,3 +222,36 @@ if ('serviceWorker' in navigator) {
   window.visualViewport.addEventListener('scroll', update);
   update();
 })();
+
+// ── Bottom-sheet backdrop dismiss ──────────────────────
+// Convention: the outermost modal div carries `data-bs-modal="closeXxx"`. A
+// tap anywhere outside the white sheet calls that close fn (so the modal can
+// run its own state cleanup, not just toggle .hidden).
+document.addEventListener('click', (e) => {
+  const modal = e.target.closest('[data-bs-modal]');
+  if (!modal || modal.classList.contains('hidden')) return;
+  // The white card always has .bg-white at the sheet root — tapping inside
+  // that subtree should not dismiss.
+  const sheet = modal.querySelector('.bg-white');
+  if (sheet && sheet.contains(e.target)) return;
+  const fn = window[modal.dataset.bsModal];
+  if (typeof fn === 'function') fn();
+});
+
+// ── Scroll focused input into view inside bottom-sheet modals ─────────
+// On iOS, focusing a field inside a fixed-position modal often leaves it
+// hidden behind the keyboard. The browser's auto-scroll only nudges the page,
+// not the modal's internal scroll container. We wait for visualViewport to
+// settle (keyboard fully in), then scroll the field to the middle of the
+// available area.
+document.addEventListener('focusin', (e) => {
+  const target = e.target;
+  if (!target.matches || !target.matches('input, select, textarea')) return;
+  const modal = target.closest('[data-bs-modal]');
+  if (!modal || modal.classList.contains('hidden')) return;
+  // Defer past the keyboard animation. 300ms is a safe upper bound for iOS.
+  setTimeout(() => {
+    if (document.activeElement !== target) return;
+    target.scrollIntoView({ block: 'center', behavior: 'smooth' });
+  }, 300);
+});

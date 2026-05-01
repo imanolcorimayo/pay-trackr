@@ -31,12 +31,12 @@
 </div>
 
 <!-- ─────────────────────────── Form modal ─────────────────────────── -->
-<div id="category-modal" class="fixed inset-0 z-50 hidden bg-dark/40">
+<div id="category-modal" class="fixed inset-0 z-50 hidden bg-dark/40" data-bs-modal="closeCategoryModal">
     <!-- bottom: var(--keyboard-inset) lifts the sheet above the on-screen keyboard on iOS;
          max-h: 85dvh shrinks the sheet with the visual viewport when the keyboard opens. -->
     <div class="absolute inset-x-0 bottom-0 sm:inset-0 sm:flex sm:items-center sm:justify-center sm:p-4"
          style="bottom: var(--keyboard-inset, 0px);">
-        <div class="bg-white rounded-t-2xl sm:rounded-xl border-t sm:border border-border w-full sm:max-w-md max-h-[85dvh] sm:max-h-[92vh] overflow-y-auto safe-bottom">
+        <div class="bg-white rounded-t-2xl sm:rounded-xl border-t sm:border border-border w-full sm:max-w-md max-h-sheet overflow-y-auto safe-bottom">
             <!-- Drag handle (mobile only, tap to close) -->
             <button type="button" onclick="closeCategoryModal()" class="w-full pt-2 pb-1 flex justify-center sm:hidden" aria-label="Cerrar">
                 <div class="w-10 h-1 rounded-full bg-border"></div>
@@ -82,7 +82,7 @@
 </div>
 
 <!-- ─────────────────────────── Confirm delete ─────────────────────────── -->
-<div id="category-delete-modal" class="fixed inset-0 z-50 hidden bg-dark/40">
+<div id="category-delete-modal" class="fixed inset-0 z-50 hidden bg-dark/40" data-bs-modal="closeCategoryDelete">
     <div class="absolute inset-x-0 bottom-0 sm:inset-0 sm:flex sm:items-center sm:justify-center sm:p-4"
          style="bottom: var(--keyboard-inset, 0px);">
         <div class="bg-white rounded-t-2xl sm:rounded-xl border-t sm:border border-border w-full sm:max-w-sm safe-bottom">

@@ -115,9 +115,20 @@ $isActive = function($href) use ($route) {
     <div class="flex-1 flex flex-col min-h-screen min-w-0">
         <!-- Topbar (mobile only) -->
         <header class="sticky top-0 z-20 bg-light/85 backdrop-blur-sm border-b border-border lg:hidden safe-top">
-            <div class="px-4 h-14 flex items-center justify-between">
-                <h1 class="text-base font-semibold truncate"><?= $pageTitle ?? 'Dashboard' ?></h1>
-                <img id="topbar-avatar" src="" alt="" class="w-8 h-8 rounded-full bg-border hidden" onclick="toggleMore()">
+            <div class="px-4 h-14 flex items-center justify-between gap-3">
+                <h1 class="text-base font-semibold truncate flex-1 min-w-0"><?= $pageTitle ?? 'Dashboard' ?></h1>
+                <div class="flex items-center gap-2 flex-shrink-0">
+                    <?php if ($route !== '/capturar'): ?>
+                    <a href="/capturar" aria-label="Carga masiva con IA"
+                       class="w-10 h-10 rounded-full flex items-center justify-center text-accent hover:bg-accent/10 active:scale-95 transition">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                  d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-6.857 2.286L12 21l-2.286-6.857L3 12l6.857-2.286L12 3z"/>
+                        </svg>
+                    </a>
+                    <?php endif; ?>
+                    <img id="topbar-avatar" src="" alt="" class="w-8 h-8 rounded-full bg-border hidden" onclick="toggleMore()">
+                </div>
             </div>
         </header>
 

@@ -1014,7 +1014,8 @@ async function commit() {
 
     let result;
     try {
-        result = await api.post('/ai/commit-transactions', { rows });
+        const source = mode === 'audio' ? 'ai-audio' : 'ai-image';
+        result = await api.post('/ai/commit-transactions', { rows, source });
     } catch (e) {
         console.error(e);
         toast('Error de red', 'error');

@@ -161,12 +161,12 @@ $openAIOnLoad = !empty($_GET['ai']);
 </div>
 
 <!-- ─────────────────────────── Form modal ─────────────────────────── -->
-<div id="payment-modal" class="fixed inset-0 z-50 hidden bg-dark/40">
+<div id="payment-modal" class="fixed inset-0 z-50 hidden bg-dark/40" data-bs-modal="closePaymentModal">
     <!-- bottom: var(--keyboard-inset) lifts the sheet above the on-screen keyboard on iOS;
          max-h: 85dvh shrinks the sheet with the visual viewport when the keyboard opens. -->
     <div class="absolute inset-x-0 bottom-0 sm:inset-0 sm:flex sm:items-center sm:justify-center sm:p-4"
          style="bottom: var(--keyboard-inset, 0px);">
-        <div class="bg-white rounded-t-2xl sm:rounded-xl border-t sm:border border-border w-full sm:max-w-lg max-h-[85dvh] sm:max-h-[92vh] overflow-y-auto safe-bottom">
+        <div class="bg-white rounded-t-2xl sm:rounded-xl border-t sm:border border-border w-full sm:max-w-lg max-h-sheet overflow-y-auto safe-bottom">
             <!-- Drag handle (mobile only, tap to close) -->
             <button type="button" onclick="closePaymentModal()" class="w-full pt-2 pb-1 flex justify-center sm:hidden" aria-label="Cerrar">
                 <div class="w-10 h-1 rounded-full bg-border"></div>
@@ -325,7 +325,7 @@ $openAIOnLoad = !empty($_GET['ai']);
 </div>
 
 <!-- ─────────────────────────── Confirm delete ─────────────────────────── -->
-<div id="payment-delete-modal" class="fixed inset-0 z-50 hidden bg-dark/40">
+<div id="payment-delete-modal" class="fixed inset-0 z-50 hidden bg-dark/40" data-bs-modal="closePaymentDelete">
     <div class="absolute inset-x-0 bottom-0 sm:inset-0 sm:flex sm:items-center sm:justify-center sm:p-4"
          style="bottom: var(--keyboard-inset, 0px);">
         <div class="bg-white rounded-t-2xl sm:rounded-xl border-t sm:border border-border w-full sm:max-w-sm safe-bottom">
@@ -349,10 +349,10 @@ $openAIOnLoad = !empty($_GET['ai']);
 </div>
 
 <!-- ─────────────────────────── Transfer modal ─────────────────────────── -->
-<div id="transfer-modal" class="fixed inset-0 z-50 hidden bg-dark/40">
+<div id="transfer-modal" class="fixed inset-0 z-50 hidden bg-dark/40" data-bs-modal="closeTransferModal">
     <div class="absolute inset-x-0 bottom-0 sm:inset-0 sm:flex sm:items-center sm:justify-center sm:p-4"
          style="bottom: var(--keyboard-inset, 0px);">
-        <div class="bg-white rounded-t-2xl sm:rounded-xl border-t sm:border border-border w-full sm:max-w-lg max-h-[85dvh] sm:max-h-[92vh] overflow-y-auto safe-bottom">
+        <div class="bg-white rounded-t-2xl sm:rounded-xl border-t sm:border border-border w-full sm:max-w-lg max-h-sheet overflow-y-auto safe-bottom">
             <button type="button" onclick="closeTransferModal()" class="w-full pt-2 pb-1 flex justify-center sm:hidden" aria-label="Cerrar">
                 <div class="w-10 h-1 rounded-full bg-border"></div>
             </button>
@@ -443,10 +443,10 @@ $openAIOnLoad = !empty($_GET['ai']);
 </div>
 
 <!-- ─────────────────────────── AI input modal ─────────────────────────── -->
-<div id="ai-input-modal" class="fixed inset-0 z-50 <?= $openAIOnLoad ? '' : 'hidden ' ?>bg-dark/40">
+<div id="ai-input-modal" class="fixed inset-0 z-50 <?= $openAIOnLoad ? '' : 'hidden ' ?>bg-dark/40" data-bs-modal="closeAIModal">
     <div class="absolute inset-x-0 bottom-0 sm:inset-0 sm:flex sm:items-center sm:justify-center sm:p-4"
          style="bottom: var(--keyboard-inset, 0px);">
-        <div class="bg-white rounded-t-2xl sm:rounded-xl border-t sm:border border-border w-full sm:max-w-lg max-h-[85dvh] sm:max-h-[92vh] overflow-y-auto safe-bottom">
+        <div class="bg-white rounded-t-2xl sm:rounded-xl border-t sm:border border-border w-full sm:max-w-lg max-h-sheet overflow-y-auto safe-bottom">
             <!-- Drag handle (mobile only, tap to close) -->
             <button type="button" onclick="closeAIModal()" class="w-full pt-2 pb-1 flex justify-center sm:hidden" aria-label="Cerrar">
                 <div class="w-10 h-1 rounded-full bg-border"></div>

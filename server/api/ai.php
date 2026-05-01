@@ -376,6 +376,13 @@ function handle_commit_transactions(PDO $pdo, string $user_id): void {
         json_error('rows is required and must be non-empty');
     }
 
+    // Source defaults to 'ai-image' for back-compat with older clients that
+    // didn't send this field. Whitelist the values the row label resolver knows.
+    $source = $body['source'] ?? 'ai-image';
+    if (!in_array($source, ['ai-image', 'ai-audio', 'ai-text', 'ai-pdf'], true)) {
+        $source = 'ai-image';
+    }
+
     $created = 0;
     $updated_recurrents = 0;
     $marked_paid = 0;
@@ -407,7 +414,7 @@ function handle_commit_transactions(PDO $pdo, string $user_id): void {
                 $stmt = $pdo->prepare(
                     "INSERT INTO `transaction` (id, user_id, title, description, amount, currency, expense_category_id,
                      is_paid, paid_ts, recurrent_id, card_id, account_id, transaction_type, due_ts, source, status)
-                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, ?, ?, ?, ?, 'ai-image', 'reviewed')"
+                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, ?, ?, ?, ?, ?, 'reviewed')"
                 );
                 $stmt->execute([
                     $id, $user_id,
@@ -421,6 +428,7 @@ function handle_commit_transactions(PDO $pdo, string $user_id): void {
                     $account_id,
                     $row['transaction_type'] ?? 'one-time',
                     $row['due_ts'] ?? null,
+                    $source,
                 ]);
                 $transaction_ids[] = $id;
                 $created++;
@@ -479,7 +487,7 @@ function handle_commit_transactions(PDO $pdo, string $user_id): void {
                     $stmt = $pdo->prepare(
                         "INSERT INTO `transaction` (id, user_id, title, description, amount, currency, expense_category_id,
                          is_paid, paid_ts, recurrent_id, card_id, account_id, transaction_type, due_ts, source, status)
-                         VALUES (?, ?, ?, ?, ?, ?, ?, 1, ?, ?, ?, ?, 'recurrent', ?, 'ai-image', 'reviewed')"
+                         VALUES (?, ?, ?, ?, ?, ?, ?, 1, ?, ?, ?, ?, 'recurrent', ?, ?, 'reviewed')"
                     );
                     $stmt->execute([
                         $id, $user_id,
@@ -493,6 +501,7 @@ function handle_commit_transactions(PDO $pdo, string $user_id): void {
                         $r['card_id'],
                         $r['account_id'] ?? null,
                         $due_ts,
+                        $source,
                     ]);
                     $transaction_ids[] = $id;
                     $created++;

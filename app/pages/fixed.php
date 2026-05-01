@@ -86,10 +86,10 @@
 </div>
 
 <!-- ─────────────────────────── Form modal ─────────────────────────── -->
-<div id="recurrent-modal" class="fixed inset-0 z-50 hidden bg-dark/40">
+<div id="recurrent-modal" class="fixed inset-0 z-50 hidden bg-dark/40" data-bs-modal="closeRecurrentModal">
     <div class="absolute inset-x-0 bottom-0 sm:inset-0 sm:flex sm:items-center sm:justify-center sm:p-4"
          style="bottom: var(--keyboard-inset, 0px);">
-        <div class="bg-white rounded-t-2xl sm:rounded-xl border-t sm:border border-border w-full sm:max-w-lg max-h-[85dvh] sm:max-h-[92vh] overflow-y-auto safe-bottom">
+        <div class="bg-white rounded-t-2xl sm:rounded-xl border-t sm:border border-border w-full sm:max-w-lg max-h-sheet overflow-y-auto safe-bottom">
             <button type="button" onclick="closeRecurrentModal()" class="w-full pt-2 pb-1 flex justify-center sm:hidden" aria-label="Cerrar">
                 <div class="w-10 h-1 rounded-full bg-border"></div>
             </button>
@@ -195,9 +195,9 @@
 </div>
 
 <!-- ─────────────────────────── History modal ─────────────────────────── -->
-<div id="recurrent-history-modal" class="fixed inset-0 z-50 hidden bg-dark/40">
+<div id="recurrent-history-modal" class="fixed inset-0 z-50 hidden bg-dark/40" data-bs-modal="closeRecurrentHistory">
     <div class="absolute inset-x-0 bottom-0 sm:inset-0 sm:flex sm:items-center sm:justify-center sm:p-4">
-        <div class="bg-white rounded-t-2xl sm:rounded-xl border-t sm:border border-border w-full sm:max-w-lg max-h-[85dvh] sm:max-h-[92vh] overflow-y-auto safe-bottom">
+        <div class="bg-white rounded-t-2xl sm:rounded-xl border-t sm:border border-border w-full sm:max-w-lg max-h-sheet overflow-y-auto safe-bottom">
             <button type="button" onclick="closeRecurrentHistory()" class="w-full pt-2 pb-1 flex justify-center sm:hidden" aria-label="Cerrar">
                 <div class="w-10 h-1 rounded-full bg-border"></div>
             </button>
@@ -220,9 +220,9 @@
 </div>
 
 <!-- ─────────────────────────── Confirm delete ─────────────────────────── -->
-<div id="recurrent-delete-modal" class="fixed inset-0 z-50 hidden bg-dark/40">
+<div id="recurrent-delete-modal" class="fixed inset-0 z-50 hidden bg-dark/40" data-bs-modal="closeRecurrentDelete">
     <div class="absolute inset-x-0 bottom-0 sm:inset-0 sm:flex sm:items-center sm:justify-center sm:p-4">
-        <div class="bg-white rounded-t-2xl sm:rounded-xl border-t sm:border border-border w-full sm:max-w-sm max-h-[85dvh] sm:max-h-[92vh] overflow-y-auto safe-bottom">
+        <div class="bg-white rounded-t-2xl sm:rounded-xl border-t sm:border border-border w-full sm:max-w-sm max-h-sheet overflow-y-auto safe-bottom">
             <button type="button" onclick="closeRecurrentDelete()" class="w-full pt-2 pb-1 flex justify-center sm:hidden" aria-label="Cerrar">
                 <div class="w-10 h-1 rounded-full bg-border"></div>
             </button>
