@@ -46,6 +46,11 @@ switch ($route) {
         require __DIR__ . '/pages/capture.php';
         break;
 
+    case '/notificaciones':
+        $pageTitle = 'Notificaciones';
+        require __DIR__ . '/pages/notifications.php';
+        break;
+
     default:
         http_response_code(404);
         $pageTitle = '404';

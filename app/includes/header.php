@@ -47,6 +47,7 @@ $secondaryNav = [
     ['/tarjetas',   'Tarjetas',   '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 10h18M7 15h.01M11 15h2M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>'],
     ['/cuentas',    'Cuentas',    '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 10l9-6 9 6v9a2 2 0 01-2 2H5a2 2 0 01-2-2v-9zM12 14a2 2 0 100-4 2 2 0 000 4z"/>'],
     ['/analisis',   'Analisis',   '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>'],
+    ['/notificaciones', 'Notificaciones', '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 17h5l-1.4-1.4a2 2 0 01-.6-1.4V11a6 6 0 10-12 0v3.2a2 2 0 01-.6 1.4L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>'],
 ];
 $allNav = array_merge($primaryNav, $secondaryNav);
 $isActive = function($href) use ($route) {
@@ -81,6 +82,7 @@ $isActive = function($href) use ($route) {
                 ['/tarjetas', 'Tarjetas'],
                 ['/cuentas', 'Cuentas'],
                 ['/analisis', 'Analisis'],
+                ['/notificaciones', 'Notificaciones'],
             ];
             $iconMap = [];
             foreach ($allNav as [$h, $l, $i]) { $iconMap[$h] = $i; }

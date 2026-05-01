@@ -129,6 +129,26 @@ try {
             require __DIR__ . '/transactions.php';
             break;
 
+        case '/notifications/prefs':
+            $notif_action = 'prefs';
+            require __DIR__ . '/notifications.php';
+            break;
+
+        case '/notifications/subscribe':
+            $notif_action = 'subscribe';
+            require __DIR__ . '/notifications.php';
+            break;
+
+        case '/notifications/unsubscribe':
+            $notif_action = 'unsubscribe';
+            require __DIR__ . '/notifications.php';
+            break;
+
+        case '/notifications/test-push':
+            $notif_action = 'test-push';
+            require __DIR__ . '/notifications.php';
+            break;
+
         default:
             json_error('Not found', 404);
     }

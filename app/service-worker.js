@@ -14,7 +14,7 @@
  * the fetch handler unless we explicitly opt in.
  */
 
-const CACHE_VERSION = 'v1';
+const CACHE_VERSION = 'v2';
 const PAGES_CACHE   = `mangos-pages-${CACHE_VERSION}`;
 const ASSETS_CACHE  = `mangos-assets-${CACHE_VERSION}`;
 
@@ -111,3 +111,40 @@ async function networkFirstPage(req) {
         throw err;
     }
 }
+
+// ── Web Push ────────────────────────────────────────────────────────────────
+// Server posts a JSON payload of {title, body, url}. If the push has no body
+// (rare, malformed sends), fall back to a generic message so the user still
+// sees something rather than nothing.
+self.addEventListener('push', event => {
+    let data = {};
+    try { data = event.data ? event.data.json() : {}; } catch (_) {}
+    const title = data.title || 'Mangos';
+    const body = data.body || 'Tenés una notificación nueva';
+    const url = data.url || '/';
+    event.waitUntil(self.registration.showNotification(title, {
+        body,
+        icon: '/icon-192.png',
+        badge: '/icon-192.png',
+        data: { url },
+    }));
+});
+
+// Tap on the notification → focus an existing tab on that URL if open,
+// otherwise open a new one.
+self.addEventListener('notificationclick', event => {
+    event.notification.close();
+    const targetUrl = event.notification.data?.url || '/';
+    event.waitUntil((async () => {
+        const all = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+        for (const client of all) {
+            try {
+                const u = new URL(client.url);
+                if (u.pathname + u.search === targetUrl) {
+                    return client.focus();
+                }
+            } catch (_) {}
+        }
+        return self.clients.openWindow(targetUrl);
+    })());
+});
