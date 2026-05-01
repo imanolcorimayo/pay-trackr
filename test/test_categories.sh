@@ -61,4 +61,58 @@ fi
 req POST /api/categories '{"name":"Only name"}'
 assert_status 400 "POST without color rejected"
 
+# ── Income categories ────────────────────────────────────────────
+# Default income categories were seeded for the test user.
+req GET '/api/categories?kind=income'
+assert_status 200 "GET income categories"
+income_count=$(printf '%s' "$last_body" | jq 'length')
+TESTS_RUN=$((TESTS_RUN + 1))
+if [ "$income_count" -ge 7 ]; then
+    TESTS_PASSED=$((TESTS_PASSED + 1))
+    printf '  [ OK ] default income categories seeded (count=%s)\n' "$income_count"
+else
+    TESTS_FAILED=$((TESTS_FAILED + 1))
+    FAILURES+=("expected ≥7 default income categories, got $income_count")
+    printf '  [FAIL] default income categories missing (count=%s)\n' "$income_count"
+fi
+
+# Income POST → goes to income_category, not expense_category
+req POST '/api/categories?kind=income' '{"name":"Bonus","color":"#00FF00"}'
+assert_status 201 "POST income category"
+inc_id=$(json_field id)
+
+# Should appear on income list
+req GET '/api/categories?kind=income'
+inc_found=$(printf '%s' "$last_body" | jq -r --arg id "$inc_id" '.[] | select(.id==$id) | .name')
+TESTS_RUN=$((TESTS_RUN + 1))
+if [ "$inc_found" = "Bonus" ]; then
+    TESTS_PASSED=$((TESTS_PASSED + 1))
+    printf '  [ OK ] new income category appears on income list\n'
+else
+    TESTS_FAILED=$((TESTS_FAILED + 1))
+    FAILURES+=("income category $inc_id not in income list (got '$inc_found')")
+    printf '  [FAIL] new income category not in income list\n'
+fi
+
+# Should NOT appear on expense list
+req GET '/api/categories'
+inc_leaked=$(printf '%s' "$last_body" | jq -r --arg id "$inc_id" '[.[] | select(.id==$id)] | length')
+TESTS_RUN=$((TESTS_RUN + 1))
+if [ "$inc_leaked" = "0" ]; then
+    TESTS_PASSED=$((TESTS_PASSED + 1))
+    printf '  [ OK ] income category isolated from expense list\n'
+else
+    TESTS_FAILED=$((TESTS_FAILED + 1))
+    FAILURES+=("income category leaked into expense list")
+    printf '  [FAIL] income category leaked into expense list\n'
+fi
+
+# Soft delete on income kind
+req DELETE "/api/categories?id=$inc_id&kind=income"
+assert_status 200 "DELETE income category"
+
+# Invalid kind rejected
+req GET '/api/categories?kind=invalid'
+assert_status 400 "invalid kind rejected"
+
 print_summary "test_categories"

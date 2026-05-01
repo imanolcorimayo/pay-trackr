@@ -30,37 +30,48 @@ $openAIOnLoad = !empty($_GET['ai']);
             </svg>
             Transferir
         </button>
-        <button class="btn btn-outline" onclick="openPaymentModal()" title="Nuevo movimiento manual">
+        <button class="btn btn-outline" onclick="openPaymentModal()" title="Nuevo gasto manual">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
             </svg>
-            Nuevo
+            Gasto
+        </button>
+        <button class="btn btn-outline" onclick="openIncomeModal()" title="Nuevo ingreso manual">
+            <svg class="w-4 h-4 text-success" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+            </svg>
+            Ingreso
         </button>
     </div>
 </div>
 
-<!-- Mobile action row (Carga masiva + Transferir + Nuevo manual; AI lives on the bottom-nav FAB).
-     Grid keeps all three buttons on-screen on narrow phones — a flex row with
-     justify-end pushed the rightmost button off-screen on widths ≤375px. -->
-<div class="lg:hidden grid grid-cols-3 gap-2 mb-3">
-    <a href="/capturar" class="inline-flex items-center justify-center gap-1.5 px-2 py-2 rounded-lg border border-border text-sm text-dark hover:bg-dark/5 active:scale-95 transition" title="Carga masiva con IA (imagenes o audio)">
+<!-- Mobile action row (Carga masiva + Transferir + Gasto + Ingreso; AI lives on the bottom-nav FAB).
+     Grid keeps all four buttons on-screen on narrow phones. -->
+<div class="lg:hidden grid grid-cols-4 gap-2 mb-3">
+    <a href="/capturar" class="inline-flex items-center justify-center gap-1 px-1 py-2 rounded-lg border border-border text-xs text-dark hover:bg-dark/5 active:scale-95 transition" title="Carga masiva con IA (imagenes o audio)">
         <svg class="w-4 h-4 text-accent flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                   d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-6.857 2.286L12 21l-2.286-6.857L3 12l6.857-2.286L12 3z"/>
         </svg>
-        <span class="truncate">Carga masiva</span>
+        <span class="truncate">Carga</span>
     </a>
-    <button type="button" onclick="openTransferModal()" class="inline-flex items-center justify-center gap-1.5 px-2 py-2 rounded-lg border border-border text-sm text-dark hover:bg-dark/5 active:scale-95 transition" title="Transferir entre cuentas">
+    <button type="button" onclick="openTransferModal()" class="inline-flex items-center justify-center gap-1 px-1 py-2 rounded-lg border border-border text-xs text-dark hover:bg-dark/5 active:scale-95 transition" title="Transferir entre cuentas">
         <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/>
         </svg>
         <span>Transferir</span>
     </button>
-    <button type="button" onclick="openPaymentModal()" class="inline-flex items-center justify-center gap-1.5 px-2 py-2 rounded-lg border border-border text-sm text-dark hover:bg-dark/5 active:scale-95 transition" title="Nuevo movimiento manual">
+    <button type="button" onclick="openPaymentModal()" class="inline-flex items-center justify-center gap-1 px-1 py-2 rounded-lg border border-border text-xs text-dark hover:bg-dark/5 active:scale-95 transition" title="Nuevo gasto manual">
         <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
         </svg>
-        <span>Manual</span>
+        <span>Gasto</span>
+    </button>
+    <button type="button" onclick="openIncomeModal()" class="inline-flex items-center justify-center gap-1 px-1 py-2 rounded-lg border border-border text-xs text-dark hover:bg-dark/5 active:scale-95 transition" title="Nuevo ingreso manual">
+        <svg class="w-4 h-4 text-success flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+        </svg>
+        <span>Ingreso</span>
     </button>
 </div>
 
@@ -91,6 +102,11 @@ $openAIOnLoad = !empty($_GET['ai']);
     </div>
 
     <div class="hidden sm:block flex-1"></div>
+
+    <!-- Account filter (hidden when only one account exists — see populateDropdowns) -->
+    <select id="filter-account" class="input sm:max-w-[180px] hidden">
+        <option value="">Todas las cuentas</option>
+    </select>
 
     <!-- Category filter -->
     <select id="filter-category" class="input sm:max-w-[200px]">
@@ -348,6 +364,102 @@ $openAIOnLoad = !empty($_GET['ai']);
     </div>
 </div>
 
+<!-- ─────────────────────────── Income modal ─────────────────────────── -->
+<!-- Slimmer than the payment modal: no card, no recurrent banner, no recipient.
+     Income flow is intentionally simpler since the data model for incoming
+     money has fewer dimensions. -->
+<div id="income-modal" class="fixed inset-0 z-50 hidden bg-dark/40" data-bs-modal="closeIncomeModal">
+    <div class="absolute inset-x-0 bottom-0 sm:inset-0 sm:flex sm:items-center sm:justify-center sm:p-4"
+         style="bottom: var(--keyboard-inset, 0px);">
+        <div class="bg-white rounded-t-2xl sm:rounded-xl border-t sm:border border-border w-full sm:max-w-lg max-h-sheet overflow-y-auto safe-bottom">
+            <button type="button" onclick="closeIncomeModal()" class="w-full pt-2 pb-1 flex justify-center sm:hidden" aria-label="Cerrar">
+                <div class="w-10 h-1 rounded-full bg-border"></div>
+            </button>
+            <header class="px-5 py-4 border-b border-border flex items-center justify-between">
+                <h2 id="income-modal-title" class="text-lg font-semibold">Nuevo ingreso</h2>
+                <button type="button" onclick="closeIncomeModal()" class="text-muted hover:text-dark p-1 -m-1">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                    </svg>
+                </button>
+            </header>
+
+            <form id="income-form" class="p-5 space-y-4">
+                <input type="hidden" id="inc-id">
+
+                <div>
+                    <label for="inc-title" class="block text-sm font-medium mb-1.5">Titulo <span class="text-danger">*</span></label>
+                    <input type="text" id="inc-title" class="input" placeholder="Ej: Sueldo abril, Pago freelance Juan" maxlength="200" required>
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label for="inc-amount" class="block text-sm font-medium mb-1.5">Monto <span class="text-danger">*</span></label>
+                        <input type="text" id="inc-amount" class="input" placeholder="1234,56" inputmode="decimal" data-amount required>
+                    </div>
+                    <div>
+                        <label for="inc-due" class="block text-sm font-medium mb-1.5">Fecha</label>
+                        <input type="date" id="inc-due" class="input">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label for="inc-category" class="block text-sm font-medium mb-1.5">Categoria</label>
+                        <div class="relative">
+                            <span id="inc-category-swatch" class="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 rounded-full border border-border pointer-events-none"></span>
+                            <select id="inc-category" class="input pl-9">
+                                <option value="">Sin categoria</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div>
+                        <label for="inc-currency" class="block text-sm font-medium mb-1.5">Moneda</label>
+                        <select id="inc-currency" class="input">
+                            <option value="ARS">ARS</option>
+                            <option value="USD">USD</option>
+                            <option value="USDT">USDT</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium mb-1.5">Cuenta (donde se acredito)</label>
+                    <input type="hidden" id="inc-account" value="">
+                    <button type="button" id="inc-account-chip" class="picker-chip"></button>
+                </div>
+
+                <label class="flex items-center gap-2 cursor-pointer select-none">
+                    <input type="checkbox" id="inc-is-paid" class="w-4 h-4 rounded border-border text-accent focus:ring-accent/30" checked>
+                    <span class="text-sm">Ya acreditado</span>
+                </label>
+
+                <div id="inc-paid-ts-wrap">
+                    <label for="inc-paid-ts" class="block text-sm font-medium mb-1.5">Fecha de acreditacion</label>
+                    <input type="date" id="inc-paid-ts" class="input">
+                </div>
+
+                <div>
+                    <label for="inc-description" class="block text-sm font-medium mb-1.5">Descripcion</label>
+                    <textarea id="inc-description" class="input min-h-[64px]" maxlength="500" rows="2"></textarea>
+                </div>
+
+                <p id="inc-form-error" class="hidden text-sm text-danger">&nbsp;</p>
+
+                <div class="flex items-center gap-2 pt-2">
+                    <button type="button" id="inc-form-delete" onclick="deleteFromIncomeModal()"
+                            class="hidden text-sm text-danger hover:bg-danger/5 px-3 py-2 rounded-lg transition-colors">
+                        Eliminar
+                    </button>
+                    <div class="flex-1"></div>
+                    <button type="button" onclick="closeIncomeModal()" class="btn btn-ghost">Cancelar</button>
+                    <button type="submit" id="inc-form-submit" class="btn btn-primary">Guardar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
 <!-- ─────────────────────────── Transfer modal ─────────────────────────── -->
 <div id="transfer-modal" class="fixed inset-0 z-50 hidden bg-dark/40" data-bs-modal="closeTransferModal">
     <div class="absolute inset-x-0 bottom-0 sm:inset-0 sm:flex sm:items-center sm:justify-center sm:p-4"
@@ -461,6 +573,12 @@ $openAIOnLoad = !empty($_GET['ai']);
             </header>
 
             <div class="p-5 space-y-4">
+                <!-- Kind toggle (Gasto / Ingreso) — drives the prompt + which form opens after parse -->
+                <div class="flex gap-1 p-1 bg-dark/5 rounded-lg">
+                    <button type="button" data-kind="expense" class="ai-kind-tab flex-1 text-sm py-2 rounded-md transition-colors bg-white shadow-sm text-dark font-medium">Gasto</button>
+                    <button type="button" data-kind="income" class="ai-kind-tab flex-1 text-sm py-2 rounded-md transition-colors text-muted">Ingreso</button>
+                </div>
+
                 <!-- Mode tabs (text active by default — JS keeps these classes in sync after init) -->
                 <div class="flex gap-1 p-1 bg-dark/5 rounded-lg">
                     <button type="button" data-mode="text" class="ai-mode-tab flex-1 text-sm py-2 rounded-md transition-colors bg-white shadow-sm text-dark font-medium">Texto</button>
@@ -580,7 +698,8 @@ $openAIOnLoad = !empty($_GET['ai']);
 const SVG_NS = 'http://www.w3.org/2000/svg';
 const ICON_RECURRENT = 'M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15';
 let payments = [];
-let categories = [];
+let categories = [];        // expense categories
+let incomeCategories = [];  // income categories (separate taxonomy)
 let cards = [];
 let accounts = [];
 let editingId = null;
@@ -589,7 +708,7 @@ let pendingDeleteId = null;
 // AI input state. aiSourceTag is non-null while the payment-modal is pre-filled
 // from /api/ai/parse-single — used to tag the resulting payment with source=ai-*.
 let aiSourceTag = null;
-let aiState = { mode: 'text', image: null, pdf: null, audio: null, draft: null, matched: null, artifact: null };
+let aiState = { mode: 'text', kind: 'expense', image: null, pdf: null, audio: null, draft: null, matched: null, artifact: null };
 
 // MediaRecorder runtime (only populated while a recording is in progress or just-finished).
 let aiAudio = { recorder: null, stream: null, chunks: [], startTime: 0, mimeType: null, timerInterval: null, autoStopTimeout: null };
@@ -598,6 +717,7 @@ let aiAudio = { recorder: null, stream: null, chunks: [], startTime: 0, mimeType
 let viewMonth = startOfMonth(new Date());
 let statusFilter = 'all';   // all | paid | unpaid
 let categoryFilter = '';
+let accountFilter = '';     // account_id; '' = all accounts
 let searchQuery = '';       // free-text substring search (case-insensitive)
 // Per-row currency override. id → currency code. Absent = native (default).
 // Cycled by the row's currency action; lost on reload.
@@ -616,6 +736,7 @@ function readUrlState() {
         statusFilter = p.get('status');
     }
     if (p.has('category')) categoryFilter = p.get('category');
+    if (p.has('account')) accountFilter = p.get('account');
     if (p.has('q')) searchQuery = p.get('q');
     if (p.has('open')) expandedId = p.get('open');
 }
@@ -639,6 +760,7 @@ function writeUrlState() {
     params.set('month', `${y}-${m}`);
     if (statusFilter !== 'all') params.set('status', statusFilter);
     if (categoryFilter) params.set('category', categoryFilter);
+    if (accountFilter) params.set('account', accountFilter);
     if (searchQuery) params.set('q', searchQuery);
     if (expandedId) params.set('open', expandedId);
     const qs = params.toString();
@@ -709,9 +831,16 @@ function todayISODate() {
     return `${d.getFullYear()}-${m}-${day}`;
 }
 function categoryById(id) { return categories.find(c => c.id === id); }
+function incomeCategoryById(id) { return incomeCategories.find(c => c.id === id); }
 function cardById(id)     { return cards.find(c => c.id === id); }
 function accountById(id)  { return accounts.find(a => a.id === id); }
 function defaultAccount() { return accounts.find(a => Number(a.is_default) === 1) || accounts[0] || null; }
+// Resolve the right category for a transaction regardless of kind.
+function categoryForRow(p) {
+    return p.kind === 'income'
+        ? incomeCategoryById(p.income_category_id)
+        : categoryById(p.expense_category_id);
+}
 
 // Origin label shown in the row's subline. Keeps 'manual' silent so default
 // rows stay clean. Whatsapp variants collapse to a single label since the
@@ -765,21 +894,24 @@ async function loadAll() {
     document.getElementById('month-label').textContent = monthLabel(viewMonth);
     const range = fmtDateRange(viewMonth);
 
-    const [pays, cats, crds, accs] = await Promise.all([
+    const [pays, cats, incCats, crds, accs] = await Promise.all([
         api.get('/transactions', { start_date: range.start, end_date: range.end }),
         api.get('/categories'),
+        api.get('/categories', { kind: 'income' }),
         api.get('/cards'),
         api.get('/accounts'),
     ]);
 
     payments = Array.isArray(pays) ? pays : [];
     categories = Array.isArray(cats) ? cats : [];
+    incomeCategories = Array.isArray(incCats) ? incCats : [];
     cards = Array.isArray(crds) ? crds : [];
     accounts = Array.isArray(accs) ? accs : [];
     if (pays && pays.error) toast(`No se pudieron cargar los movimientos: ${pays.error}`, 'error');
 
     populateDropdowns();
     document.getElementById('filter-category').value = categoryFilter;
+    document.getElementById('filter-account').value = accountFilter;
     renderSummary();
     renderPayments();
     // If we landed via /movimientos?open=<id>, scroll to that row once the
@@ -815,6 +947,16 @@ function populateDropdowns() {
     filterSel.appendChild(makeOption('', 'Todas las categorias'));
     categories.forEach(c => filterSel.appendChild(makeOption(c.id, c.name)));
     filterSel.value = prev;
+
+    // Account filter — hidden when there's only one account, since "filter
+    // by the only account I have" is a no-op and adds visual noise.
+    const acctSel = document.getElementById('filter-account');
+    const acctPrev = acctSel.value;
+    acctSel.textContent = '';
+    acctSel.appendChild(makeOption('', 'Todas las cuentas'));
+    accounts.forEach(a => acctSel.appendChild(makeOption(a.id, a.name)));
+    acctSel.value = acctPrev;
+    acctSel.classList.toggle('hidden', accounts.length <= 1);
 }
 
 function makeOption(value, label) {
@@ -832,7 +974,7 @@ function paymentSearchableText(p) {
         p.description,
         p.currency,
         labelForSource(p.source),
-        categoryById(p.expense_category_id)?.name,
+        categoryForRow(p)?.name,
     ];
     const card = cardById(p.card_id);
     if (card) {
@@ -860,6 +1002,10 @@ function applyFilters(list) {
         if (statusFilter === 'paid' && p.is_paid != 1) return false;
         if (statusFilter === 'unpaid' && p.is_paid == 1) return false;
         if (categoryFilter && p.expense_category_id !== categoryFilter) return false;
+        // Account filter: matches per-leg, so transfers involving the chosen
+        // account show via either leg (the leg-grouping in renderPayments
+        // pulls the full transfer back together once any leg matches).
+        if (accountFilter && p.account_id !== accountFilter) return false;
         if (q && !paymentSearchableText(p).includes(q)) return false;
         return true;
     });
@@ -874,9 +1020,11 @@ function emptyBucket() {
 }
 
 // Buckets are built off the same filtered set the list renders, but transfer
-// legs are excluded (they move money, they don't spend it).
+// legs are excluded (they move money, they don't spend it). Income is also
+// excluded so the spend rollup stays accurate; income totals will get their
+// own treatment when the dashboard/analytics rework lands (#56).
 function summaryBuckets() {
-    const filtered = applyFilters(payments).filter(p => p.kind !== 'transfer');
+    const filtered = applyFilters(payments).filter(p => p.kind !== 'transfer' && p.kind !== 'income');
     const buckets = {};
     filtered.forEach(p => {
         const cur = p.currency || 'ARS';
@@ -1119,7 +1267,7 @@ function buildPaymentRow(p, isPaid, isOverdue, isLast) {
     if (!isLast) wrap.classList.add('border-b', 'border-border');
 
     const isRecurrent = p.transaction_type === 'recurrent';
-    const cat = categoryById(p.expense_category_id);
+    const cat = categoryForRow(p);
     const catColor = cat?.color || '#8C857D';
 
     const header = document.createElement('div');
@@ -1181,7 +1329,8 @@ function buildPaymentRow(p, isPaid, isOverdue, isLast) {
     const badge = document.createElement('button');
     badge.type = 'button';
     let badgeColor;
-    if (isPaid)        { badgeColor = 'bg-success/10 text-success'; badge.textContent = 'Pagado'; }
+    const isIncomeRow = p.kind === 'income';
+    if (isPaid)        { badgeColor = 'bg-success/10 text-success'; badge.textContent = isIncomeRow ? 'Acreditado' : 'Pagado'; }
     else if (isOverdue){ badgeColor = 'bg-danger/10 text-danger';   badge.textContent = 'Vencido'; }
     else               { badgeColor = 'bg-muted/10 text-muted';     badge.textContent = 'Pendiente'; }
     badge.className = `inline-block font-semibold tracking-wide uppercase rounded cursor-pointer hover:opacity-80 active:scale-95 transition disabled:opacity-50 disabled:cursor-wait whitespace-nowrap text-[10px] px-2 py-0.5 ${badgeColor}`;
@@ -1231,7 +1380,7 @@ function buildPaymentExpansion(p) {
 
     if (p.description) appendKv(exp, 'Descripción', p.description);
 
-    const cat = categoryById(p.expense_category_id);
+    const cat = categoryForRow(p);
     if (cat) appendKv(exp, 'Categoría', cat.name);
 
     const acct = accountById(p.account_id);
@@ -1341,8 +1490,13 @@ function buildAmountStack(p) {
     const value = display === native ? nativeAmt : fx.convert(nativeAmt, native, display);
 
     const span = document.createElement('span');
-    span.className = 'text-[15px] sm:text-sm font-semibold tabular-nums';
-    span.textContent = (display === native ? '' : '≈ ') + formatPrice(value, display);
+    const isIncome = p.kind === 'income';
+    // Income reads as positive cashflow — green text + leading "+" sets it
+    // apart from expenses without needing a separate column.
+    const colorCls = isIncome ? ' text-success' : '';
+    span.className = 'text-[15px] sm:text-sm font-semibold tabular-nums' + colorCls;
+    const prefix = display === native ? (isIncome ? '+' : '') : (isIncome ? '+≈ ' : '≈ ');
+    span.textContent = prefix + formatPrice(value, display);
     return span;
 }
 
@@ -1381,7 +1535,7 @@ function makeRowActions(p) {
         }
         sections.push({
             items: [
-                { label: 'Editar',   onClick: () => openPaymentModal(p) },
+                { label: 'Editar',   onClick: () => p.kind === 'income' ? openIncomeModal(p) : openPaymentModal(p) },
                 { label: 'Eliminar', danger: true, onClick: () => openPaymentDelete(p) },
             ],
         });
@@ -1682,6 +1836,162 @@ async function confirmPaymentDelete() {
     }
 }
 
+// ── Income modal ────────────────────────────────────────────────────
+// Slimmer than the payment modal: no card, no recurrent banner, no recipient.
+// Lives separately so the expense flow keeps its specialized behavior without
+// branching on `kind` at every line.
+let incomeEditingId = null;
+
+function populateIncomeCategorySelect() {
+    const sel = document.getElementById('inc-category');
+    sel.textContent = '';
+    sel.appendChild(makeOption('', 'Sin categoria'));
+    incomeCategories.forEach(c => sel.appendChild(makeOption(c.id, c.name)));
+}
+
+function updateIncomeCategorySwatch() {
+    const id = document.getElementById('inc-category').value;
+    const cat = incomeCategoryById(id);
+    document.getElementById('inc-category-swatch').style.backgroundColor = cat?.color || 'transparent';
+}
+
+async function openIncomeModal(p) {
+    incomeEditingId = p?.id || null;
+    document.getElementById('income-modal-title').textContent = incomeEditingId ? 'Editar ingreso' : 'Nuevo ingreso';
+
+    populateIncomeCategorySelect();
+
+    // Editing an existing income row: hydrate from the latest server copy so we
+    // pick up any fields not present on the list (e.g. description).
+    const full = incomeEditingId ? (await api.get('/transactions', { id: incomeEditingId })) : null;
+    const data = full || p || {};
+
+    document.getElementById('inc-id').value = data.id || '';
+    document.getElementById('inc-title').value = data.title || '';
+    document.getElementById('inc-amount').value = data.amount != null ? formatAmountForInput(Math.abs(data.amount)) : '';
+    document.getElementById('inc-due').value = data.due_ts ? data.due_ts.slice(0, 10) : todayISODate();
+    document.getElementById('inc-category').value = data.income_category_id || '';
+    document.getElementById('inc-currency').value = data.currency || 'ARS';
+    document.getElementById('inc-account').value = data.account_id || defaultAccount()?.id || '';
+    document.getElementById('inc-is-paid').checked = data.is_paid != 0;
+    document.getElementById('inc-paid-ts').value = data.paid_ts ? data.paid_ts.slice(0, 10) : (data.due_ts ? data.due_ts.slice(0, 10) : todayISODate());
+    document.getElementById('inc-description').value = data.description || '';
+
+    updateIncomeCategorySwatch();
+    mangosPicker.updateChip(document.getElementById('inc-account-chip'));
+    document.getElementById('inc-paid-ts-wrap').classList.toggle('hidden', !document.getElementById('inc-is-paid').checked);
+
+    document.getElementById('inc-form-error').classList.add('hidden');
+    document.getElementById('inc-form-delete').classList.toggle('hidden', !incomeEditingId);
+
+    document.getElementById('income-modal').classList.remove('hidden');
+    setTimeout(() => document.getElementById('inc-title').focus(), 50);
+}
+
+function closeIncomeModal() {
+    // If we still have an unsaved AI artifact when closing, the user dismissed
+    // the prefilled form — fire-and-forget a discard so we don't leak orphans.
+    if (aiState.artifact && aiState.artifact.path) {
+        const path = aiState.artifact.path;
+        aiState.artifact = null;
+        api.post('/ai/discard-artifact', { path }).catch(() => {});
+    }
+    document.getElementById('income-modal').classList.add('hidden');
+    incomeEditingId = null;
+    aiSourceTag = null;
+}
+
+async function submitIncomeForm(e) {
+    e.preventDefault();
+    const submitBtn = document.getElementById('inc-form-submit');
+    const errorEl = document.getElementById('inc-form-error');
+    errorEl.classList.add('hidden');
+    submitBtn.disabled = true;
+
+    const amountStr = document.getElementById('inc-amount').value;
+    const amountNum = parseAmount(amountStr);
+    if (!isFinite(amountNum) || amountNum <= 0) {
+        errorEl.textContent = 'Ingresa un monto valido';
+        errorEl.classList.remove('hidden');
+        submitBtn.disabled = false;
+        return;
+    }
+
+    const dueDate = document.getElementById('inc-due').value;
+    const isPaidChecked = document.getElementById('inc-is-paid').checked;
+    const paidDate = document.getElementById('inc-paid-ts').value;
+
+    const body = {
+        kind: 'income',
+        title: document.getElementById('inc-title').value.trim(),
+        amount: amountNum,
+        due_ts: dueDate ? `${dueDate} 12:00:00` : null,
+        income_category_id: document.getElementById('inc-category').value || null,
+        account_id: document.getElementById('inc-account').value || null,
+        currency: document.getElementById('inc-currency').value || 'ARS',
+        is_paid: isPaidChecked,
+        paid_ts: (isPaidChecked && paidDate) ? `${paidDate} 12:00:00` : null,
+        description: document.getElementById('inc-description').value.trim(),
+    };
+    if (!incomeEditingId && aiSourceTag) body.source = aiSourceTag;
+    if (!incomeEditingId && aiState.artifact) {
+        body.ai_artifact_path = aiState.artifact.path;
+        body.ai_artifact_mime = aiState.artifact.mime;
+    }
+
+    try {
+        const result = incomeEditingId
+            ? await api.put('/transactions', body, { id: incomeEditingId })
+            : await api.post('/transactions', body);
+
+        const ok = incomeEditingId ? result?.updated === true : !!result?.id;
+        if (!ok) {
+            errorEl.textContent = result?.error || 'Error al guardar';
+            errorEl.classList.remove('hidden');
+            submitBtn.disabled = false;
+            return;
+        }
+
+        toast(incomeEditingId ? 'Ingreso actualizado' : 'Ingreso creado', 'success');
+        aiState.artifact = null;
+        closeIncomeModal();
+        await loadAll();
+    } catch (err) {
+        console.error(err);
+        errorEl.textContent = 'Error de red';
+        errorEl.classList.remove('hidden');
+    } finally {
+        submitBtn.disabled = false;
+    }
+}
+
+function deleteFromIncomeModal() {
+    if (!incomeEditingId) return;
+    const p = payments.find(x => x.id === incomeEditingId);
+    if (!p) return;
+    closeIncomeModal();
+    openPaymentDelete(p);  // shared confirm dialog — same backend DELETE
+}
+
+// Bridge from AI parse-single (kind=income) → income modal with prefilled values.
+function openIncomeModalFromAI(draft, submittedMode) {
+    const detectedCur = draft.detected_currency || 'ARS';
+    const matchByCurrency = accounts.find(a => a.currency === detectedCur);
+    const synthetic = {
+        title: draft.title || '',
+        amount: draft.amount,
+        due_ts: draft.date ? `${draft.date} 12:00:00` : null,
+        income_category_id: draft.suggested_category_id || null,
+        account_id: matchByCurrency?.id || defaultAccount()?.id || null,
+        currency: detectedCur,
+        is_paid: draft.is_paid ? 1 : 0,
+        description: draft.description || '',
+    };
+    const mode = submittedMode || aiState.mode;
+    openIncomeModal(synthetic);
+    aiSourceTag = `ai-${mode}`;
+}
+
 // ── Transfer modal ──────────────────────────────────────────────────
 let editingTransferId = null;
 
@@ -1886,7 +2196,7 @@ function switchAIToManual() {
 
 function resetAIModal() {
     cancelAudioRecording();
-    aiState = { mode: 'text', image: null, pdf: null, audio: null, draft: null, matched: null };
+    aiState = { mode: 'text', kind: 'expense', image: null, pdf: null, audio: null, draft: null, matched: null };
     document.getElementById('ai-text').value = '';
     document.getElementById('ai-image-input').value = '';
     document.getElementById('ai-pdf-input').value = '';
@@ -1897,6 +2207,26 @@ function resetAIModal() {
     showAudioState('idle');
     setAILoading(false);
     setAIMode('text');
+    setAIKind('expense');
+}
+
+function setAIKind(kind) {
+    aiState.kind = kind;
+    document.querySelectorAll('.ai-kind-tab').forEach(t => {
+        const active = t.dataset.kind === kind;
+        t.classList.toggle('bg-white', active);
+        t.classList.toggle('shadow-sm', active);
+        t.classList.toggle('text-dark', active);
+        t.classList.toggle('font-medium', active);
+        t.classList.toggle('text-muted', !active);
+    });
+    // Hint copy on the text-mode placeholder so the user knows what to write.
+    const textarea = document.getElementById('ai-text');
+    if (textarea) {
+        textarea.placeholder = kind === 'income'
+            ? 'Ej: sueldo abril 850000; transferencia recibida 50000 de Juan; reembolso obra social 12000'
+            : 'Ej: 1500 super coto ayer; 800 cafe con juan; transferencia 5000 a Maria por alquiler';
+    }
 }
 
 function setAIMode(mode) {
@@ -2095,7 +2425,7 @@ async function submitAIInput() {
     const errEl = document.getElementById('ai-error');
     errEl.classList.add('hidden');
 
-    const payload = { mode: aiState.mode };
+    const payload = { mode: aiState.mode, kind: aiState.kind };
     const caption = document.getElementById('ai-caption').value.trim();
 
     if (aiState.mode === 'text') {
@@ -2149,12 +2479,16 @@ async function submitAIInput() {
     aiState.draft = result.draft;
     aiState.matched = result.matched_recurrent || null;
     aiState.artifact = result.ai_artifact || null;
-    // Capture the mode BEFORE closeAIModal — resetAIModal() flips aiState.mode
-    // back to 'text', so reading it later in openPaymentModalFromAI would
-    // always tag the source as 'ai-text' regardless of the actual input mode.
+    // Capture mode + kind BEFORE closeAIModal — resetAIModal() flips them
+    // back to defaults, which would corrupt downstream tagging/routing.
     const submittedMode = aiState.mode;
+    const submittedKind = result.kind || aiState.kind;
     closeAIModal();
-    await openPaymentModalFromAI(result.draft, result.matched_recurrent || null, submittedMode);
+    if (submittedKind === 'income') {
+        openIncomeModalFromAI(result.draft, submittedMode);
+    } else {
+        await openPaymentModalFromAI(result.draft, result.matched_recurrent || null, submittedMode);
+    }
 }
 
 function showAIError(msg) {
@@ -2292,6 +2626,13 @@ mangosAuth.ready.then(user => {
         renderPayments();
     });
 
+    document.getElementById('filter-account').addEventListener('change', e => {
+        accountFilter = e.target.value;
+        writeUrlState();
+        renderSummary();
+        renderPayments();
+    });
+
     const searchInput = document.getElementById('filter-search');
     searchInput.value = searchQuery;
     let searchDebounce;
@@ -2324,6 +2665,21 @@ mangosAuth.ready.then(user => {
         mode: 'account',
         valueInputId: 'pmt-account',
     });
+    // Income modal wiring
+    mangosPicker.bindChip(document.getElementById('inc-account-chip'), {
+        mode: 'account',
+        valueInputId: 'inc-account',
+    });
+    document.getElementById('income-form').addEventListener('submit', submitIncomeForm);
+    document.getElementById('inc-category').addEventListener('change', updateIncomeCategorySwatch);
+    document.getElementById('inc-is-paid').addEventListener('change', e => {
+        const wrap = document.getElementById('inc-paid-ts-wrap');
+        wrap.classList.toggle('hidden', !e.target.checked);
+        if (e.target.checked && !document.getElementById('inc-paid-ts').value) {
+            const dueIso = document.getElementById('inc-due').value || todayISODate();
+            document.getElementById('inc-paid-ts').value = dueIso;
+        }
+    });
     // Show/hide the paid-date row in lockstep with the "Marcar como pagado"
     // checkbox so unpaid rows don't carry a stray date.
     document.getElementById('pmt-is-paid').addEventListener('change', e => {
@@ -2343,6 +2699,9 @@ mangosAuth.ready.then(user => {
     // AI modal: tab switching
     document.querySelectorAll('.ai-mode-tab').forEach(t => {
         t.addEventListener('click', () => setAIMode(t.dataset.mode));
+    });
+    document.querySelectorAll('.ai-kind-tab').forEach(t => {
+        t.addEventListener('click', () => setAIKind(t.dataset.kind));
     });
 
     // AI modal: image input
@@ -2393,6 +2752,7 @@ mangosAuth.ready.then(user => {
     document.addEventListener('keydown', e => {
         if (e.key !== 'Escape') return;
         if (!document.getElementById('ai-input-modal').classList.contains('hidden')) closeAIModal();
+        else if (!document.getElementById('income-modal').classList.contains('hidden')) closeIncomeModal();
         else if (!document.getElementById('transfer-modal').classList.contains('hidden')) closeTransferModal();
         else if (!document.getElementById('payment-modal').classList.contains('hidden')) closePaymentModal();
         else if (!document.getElementById('payment-delete-modal').classList.contains('hidden')) closePaymentDelete();

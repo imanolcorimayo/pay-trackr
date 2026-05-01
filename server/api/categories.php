@@ -1,10 +1,19 @@
 <?php
 // $pdo and $user_id provided by index.php
+//
+// Serves both expense_category and income_category. Defaults to expense for
+// back-compat. Pass ?kind=income to operate on the income table.
+
+$kind = $_GET['kind'] ?? 'expense';
+if (!in_array($kind, ['expense', 'income'], true)) {
+    json_error('kind must be one of: expense, income');
+}
+$table = $kind === 'income' ? 'income_category' : 'expense_category';
 
 switch (method()) {
     case 'GET':
         $stmt = $pdo->prepare(
-            "SELECT id, name, color, created_ts FROM expense_category
+            "SELECT id, name, color, created_ts FROM `$table`
              WHERE user_id = ? AND deleted_ts IS NULL
              ORDER BY name"
         );
@@ -19,7 +28,7 @@ switch (method()) {
 
         $id = bin2hex(random_bytes(14));
         $stmt = $pdo->prepare(
-            "INSERT INTO expense_category (id, user_id, name, color) VALUES (?, ?, ?, ?)"
+            "INSERT INTO `$table` (id, user_id, name, color) VALUES (?, ?, ?, ?)"
         );
         $stmt->execute([$id, $user_id, $data['name'], $data['color']]);
 
@@ -47,7 +56,7 @@ switch (method()) {
         $params[] = $user_id;
 
         $stmt = $pdo->prepare(
-            "UPDATE expense_category SET " . implode(', ', $fields) .
+            "UPDATE `$table` SET " . implode(', ', $fields) .
             " WHERE id = ? AND user_id = ? AND deleted_ts IS NULL"
         );
         $stmt->execute($params);
@@ -59,7 +68,7 @@ switch (method()) {
         if (empty($id)) json_error('id is required');
 
         $stmt = $pdo->prepare(
-            "UPDATE expense_category SET deleted_ts = NOW()
+            "UPDATE `$table` SET deleted_ts = NOW()
              WHERE id = ? AND user_id = ? AND deleted_ts IS NULL"
         );
         $stmt->execute([$id, $user_id]);

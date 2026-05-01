@@ -11,3 +11,13 @@ SELECT 'test-mangos-001-acct', 'test-mangos-001', 'Sin cuenta', 'other', 'ARS', 
 WHERE NOT EXISTS (
     SELECT 1 FROM account WHERE user_id = 'test-mangos-001' AND deleted_ts IS NULL
 );
+
+-- Mirror the auth-flow seed: every real user gets default income categories on
+-- first login. The test user is created via this fixture (not through auth),
+-- so we seed them here to keep parity with production state.
+INSERT INTO income_category (id, user_id, name, color)
+SELECT LOWER(HEX(RANDOM_BYTES(14))), 'test-mangos-001', d.name, d.color
+FROM default_income_category d
+WHERE NOT EXISTS (
+    SELECT 1 FROM income_category WHERE user_id = 'test-mangos-001'
+);

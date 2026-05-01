@@ -2,7 +2,7 @@
 <div class="hidden lg:flex items-center justify-between mb-6">
     <div>
         <h1 class="text-2xl font-semibold">Categorias</h1>
-        <p class="text-sm text-muted mt-1">Clasifica tus gastos para entender en que se va tu plata</p>
+        <p class="text-sm text-muted mt-1">Clasifica tus gastos e ingresos para entender tu plata</p>
     </div>
     <button class="btn btn-primary" onclick="openCategoryModal()">
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -12,13 +12,19 @@
     </button>
 </div>
 
+<!-- Kind tabs (gastos vs ingresos) -->
+<div class="flex gap-1 p-1 bg-dark/5 rounded-lg mb-3">
+    <button type="button" data-kind="expense" class="cat-kind-tab flex-1 text-sm py-2 rounded-md transition-colors bg-white shadow-sm text-dark font-medium">Gastos</button>
+    <button type="button" data-kind="income" class="cat-kind-tab flex-1 text-sm py-2 rounded-md transition-colors text-muted">Ingresos</button>
+</div>
+
 <!-- Mobile action row -->
 <div class="lg:hidden mb-3">
     <button type="button" onclick="openCategoryModal()" class="w-full inline-flex items-center justify-center gap-1.5 px-2 py-2 rounded-lg border border-border text-sm text-dark hover:bg-dark/5 active:scale-95 transition" title="Nueva categoria">
         <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
         </svg>
-        <span>Nueva categoria</span>
+        <span id="cat-new-label">Nueva categoria</span>
     </button>
 </div>
 
@@ -120,6 +126,7 @@ const PALETTE = [
 let categories = [];
 let editingId = null;
 let pendingDeleteId = null;
+let activeKind = 'expense'; // 'expense' | 'income'
 
 // ── Helpers ─────────────────────────────────────────────────────────
 function svgIcon(pathD, sizeCls = 'w-4 h-4') {
@@ -148,8 +155,21 @@ function iconButton(pathD, cls, onClick) {
 
 // ── Loading & rendering ─────────────────────────────────────────────
 async function loadCategories() {
-    categories = (await api.get('/categories')) || [];
+    categories = (await api.get('/categories', { kind: activeKind })) || [];
     renderCategories();
+}
+
+function selectKind(kind) {
+    if (kind === activeKind) return;
+    activeKind = kind;
+    document.querySelectorAll('.cat-kind-tab').forEach(btn => {
+        const active = btn.dataset.kind === kind;
+        btn.className = 'cat-kind-tab flex-1 text-sm py-2 rounded-md transition-colors '
+            + (active ? 'bg-white shadow-sm text-dark font-medium' : 'text-muted');
+    });
+    const newLabel = document.getElementById('cat-new-label');
+    if (newLabel) newLabel.textContent = kind === 'income' ? 'Nuevo ingreso' : 'Nueva categoria';
+    loadCategories();
 }
 
 function renderCategories() {
@@ -261,8 +281,8 @@ async function submitCategoryForm(e) {
 
     try {
         const result = editingId
-            ? await api.put('/categories', body, { id: editingId })
-            : await api.post('/categories', body);
+            ? await api.put('/categories', body, { id: editingId, kind: activeKind })
+            : await api.post('/categories?kind=' + activeKind, body);
 
         if (!result || result.error) {
             errorEl.textContent = result?.error || 'Error al guardar';
@@ -300,7 +320,7 @@ async function confirmCategoryDelete() {
     const btn = document.getElementById('category-delete-submit');
     btn.disabled = true;
     try {
-        const result = await api.del('/categories', { id: pendingDeleteId });
+        const result = await api.del('/categories', { id: pendingDeleteId, kind: activeKind });
         if (!result || result.error) {
             toast(result?.error || 'No se pudo eliminar', 'error');
             return;
@@ -323,6 +343,9 @@ mangosAuth.ready.then(user => {
     document.getElementById('category-form').addEventListener('submit', submitCategoryForm);
     document.getElementById('category-color').addEventListener('input', e => {
         document.getElementById('category-color-value').textContent = e.target.value.toUpperCase();
+    });
+    document.querySelectorAll('.cat-kind-tab').forEach(btn => {
+        btn.addEventListener('click', () => selectKind(btn.dataset.kind));
     });
     document.addEventListener('keydown', e => {
         if (e.key !== 'Escape') return;

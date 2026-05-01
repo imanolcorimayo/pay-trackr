@@ -547,6 +547,13 @@ function handle_parse_single(PDO $pdo, string $user_id): void {
         json_error('mode must be one of: text, image, audio, pdf');
     }
 
+    // kind drives prompt selection + which category table to load. Defaults to
+    // expense for back-compat with clients that haven't been updated yet.
+    $kind = $body['kind'] ?? 'expense';
+    if (!in_array($kind, ['expense', 'income'], true)) {
+        json_error('kind must be one of: expense, income');
+    }
+
     $parts = [];
     $caption = trim((string)($body['caption'] ?? ''));
     $user_input = null;
@@ -583,30 +590,37 @@ function handle_parse_single(PDO $pdo, string $user_id): void {
     $tz = new DateTimeZone('America/Argentina/Buenos_Aires');
     $today = (new DateTime('now', $tz))->format('Y-m-d');
 
-    // Recurrents + aliases (for matching against active subscriptions). ABS()
-    // because the prompt context expects the displayed (positive) magnitude.
-    $stmt = $pdo->prepare(
-        "SELECT r.id, r.title, ABS(r.amount) AS amount, r.expense_category_id,
-                COALESCE(GROUP_CONCAT(ra.alias SEPARATOR '\n'), '') AS aliases
-         FROM recurrent r
-         LEFT JOIN recurrent_alias ra ON ra.recurrent_id = r.id
-         WHERE r.user_id = ?
-         GROUP BY r.id
-         ORDER BY r.title"
-    );
-    $stmt->execute([$user_id]);
-    $recurrents_raw = $stmt->fetchAll();
-    $recurrents = array_map(function($r) {
-        return [
-            'id' => $r['id'],
-            'title' => $r['title'],
-            'amount' => (float)$r['amount'],
-            'aliases' => $r['aliases'] ? array_values(array_filter(explode("\n", $r['aliases']))) : [],
-        ];
-    }, $recurrents_raw);
+    // Recurrents only matter for expense parsing (no income recurrents in
+    // scope). For income, we skip the SELECT entirely and pass empty arrays
+    // through the prompt context.
+    if ($kind === 'expense') {
+        $stmt = $pdo->prepare(
+            "SELECT r.id, r.title, ABS(r.amount) AS amount, r.expense_category_id,
+                    COALESCE(GROUP_CONCAT(ra.alias SEPARATOR '\n'), '') AS aliases
+             FROM recurrent r
+             LEFT JOIN recurrent_alias ra ON ra.recurrent_id = r.id
+             WHERE r.user_id = ?
+             GROUP BY r.id
+             ORDER BY r.title"
+        );
+        $stmt->execute([$user_id]);
+        $recurrents_raw = $stmt->fetchAll();
+        $recurrents = array_map(function($r) {
+            return [
+                'id' => $r['id'],
+                'title' => $r['title'],
+                'amount' => (float)$r['amount'],
+                'aliases' => $r['aliases'] ? array_values(array_filter(explode("\n", $r['aliases']))) : [],
+            ];
+        }, $recurrents_raw);
+    } else {
+        $recurrents_raw = [];
+        $recurrents = [];
+    }
 
-    // Categories
-    $stmt = $pdo->prepare("SELECT id, name FROM expense_category WHERE user_id = ? ORDER BY name");
+    // Categories from the right taxonomy.
+    $cat_table = $kind === 'income' ? 'income_category' : 'expense_category';
+    $stmt = $pdo->prepare("SELECT id, name FROM `$cat_table` WHERE user_id = ? AND deleted_ts IS NULL ORDER BY name");
     $stmt->execute([$user_id]);
     $categories = $stmt->fetchAll();
 
@@ -624,7 +638,7 @@ function handle_parse_single(PDO $pdo, string $user_id): void {
         'accounts' => array_map(fn($a) => ['name' => $a['name'], 'currency' => $a['currency']], $accounts),
     ];
 
-    $parts[] = ['text' => build_single_prompt($context, $mode, $user_input)];
+    $parts[] = ['text' => build_single_prompt($context, $mode, $user_input, $kind)];
 
     $start = microtime(true);
     $handler = new GeminiHandler($api_key);
@@ -699,8 +713,10 @@ function handle_parse_single(PDO $pdo, string $user_id): void {
         'ai_artifact' => $ai_artifact,
         'unreadable' => $unreadable,
         'reason' => $reason,
+        'kind' => $kind,
         'meta' => [
             'mode' => $mode,
+            'kind' => $kind,
             'processing_ms' => $elapsed_ms,
             'model_used' => $gem['model_used'] ?? null,
             'models_tried' => $gem['tried'] ?? [],
@@ -797,7 +813,14 @@ function handle_discard_artifact(string $user_id): void {
     json_response(['deleted' => $ok]);
 }
 
-function build_single_prompt(array $context, string $mode, ?string $user_input): string {
+function build_single_prompt(array $context, string $mode, ?string $user_input, string $kind = 'expense'): string {
+    if ($kind === 'income') {
+        return build_single_income_prompt($context, $mode, $user_input);
+    }
+    return build_single_expense_prompt($context, $mode, $user_input);
+}
+
+function build_single_expense_prompt(array $context, string $mode, ?string $user_input): string {
     $context_json = json_encode($context, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
     $today = $context['today'];
 
@@ -845,6 +868,55 @@ TRANSCRIPCION:
 
 CASOS NO PROCESABLES:
 - Si la imagen/PDF no muestra un gasto identificable, o el audio/texto no describe un gasto concreto, devolve unreadable=true con un reason corto.
+- En esos casos, los campos de draft pueden ir en null/0/"" pero la estructura debe estar completa.
+PROMPT;
+}
+
+function build_single_income_prompt(array $context, string $mode, ?string $user_input): string {
+    $context_json = json_encode($context, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
+    $today = $context['today'];
+
+    $intro = match ($mode) {
+        'text' => "El usuario describio un INGRESO de dinero en texto libre (en español argentino). Texto del usuario:\n\"\"\"\n$user_input\n\"\"\"",
+        'image' => "Adjunto una imagen (comprobante de transferencia recibida, recibo de sueldo, captura de acreditacion)." . ($user_input ? " El usuario ademas escribio:\n\"\"\"\n$user_input\n\"\"\"" : " El usuario no agrego texto."),
+        'pdf' => "Adjunto un PDF (recibo de sueldo, factura cobrada, comprobante de cobro)." . ($user_input ? " El usuario ademas escribio:\n\"\"\"\n$user_input\n\"\"\"" : " El usuario no agrego texto."),
+        'audio' => "Adjunto un audio en español argentino describiendo un ingreso de plata. Transcribilo COMPLETO en el campo 'transcription' antes de extraer los datos." . ($user_input ? " El usuario ademas escribio:\n\"\"\"\n$user_input\n\"\"\"" : ""),
+    };
+
+    return <<<PROMPT
+Tu tarea: extraer UN solo INGRESO (entrada de dinero) y devolverlo estructurado para precargar el formulario "Nuevo ingreso" de la app.
+
+$intro
+
+CONTEXTO DEL USUARIO:
+$context_json
+
+REGLAS DE PARSEO:
+- Argentina: el punto separa miles. "\$67.506" = 67506. "\$1.234,56" = 1234.56. Decimales pueden aparecer en superindice o tamaño chico.
+- amount: numero positivo (no string). Para ingresos siempre devolve la magnitud sin signo.
+- title: max 80 chars. Si hay un emisor o cliente, usalo (ej: "Empresa SRL", "Pago freelance Juan"). Si es texto libre tipo "sueldo abril", usa eso.
+- date: YYYY-MM-DD. Si no aparece, usa $today. "ayer", "anteayer", nombres de dias se interpretan respecto a $today.
+- description: detalle util adicional (ej. concepto de la transferencia, mes del sueldo), o null si no hay nada relevante.
+- is_paid: true por defecto (la mayoria de los ingresos ya estan acreditados). Solo false si el texto/audio dice claramente que es un cobro PENDIENTE ("me van a depositar", "todavia no entro").
+- suggested_category_name: una EXACTA de la lista "categories" (Salario, Freelance, Reembolso, etc) o null. NO inventes categorias.
+- recipient: para ingresos generalmente sera null en todos los campos. Solo completar si hay datos bancarios EXPLICITOS del emisor (CBU/CVU, alias, banco) que valga la pena guardar.
+
+DETECCION DE INGRESO vs GASTO (rechazar gastos):
+- INGRESO (extraer): "Transferencia recibida", "Cobro", "Acreditacion", "Rendimientos", "Devolucion", "Sueldo", "Pago recibido", monto en verde, signo "+".
+- GASTO (rechazar): "Transferencia enviada", "Pago a", "Compra", "Debito", "Extraccion", monto en negro/rojo, signo "-".
+- Si el input es claramente un gasto, devuelve unreadable=true con reason="Es un gasto, no un ingreso".
+
+MONEDA:
+- detected_currency: una de "ARS", "USD", "USDT". Detecta la moneda a partir de signos textuales/visuales ("USD", "U\$D", "u\$s", "dolares", "USDT", "tether"). Default a "ARS" si no hay indicio explicito.
+
+MATCHING DE RECURRENTES:
+- No hay recurrentes de ingreso por ahora. Devolve siempre recurrent_match_id=null y recurrent_match_confidence="low".
+
+TRANSCRIPCION:
+- transcription: en modo audio, el texto completo de lo que se dice. En cualquier otro modo, null.
+
+CASOS NO PROCESABLES:
+- Si la imagen/PDF no muestra un ingreso identificable, o el audio/texto no describe un ingreso concreto, devolve unreadable=true con un reason corto.
 - En esos casos, los campos de draft pueden ir en null/0/"" pero la estructura debe estar completa.
 PROMPT;
 }

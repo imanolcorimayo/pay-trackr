@@ -1,10 +1,14 @@
 <?php
 // $pdo, $user_id, and (when present) $transactions_action provided by index.php
 //
-// Sign convention: this endpoint stores signed amounts. Until incomes land
-// (Phase 4), every write is an expense, so amounts are normalized to negative
-// via `-abs($input)` before insert/update. Reads return the stored signed
-// value as-is; the frontend `Math.abs()`es for display.
+// Sign convention: this endpoint stores signed amounts. Sign is driven by
+// `kind`: expense ⇒ -abs(input), income ⇒ +abs(input). Transfers and fees
+// stay expense-managed via /api/transfers (this endpoint refuses to delete
+// them and never creates them). Reads return the stored signed value as-is;
+// the frontend `Math.abs()`es for display.
+//
+// Categories: expense rows use expense_category_id, income rows use
+// income_category_id. The opposite column is forced to NULL on write.
 
 if (($transactions_action ?? null) === 'artifact') {
     handle_transaction_artifact($pdo, $user_id);
@@ -69,6 +73,10 @@ switch (method()) {
             $sql .= " AND expense_category_id = ?";
             $params[] = $_GET['expense_category_id'];
         }
+        if (!empty($_GET['income_category_id'])) {
+            $sql .= " AND income_category_id = ?";
+            $params[] = $_GET['income_category_id'];
+        }
         if (!empty($_GET['recurrent_id'])) {
             $sql .= " AND recurrent_id = ?";
             $params[] = $_GET['recurrent_id'];
@@ -111,6 +119,13 @@ switch (method()) {
             json_error('title and amount are required');
         }
 
+        // Only expense | income are creatable here. Transfers and fees are
+        // managed by /api/transfers and never come through this endpoint.
+        $kind = $data['kind'] ?? 'expense';
+        if (!in_array($kind, ['expense', 'income'], true)) {
+            json_error('kind must be one of: expense, income');
+        }
+
         $id = bin2hex(random_bytes(14));
         $is_paid = !empty($data['is_paid']) ? 1 : 0;
         // Allow clients to back-date paid_ts (e.g. logging an expense after the
@@ -118,7 +133,14 @@ switch (method()) {
         $paid_ts = $is_paid
             ? (!empty($data['paid_ts']) ? $data['paid_ts'] : date('Y-m-d H:i:s'))
             : null;
-        $signed_amount = -abs((float)$data['amount']);
+        $signed_amount = $kind === 'income'
+            ? abs((float)$data['amount'])
+            : -abs((float)$data['amount']);
+
+        // Force the opposite category_id to NULL so a row can never claim a
+        // category from the wrong taxonomy.
+        $expense_cat = $kind === 'expense' ? ($data['expense_category_id'] ?? null) : null;
+        $income_cat  = $kind === 'income'  ? ($data['income_category_id']  ?? null) : null;
 
         [$account_id, $currency] = resolve_account_and_currency(
             $pdo, $user_id, $data['account_id'] ?? null, $data['currency'] ?? null
@@ -126,9 +148,9 @@ switch (method()) {
 
         $stmt = $pdo->prepare(
             "INSERT INTO `transaction` (id, user_id, title, description, amount, currency, expense_category_id,
-             is_paid, paid_ts, recurrent_id, card_id, account_id, transaction_type, due_ts, source, status,
-             needs_revision, is_whatsapp, audio_transcription, ai_artifact_path, ai_artifact_mime)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+             income_category_id, is_paid, paid_ts, recurrent_id, card_id, account_id, transaction_type, due_ts,
+             kind, source, status, needs_revision, is_whatsapp, audio_transcription, ai_artifact_path, ai_artifact_mime)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
         );
         $stmt->execute([
             $id,
@@ -137,7 +159,8 @@ switch (method()) {
             $data['description'] ?? '',
             $signed_amount,
             $currency,
-            $data['expense_category_id'] ?? null,
+            $expense_cat,
+            $income_cat,
             $is_paid,
             $paid_ts,
             $data['recurrent_id'] ?? null,
@@ -145,6 +168,7 @@ switch (method()) {
             $account_id,
             $data['transaction_type'] ?? 'one-time',
             $data['due_ts'] ?? null,
+            $kind,
             $data['source'] ?? 'manual',
             $data['status'] ?? 'reviewed',
             !empty($data['needs_revision']) ? 1 : 0,
@@ -171,7 +195,8 @@ switch (method()) {
         if (empty($id)) json_error('id is required');
 
         $data = get_json_body();
-        $allowed = ['title', 'description', 'expense_category_id', 'card_id', 'account_id', 'currency',
+        $allowed = ['title', 'description', 'expense_category_id', 'income_category_id',
+                     'card_id', 'account_id', 'currency',
                      'transaction_type', 'due_ts', 'source', 'status', 'needs_revision',
                      'is_whatsapp', 'audio_transcription', 'ai_artifact_path', 'ai_artifact_mime'];
         $fields = [];
@@ -181,10 +206,19 @@ switch (method()) {
             json_error('currency must be one of: ARS, USD, USDT');
         }
 
-        // Amount needs sign normalization (negative for expense).
+        // Amount sign follows the row's existing kind. Kind is immutable via
+        // PUT — converting expense ↔ income requires delete + recreate (rare,
+        // and avoids edge cases like flipping the sign while the opposite
+        // category_id is still populated).
         if (array_key_exists('amount', $data)) {
+            $stmt = $pdo->prepare("SELECT kind FROM `transaction` WHERE id = ? AND user_id = ?");
+            $stmt->execute([$id, $user_id]);
+            $existing_kind = $stmt->fetchColumn();
+            if ($existing_kind === false) json_error('Transaction not found', 404);
             $fields[] = "amount = ?";
-            $params[] = -abs((float)$data['amount']);
+            $params[] = $existing_kind === 'income'
+                ? abs((float)$data['amount'])
+                : -abs((float)$data['amount']);
         }
 
         // Special handling for is_paid toggle. NOW() is AR-anchored via the

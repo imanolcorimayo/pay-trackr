@@ -99,6 +99,7 @@ function require_auth(): string {
         $stmt->execute([$uid, $email, $name, $avatar, $uid]);
 
         seed_categories_for_user($uid);
+        seed_income_categories_for_user($uid);
         seed_default_account_for_user($uid);
     }
 
@@ -114,6 +115,23 @@ function seed_categories_for_user(string $user_id): void {
     $defaults = $pdo->query("SELECT name, color FROM default_category")->fetchAll();
     $stmt = $pdo->prepare(
         "INSERT INTO expense_category (id, user_id, name, color) VALUES (?, ?, ?, ?)"
+    );
+
+    foreach ($defaults as $cat) {
+        $id = bin2hex(random_bytes(14));
+        $stmt->execute([$id, $user_id, $cat['name'], $cat['color']]);
+    }
+}
+
+/**
+ * Copy default income categories into income_category for a new user.
+ */
+function seed_income_categories_for_user(string $user_id): void {
+    global $pdo;
+
+    $defaults = $pdo->query("SELECT name, color FROM default_income_category")->fetchAll();
+    $stmt = $pdo->prepare(
+        "INSERT INTO income_category (id, user_id, name, color) VALUES (?, ?, ?, ?)"
     );
 
     foreach ($defaults as $cat) {

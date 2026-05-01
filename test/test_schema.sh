@@ -4,7 +4,7 @@
 echo "== test_schema =="
 
 # Expected tables (singular, transaction-domain naming)
-expected="account card default_category expense_category fcm_token fx_rate migrations recurrent recurrent_alias transaction transaction_recipient transaction_template user weekly_summary"
+expected="account card default_category default_income_category expense_category fcm_token fx_rate income_category migrations recurrent recurrent_alias transaction transaction_recipient transaction_template user weekly_summary"
 actual=$(mysql_exec "SHOW TABLES;" | sort | tr '\n' ' ' | sed 's/ $//')
 TESTS_RUN=$((TESTS_RUN + 1))
 if [ "$actual" = "$expected" ]; then
