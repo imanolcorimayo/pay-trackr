@@ -125,13 +125,39 @@ async function subscribeDevice() {
             return;
         }
         const reg = await getRegistration();
-        // Pass the raw ArrayBuffer rather than the Uint8Array view — iOS
-        // Safari historically rejects the view with "must contain a valid
-        // P-256 key" even when the bytes are correct.
-        const sub = await reg.pushManager.subscribe({
-            userVisibleOnly: true,
-            applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY).buffer,
-        });
+
+        // If a subscription already exists (possibly with a different VAPID
+        // key from a previous attempt), iOS will reject re-subscribe with
+        // "must contain a valid P-256 key". Drop it first.
+        const existing = await reg.pushManager.getSubscription();
+        if (existing) {
+            try { await existing.unsubscribe(); } catch (_) {}
+        }
+
+        // Try multiple applicationServerKey formats — different browsers /
+        // Safari versions accept different shapes. The spec allows both a
+        // BufferSource and a base64url DOMString, so we fall through.
+        const keyVariants = [
+            () => urlBase64ToUint8Array(VAPID_PUBLIC_KEY),         // Uint8Array
+            () => urlBase64ToUint8Array(VAPID_PUBLIC_KEY).buffer,  // ArrayBuffer
+            () => VAPID_PUBLIC_KEY,                                 // base64url string
+        ];
+
+        let sub = null, lastErr = null;
+        for (const makeKey of keyVariants) {
+            try {
+                sub = await reg.pushManager.subscribe({
+                    userVisibleOnly: true,
+                    applicationServerKey: makeKey(),
+                });
+                break;
+            } catch (err) {
+                lastErr = err;
+                console.warn('subscribe variant failed:', err.message);
+            }
+        }
+        if (!sub) throw lastErr || new Error('No subscribe variant accepted');
+
         const json = sub.toJSON();
         const result = await api.post('/notifications/subscribe', json);
         if (result?.subscribed) {
