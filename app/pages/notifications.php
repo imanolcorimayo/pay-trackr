@@ -125,9 +125,12 @@ async function subscribeDevice() {
             return;
         }
         const reg = await getRegistration();
+        // Pass the raw ArrayBuffer rather than the Uint8Array view — iOS
+        // Safari historically rejects the view with "must contain a valid
+        // P-256 key" even when the bytes are correct.
         const sub = await reg.pushManager.subscribe({
             userVisibleOnly: true,
-            applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
+            applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY).buffer,
         });
         const json = sub.toJSON();
         const result = await api.post('/notifications/subscribe', json);
