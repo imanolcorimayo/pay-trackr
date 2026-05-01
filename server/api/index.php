@@ -94,6 +94,11 @@ try {
             require __DIR__ . '/fx.php';
             break;
 
+        case '/fx-history':
+            $fx_action = 'history';
+            require __DIR__ . '/fx.php';
+            break;
+
         case '/ai/parse-transactions':
             $ai_action = 'parse-transactions';
             require __DIR__ . '/ai.php';
