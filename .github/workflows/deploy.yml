@@ -24,4 +24,5 @@ jobs:
             cd server && composer install --no-dev --optimize-autoloader
             cd ../app && npm ci && npm run build
             cd .. && php server/migrate.php
+            install -m 644 -o root -g root deploy/cron.d/mangos /etc/cron.d/mangos
             echo "Deployed at $(date)"

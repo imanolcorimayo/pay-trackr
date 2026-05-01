@@ -1,0 +1,16 @@
+# Droplet cron for Mangos notifications.
+# Install: sudo cp deploy/cron.d/mangos /etc/cron.d/mangos && sudo chmod 644 /etc/cron.d/mangos
+# Cron secret lives at /etc/mangos/cron.secret (mode 0640, owner root:www-data).
+#
+# Schedule (America/Argentina/Buenos_Aires):
+#   daily-fijos    08:00 every day
+#   weekly-digest  08:00 Sundays  (PR3, not active yet)
+#
+# Testing tip: set the daily line to "* * * * *" temporarily to fire every
+# minute, watch /var/log/mangos-cron.log, then revert to "0 8 * * *".
+
+SHELL=/bin/bash
+PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+
+# m h dom mon dow user      command
+0 8 * * *   www-data  curl -fsS -X POST -H "X-Cron-Secret: $(cat /etc/mangos/cron.secret)" https://mangos-api.wiseutils.com/api/notifications/daily >> /var/log/mangos-cron.log 2>&1

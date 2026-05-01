@@ -170,11 +170,129 @@ function notif_log(PDO $pdo, string $user_id, string $kind, ?string $ref_id): vo
         ->execute([$id, $user_id, $kind, $ref_id]);
 }
 
+/**
+ * CRON · daily fijo reminders.
+ *
+ * For each user with master_off=false AND daily_enabled=true, query their
+ * recurrents that are due in the next 3 days OR overdue this month and not
+ * yet paid, then bundle them into a single push. Dedups via notification_log
+ * keyed by (user, daily-fijos, YYYY-MM-DD) — once per day per user max,
+ * regardless of how often the cron fires.
+ */
+function handle_notif_cron_daily(PDO $pdo): void {
+    if (method() !== 'POST') json_error('Method not allowed', 405);
+
+    $tz = new DateTimeZone('America/Argentina/Buenos_Aires');
+    $now = new DateTime('now', $tz);
+    $today = $now->format('Y-m-d');
+    $year = (int)$now->format('Y');
+    $mon  = (int)$now->format('m');
+    $day  = (int)$now->format('d');
+    $last_day = (int)$now->format('t');
+
+    // Eligible users: master on + daily kind on. We left-join push_subscription
+    // and skip users with no devices (nothing to push to anyway).
+    $stmt = $pdo->prepare(
+        "SELECT DISTINCT p.user_id
+         FROM notification_pref p
+         JOIN push_subscription s ON s.user_id = p.user_id
+         WHERE p.master_off = 0 AND p.daily_enabled = 1"
+    );
+    $stmt->execute();
+    $user_ids = array_column($stmt->fetchAll(), 'user_id');
+
+    $report = ['users' => 0, 'sent' => 0, 'skipped_dedup' => 0, 'skipped_empty' => 0];
+
+    foreach ($user_ids as $uid) {
+        // Dedup: one daily-fijos push per user per day, no matter how often
+        // the cron runs.
+        $check = $pdo->prepare(
+            "SELECT 1 FROM notification_log
+             WHERE user_id = ? AND kind = 'daily-fijos' AND ref_id = ? LIMIT 1"
+        );
+        $check->execute([$uid, $today]);
+        if ($check->fetchColumn()) { $report['skipped_dedup']++; continue; }
+
+        // Build the list of due-soon + overdue fijos for this user. Compare
+        // against transactions in the current month to detect "already paid".
+        $window_end_day = min($day + 3, $last_day);
+        $stmt = $pdo->prepare(
+            "SELECT r.id, r.title, ABS(r.amount) AS amount, r.due_date_day
+             FROM recurrent r
+             WHERE r.user_id = ?
+               AND (r.end_date IS NULL OR r.end_date >= ?)
+               AND r.due_date_day BETWEEN 1 AND ?
+               AND NOT EXISTS (
+                   SELECT 1 FROM `transaction` t
+                    WHERE t.recurrent_id = r.id
+                      AND t.is_paid = 1
+                      AND DATE_FORMAT(t.due_ts, '%Y-%m') = ?
+               )"
+        );
+        $stmt->execute([$uid, $today, $window_end_day, sprintf('%04d-%02d', $year, $mon)]);
+        $fijos = $stmt->fetchAll();
+
+        if (empty($fijos)) { $report['skipped_empty']++; continue; }
+
+        // Split into overdue (day < today) and due-soon.
+        $overdue = []; $due_soon = []; $total = 0;
+        foreach ($fijos as $f) {
+            $f['amount'] = (float)$f['amount'];
+            $total += $f['amount'];
+            if ((int)$f['due_date_day'] < $day) $overdue[] = $f;
+            else                                $due_soon[] = $f;
+        }
+
+        $payload = build_daily_payload($overdue, $due_soon, $total);
+        if (!$payload) { $report['skipped_empty']++; continue; }
+
+        $sub_stmt = $pdo->prepare("SELECT endpoint, p256dh, auth FROM push_subscription WHERE user_id = ?");
+        $sub_stmt->execute([$uid]);
+        $subs = $sub_stmt->fetchAll();
+
+        $delivered = notif_send($pdo, $uid, $subs, $payload);
+        if ($delivered > 0) {
+            notif_log($pdo, $uid, 'daily-fijos', $today);
+            $report['sent']++;
+        }
+        $report['users']++;
+    }
+
+    json_response($report);
+}
+
+/**
+ * Build the {title, body, url} payload for a daily fijo push. Bundling rule:
+ * one push per user, listing overdue + due-soon items together. Returns null
+ * if there's nothing meaningful to say.
+ */
+function build_daily_payload(array $overdue, array $due_soon, float $total): ?array {
+    $count = count($overdue) + count($due_soon);
+    if ($count === 0) return null;
+
+    $title = $count === 1
+        ? ($overdue[0]['title'] ?? $due_soon[0]['title'])
+        : "$count fijos por revisar";
+
+    $parts = [];
+    if (!empty($overdue)) {
+        $parts[] = count($overdue) . ' vencido' . (count($overdue) > 1 ? 's' : '');
+    }
+    if (!empty($due_soon)) {
+        $parts[] = count($due_soon) . ' por vencer';
+    }
+    $parts[] = '$ ' . number_format($total, 0, ',', '.');
+    $body = implode(' · ', $parts);
+
+    return ['title' => $title, 'body' => $body, 'url' => '/fijos'];
+}
+
 // ── Dispatch ────────────────────────────────────────────────────────────────
 switch ($notif_action) {
     case 'prefs':       handle_notif_prefs($pdo, $user_id); break;
     case 'subscribe':   handle_notif_subscribe($pdo, $user_id); break;
     case 'unsubscribe': handle_notif_unsubscribe($pdo, $user_id); break;
     case 'test-push':   handle_notif_test_push($pdo, $user_id); break;
+    case 'cron-daily':  handle_notif_cron_daily($pdo); break;
     default:            json_error('Unknown notification action', 404);
 }

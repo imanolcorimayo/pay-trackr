@@ -53,6 +53,6 @@ Each row = one notification kind. Bundling, copy and routing get refined as we s
 ## Status
 
 - [x] Foundation: VAPID, tables, SW handlers, `/notificaciones` page, subscribe/unsubscribe/test endpoints.
-- [ ] PR2: daily fijo reminders + droplet cron file.
+- [x] PR2: daily fijo reminders endpoint (`POST /api/notifications/daily`) + droplet cron template at `deploy/cron.d/mangos`.
 - [ ] PR3: weekly AI digest.
 - [ ] Later: anomaly alerts + low-balance alerts.

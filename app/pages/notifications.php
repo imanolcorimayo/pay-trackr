@@ -185,7 +185,15 @@ async function unsubscribeDevice() {
 async function sendTestPush() {
     const result = await api.post('/notifications/test-push', {});
     if (result?.sent != null) {
-        toast(`Enviado a ${result.sent} dispositivo(s)`, 'success');
+        // iOS Safari suppresses push banners while the PWA is in the
+        // foreground. Hint the user where to look so they don't think the
+        // test failed.
+        const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+        toast(
+            isIOS ? `Enviado. Cerrá la app o mirá el centro de notificaciones.` :
+                    `Enviado a ${result.sent} dispositivo(s)`,
+            'success'
+        );
     } else {
         toast(result?.error || 'No se pudo enviar', 'error');
     }

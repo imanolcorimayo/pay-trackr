@@ -43,17 +43,31 @@ if (method() === 'OPTIONS') {
     exit;
 }
 
-// ── Auth middleware ──────────────────────────────
-require __DIR__ . '/../middleware/auth.php';
-$user_id = require_auth();
-
-// ── Router ───────────────────────────────────────
+// ── Route resolution ─────────────────────────────
+// Done before auth so cron-only routes can short-circuit and use the shared
+// secret instead of requiring a Firebase user token.
 $uri = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
 $route = '/' . trim($uri, '/');
-
-// Strip /api prefix if present
 $route = preg_replace('#^/api#', '', $route);
 $route = '/' . trim($route, '/');
+
+$cron_routes = [
+    '/notifications/daily'   => 'cron-daily',
+    '/notifications/weekly'  => 'cron-weekly',
+];
+
+// ── Auth middleware ──────────────────────────────
+if (isset($cron_routes[$route])) {
+    $expected = $GLOBALS['mangos_config']['cron_secret'] ?? '';
+    $given = $_SERVER['HTTP_X_CRON_SECRET'] ?? '';
+    if (!$expected || !hash_equals($expected, $given)) {
+        json_error('Unauthorized', 401);
+    }
+    $user_id = null; // cron routes operate across all users
+} else {
+    require __DIR__ . '/../middleware/auth.php';
+    $user_id = require_auth();
+}
 
 // Wrap dispatch so any uncaught Throwable (PDOException, schema constraint
 // violations, etc.) becomes a structured json_error rather than a raw 500
@@ -146,6 +160,11 @@ try {
 
         case '/notifications/test-push':
             $notif_action = 'test-push';
+            require __DIR__ . '/notifications.php';
+            break;
+
+        case '/notifications/daily':
+            $notif_action = 'cron-daily';
             require __DIR__ . '/notifications.php';
             break;
 
