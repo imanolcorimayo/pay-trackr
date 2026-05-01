@@ -52,8 +52,9 @@ $route = preg_replace('#^/api#', '', $route);
 $route = '/' . trim($route, '/');
 
 $cron_routes = [
-    '/notifications/daily'   => 'cron-daily',
-    '/notifications/weekly'  => 'cron-weekly',
+    '/notifications/daily'      => 'cron-daily',
+    '/notifications/weekly'     => 'cron-weekly',
+    '/notifications/cron-test'  => 'cron-test',
 ];
 
 // ── Auth middleware ──────────────────────────────
@@ -165,6 +166,11 @@ try {
 
         case '/notifications/daily':
             $notif_action = 'cron-daily';
+            require __DIR__ . '/notifications.php';
+            break;
+
+        case '/notifications/cron-test':
+            $notif_action = 'cron-test';
             require __DIR__ . '/notifications.php';
             break;
 

@@ -287,6 +287,42 @@ function build_daily_payload(array $overdue, array $due_soon, float $total): ?ar
     return ['title' => $title, 'body' => $body, 'url' => '/fijos'];
 }
 
+/**
+ * CRON · always-fires test push.
+ *
+ * Hits every subscribed device with a "cron alive" notification regardless of
+ * fijo state. Useful while wiring the droplet cron — proves the pipe is alive
+ * end-to-end without needing real qualifying data. Skips the master_off / kind
+ * toggles intentionally: if you've subscribed a device, you'll get this.
+ *
+ * REMOVE FROM /etc/cron.d/mangos before going live.
+ */
+function handle_notif_cron_test(PDO $pdo): void {
+    if (method() !== 'POST') json_error('Method not allowed', 405);
+
+    $stmt = $pdo->prepare("SELECT user_id, endpoint, p256dh, auth FROM push_subscription");
+    $stmt->execute();
+    $rows = $stmt->fetchAll();
+
+    // Group by user so notif_send can attribute logs/cleanup correctly.
+    $by_user = [];
+    foreach ($rows as $r) {
+        $by_user[$r['user_id']][] = $r;
+    }
+
+    $delivered = 0;
+    foreach ($by_user as $uid => $subs) {
+        $delivered += notif_send($pdo, $uid, $subs, [
+            'title' => 'Cron alive',
+            'body'  => 'El cron disparó — ' . date('H:i:s'),
+            'url'   => '/notificaciones',
+        ]);
+        notif_log($pdo, $uid, 'cron-test', date('Y-m-d H:i'));
+    }
+
+    json_response(['users' => count($by_user), 'sent' => $delivered]);
+}
+
 // ── Dispatch ────────────────────────────────────────────────────────────────
 switch ($notif_action) {
     case 'prefs':       handle_notif_prefs($pdo, $user_id); break;
@@ -294,5 +330,6 @@ switch ($notif_action) {
     case 'unsubscribe': handle_notif_unsubscribe($pdo, $user_id); break;
     case 'test-push':   handle_notif_test_push($pdo, $user_id); break;
     case 'cron-daily':  handle_notif_cron_daily($pdo); break;
+    case 'cron-test':   handle_notif_cron_test($pdo); break;
     default:            json_error('Unknown notification action', 404);
 }
