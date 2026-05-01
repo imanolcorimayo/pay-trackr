@@ -18,6 +18,8 @@ if ($ai_action === 'parse-transactions') {
     handle_parse_single($pdo, $user_id);
 } elseif ($ai_action === 'discard-artifact') {
     handle_discard_artifact($user_id);
+} elseif ($ai_action === 'preview-artifact') {
+    handle_preview_artifact($user_id);
 } else {
     json_error('Unknown AI action', 404);
 }
@@ -181,6 +183,8 @@ function handle_parse_transactions(PDO $pdo, string $user_id): void {
     foreach ($expense_cats as $c) { $expense_cat_by_name[mb_strtolower($c['name'])] = $c['id']; }
     $income_cat_by_name = [];
     foreach ($income_cats as $c)  { $income_cat_by_name[mb_strtolower($c['name'])]  = $c['id']; }
+    $account_by_name = [];
+    foreach ($accounts as $a) { $account_by_name[mb_strtolower($a['name'])] = $a['id']; }
     $existing_ids = array_column($existing, 'id');
     $recurrent_ids = array_column($recurrents, 'id');
 
@@ -193,6 +197,9 @@ function handle_parse_transactions(PDO $pdo, string $user_id): void {
         $name = $d['suggested_category_name'] ?? null;
         $map = $d_kind === 'income' ? $income_cat_by_name : $expense_cat_by_name;
         $d['suggested_category_id'] = $name ? ($map[mb_strtolower($name)] ?? null) : null;
+
+        $aname = $d['suggested_account_name'] ?? null;
+        $d['suggested_account_id'] = $aname ? ($account_by_name[mb_strtolower($aname)] ?? null) : null;
 
         // Existing-match + recurrent-match only apply to expenses (income has
         // no recurrents, and existing-match is keyed by expense titles in this
@@ -346,6 +353,11 @@ $parsing_rules
 MONEDA:
 - detected_currency: una de "ARS", "USD", "USDT". Detecta la moneda del gasto a partir de signos visuales o textuales: "USD", "U\$D", "u\$s", "dolares", "USDT", "tether" → no-ARS. Default a "ARS" si no hay señal explicita. La lista "accounts" muestra las cuentas del usuario con su moneda; si el gasto coincide con una cuenta no-ARS, usa esa moneda.
 
+CUENTA (suggested_account_name):
+- Si el usuario menciona explicitamente una cuenta/billetera (ej: "lo pague con mercado pago", "salio de galicia", "transferi desde brubank", "USDT en binance"), devolve el nombre EXACTO de "accounts" que mejor matchee (case-insensitive, fuzzy: "mercadopago"/"mp" → "Mercado Pago", "galicia" → "Galicia personal", etc).
+- Tambien aplica si la imagen muestra un logo/header inequivoco de una billetera ("Mercado Pago", "Brubank", "Naranja X", "Ualá", "Binance").
+- Si no hay señal clara, devolve null. NO inventes nombres que no esten en la lista.
+
 DEDUPLICACION Y MATCHING (solo aplica a gastos — drafts con kind=income siempre llevan existing_transaction_id=null y recurrent_match_id=null):
 - existing_transaction_id: si este gasto ya esta en "existing_transactions_recent" (titulo similar + monto cercano + fecha cercana), poner el id; si no, null.
 - recurrent_match_id: si el destinatario o concepto coincide con el "title" O CUALQUIERA de los "aliases" de un recurrent, poner el id de ese recurrent. EJEMPLO: si un recurrent tiene title "Clases de running" y aliases ["NAVARRO AMADEO ANDRES"], y la transaccion es "Transferencia enviada NAVARRO AMADEO ANDRES", DEBE matchear ese recurrent_id. El monto puede variar ±20% (no exigir match exacto en plata).
@@ -377,6 +389,7 @@ function build_schema(): array {
                         'date' => ['type' => 'STRING'],
                         'description' => ['type' => 'STRING', 'nullable' => true],
                         'suggested_category_name' => ['type' => 'STRING', 'nullable' => true],
+                        'suggested_account_name' => ['type' => 'STRING', 'nullable' => true],
                         'existing_transaction_id' => ['type' => 'STRING', 'nullable' => true],
                         'recurrent_match_id' => ['type' => 'STRING', 'nullable' => true],
                         'recurrent_match_confidence' => ['type' => 'STRING', 'enum' => ['high', 'medium', 'low']],
@@ -713,6 +726,15 @@ function handle_parse_single(PDO $pdo, string $user_id): void {
         $name = $draft['suggested_category_name'] ?? null;
         $draft['suggested_category_id'] = $name ? ($cat_by_name[mb_strtolower($name)] ?? null) : null;
 
+        // Resolve account name → id (case-insensitive). Frontend will prefer
+        // this over the currency-only fallback when present.
+        $acct_by_name = [];
+        foreach ($accounts as $a) {
+            $acct_by_name[mb_strtolower($a['name'])] = $a['id'];
+        }
+        $aname = $draft['suggested_account_name'] ?? null;
+        $draft['suggested_account_id'] = $aname ? ($acct_by_name[mb_strtolower($aname)] ?? null) : null;
+
         // Validate recurrent_match_id and resolve the full row from raw rows (so we keep expense_category_id)
         if (!empty($draft['recurrent_match_id'])) {
             $matched_raw = null;
@@ -858,6 +880,31 @@ function handle_discard_artifact(string $user_id): void {
     json_response(['deleted' => $ok]);
 }
 
+// Path-based preview for an unsaved artifact (still under the user's namespace
+// in Spaces, but not yet linked to a transaction row). Used by the edit modal
+// when opened from the AI flow before the user saves.
+function handle_preview_artifact(string $user_id): void {
+    if (method() !== 'GET') json_error('Method not allowed', 405);
+    $path = $_GET['path'] ?? '';
+    $mime = $_GET['mime'] ?? '';
+    if (!is_string($path) || $path === '') json_error('path is required');
+
+    $spaces_conf = $GLOBALS['mangos_config']['spaces'] ?? null;
+    if (!$spaces_conf || empty($spaces_conf['key']) || $spaces_conf['key'] === 'CHANGE_ME') {
+        json_error('Spaces not configured', 503);
+    }
+
+    $expectedPrefix = rtrim($spaces_conf['prefix'], '/') . '/ai-uploads/' . $user_id . '/';
+    if (!str_starts_with($path, $expectedPrefix)) {
+        json_error('Path outside user namespace', 403);
+    }
+
+    require_once __DIR__ . '/../handlers/SpacesHandler.php';
+    $spaces = new SpacesHandler($spaces_conf);
+    $spaces->streamToOutput($path, $mime);
+    exit;
+}
+
 function build_single_prompt(array $context, string $mode, ?string $user_input, string $kind = 'expense'): string {
     if ($kind === 'income') {
         return build_single_income_prompt($context, $mode, $user_input);
@@ -892,6 +939,7 @@ REGLAS DE PARSEO:
 - description: detalle util adicional (ej. "milanesa + gaseosa", concepto de la transferencia), o null si no hay nada relevante.
 - is_paid: true por defecto (la mayoria de los inputs son gastos ya hechos). Solo false si el texto/audio dice claramente que es un gasto FUTURO ("la semana que viene", "voy a pagar", "tengo que pagar").
 - suggested_category_name: una EXACTA de la lista "categories" o null. NO inventes categorias.
+- suggested_account_name: si el usuario menciona o la imagen muestra una billetera/cuenta de la lista "accounts" (ej: "pague con mercado pago", "salio de galicia", logo de Brubank/Naranja X/Ualá), devolve el nombre EXACTO de esa cuenta. Fuzzy match permitido ("mp"/"mercadopago" → "Mercado Pago"). Si no hay señal clara, null. NO inventes.
 - recipient: completar SOLO si es una transferencia bancaria con datos del destinatario (CBU/CVU, alias, banco). Para tickets de comercio, compras casuales o gastos en efectivo, todos los campos en null.
 
 DETECCION DE GASTO vs INGRESO (rechazar ingresos):
@@ -944,6 +992,7 @@ REGLAS DE PARSEO:
 - description: detalle util adicional (ej. concepto de la transferencia, mes del sueldo), o null si no hay nada relevante.
 - is_paid: true por defecto (la mayoria de los ingresos ya estan acreditados). Solo false si el texto/audio dice claramente que es un cobro PENDIENTE ("me van a depositar", "todavia no entro").
 - suggested_category_name: una EXACTA de la lista "categories" (Salario, Freelance, Reembolso, etc) o null. NO inventes categorias.
+- suggested_account_name: si el usuario menciona o la imagen muestra la billetera donde se acreditó el ingreso (ej: "me entró a mercado pago", "lo cobré por brubank", logo visible), devolve el nombre EXACTO de esa cuenta de la lista "accounts". Fuzzy match permitido ("mp"/"mercadopago" → "Mercado Pago"). Si no hay señal clara, null. NO inventes.
 - recipient: para ingresos generalmente sera null en todos los campos. Solo completar si hay datos bancarios EXPLICITOS del emisor (CBU/CVU, alias, banco) que valga la pena guardar.
 
 DETECCION DE INGRESO vs GASTO (rechazar gastos):
@@ -979,6 +1028,7 @@ function build_single_schema(): array {
                     'description' => ['type' => 'STRING', 'nullable' => true],
                     'is_paid' => ['type' => 'BOOLEAN'],
                     'suggested_category_name' => ['type' => 'STRING', 'nullable' => true],
+                    'suggested_account_name' => ['type' => 'STRING', 'nullable' => true],
                     'recipient' => [
                         'type' => 'OBJECT',
                         'properties' => [

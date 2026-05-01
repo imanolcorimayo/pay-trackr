@@ -444,6 +444,18 @@ $openAIOnLoad = !empty($_GET['ai']);
                     <textarea id="inc-description" class="input min-h-[64px]" maxlength="500" rows="2"></textarea>
                 </div>
 
+                <!-- Original artifact (image / audio / PDF). Mirrors the
+                     expense modal — populated in openIncomeModal. -->
+                <details id="inc-artifact-details" class="hidden border border-border rounded-lg">
+                    <summary class="px-4 py-2.5 text-sm font-medium cursor-pointer select-none flex items-center justify-between">
+                        <span>Original <span id="inc-artifact-kind" class="text-xs text-muted ml-1"></span></span>
+                        <svg class="w-4 h-4 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                        </svg>
+                    </summary>
+                    <div id="inc-artifact-body" class="px-4 pb-4 pt-3 border-t border-border"></div>
+                </details>
+
                 <p id="inc-form-error" class="hidden text-sm text-danger">&nbsp;</p>
 
                 <div class="flex items-center gap-2 pt-2">
@@ -1300,6 +1312,7 @@ function buildPaymentRow(p, isPaid, isOverdue, isLast) {
     titleText.className = 'flex-1 text-[15px] font-medium truncate';
     titleText.textContent = p.title;
     titleRow.appendChild(titleText);
+    if (p.ai_artifact_path) titleRow.appendChild(buildArtifactClipIcon());
     titleRow.appendChild(makeRowActions(p));
     header.appendChild(titleRow);
 
@@ -1401,7 +1414,111 @@ function buildPaymentExpansion(p) {
     if (p.paid_ts) appendKv(exp, 'Pagado el', formatDateLong(p.paid_ts));
     else if (p.due_ts) appendKv(exp, 'Vence', formatDateLong(p.due_ts));
 
+    if (p.ai_artifact_path) appendArtifactRow(exp, p);
+
     return exp;
+}
+
+// Small paperclip icon shown on the row title when a transaction has an
+// associated original (image / audio / PDF). Universal "attachment" symbol —
+// keeps the row tidy regardless of artifact kind.
+function buildArtifactClipIcon() {
+    const ICON_CLIP = 'M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13';
+    const wrap = document.createElement('span');
+    wrap.className = 'flex-shrink-0 text-muted';
+    wrap.title = 'Tiene adjunto';
+    wrap.appendChild(svgIcon(ICON_CLIP, 'w-3 h-3'));
+    return wrap;
+}
+
+// Expansion-panel row: image thumbnail / audio chip / PDF chip → opens the
+// edit modal where the full preview lives. Click stops propagation so the
+// row doesn't collapse on tap.
+function appendArtifactRow(panel, p) {
+    const r = document.createElement('div');
+    r.className = 'flex items-start justify-between gap-3 py-1 text-[13px]';
+
+    const k = document.createElement('span');
+    k.className = 'text-muted flex-shrink-0 pt-1';
+    k.textContent = 'Adjunto';
+    r.appendChild(k);
+
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'flex items-center gap-2.5 p-1.5 border border-border rounded-lg bg-light hover:bg-dark/5 transition-colors max-w-[60%]';
+    btn.title = 'Ver original';
+
+    const mime = (p.ai_artifact_mime || '').toLowerCase();
+    // Image artifacts get a direct lightbox (one tap → fullscreen). Audio/PDF
+    // route through the edit modal where the player / pdf link already lives.
+    const openInModal = e => {
+        e.stopPropagation();
+        if (p.kind === 'income') openIncomeModal(p);
+        else openPaymentModal(p);
+    };
+
+    const appendStackedLabel = (top, bottomText, bottomClass) => {
+        const wrap = document.createElement('span');
+        wrap.className = 'flex flex-col items-start text-[11px] leading-tight';
+        const a = document.createElement('span');
+        a.className = 'text-muted';
+        a.textContent = top;
+        wrap.appendChild(a);
+        const b = document.createElement('span');
+        b.className = bottomClass;
+        b.textContent = bottomText;
+        wrap.appendChild(b);
+        btn.appendChild(wrap);
+    };
+
+    const appendInlineLabel = (text, sub) => {
+        const main = document.createElement('span');
+        main.className = 'text-[12px] font-medium text-dark';
+        main.textContent = text;
+        btn.appendChild(main);
+        if (sub) {
+            const s = document.createElement('span');
+            s.className = 'text-[11px] text-muted';
+            s.textContent = sub;
+            btn.appendChild(s);
+        }
+    };
+
+    if (mime.startsWith('image/')) {
+        const img = document.createElement('img');
+        img.alt = 'Original';
+        img.className = 'w-12 h-9 object-cover rounded flex-shrink-0 bg-dark/5';
+        btn.appendChild(img);
+        // Endpoint requires bearer auth — fetch as blob and use an object URL
+        // so the <img> can render without sending the Authorization header.
+        // Reuse the same blob URL for the lightbox: avoids a second fetch.
+        let blobUrl = null;
+        api.getBlobUrl('/transactions/artifact', { id: p.id }).then(b => {
+            if (b) { blobUrl = b; img.src = b; }
+        });
+        btn.addEventListener('click', e => {
+            e.stopPropagation();
+            if (blobUrl) openImageLightbox(blobUrl);
+            else openInModal(e); // fall back to modal if blob hasn't arrived
+        });
+        appendStackedLabel('Imagen', 'Ampliar', 'text-accent font-medium');
+    } else if (mime.startsWith('audio/')) {
+        const ICON_PLAY = 'M5 3l14 9-14 9V3z';
+        btn.appendChild(svgIcon(ICON_PLAY, 'w-3.5 h-3.5 text-accent'));
+        appendInlineLabel('Audio', '· Reproducir');
+        btn.addEventListener('click', openInModal);
+    } else if (mime === 'application/pdf') {
+        const ICON_PDF = 'M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z';
+        btn.appendChild(svgIcon(ICON_PDF, 'w-3.5 h-3.5 text-accent'));
+        appendInlineLabel('PDF', '· Abrir');
+        btn.addEventListener('click', openInModal);
+    } else {
+        appendInlineLabel('Archivo · Abrir', null);
+        btn.addEventListener('click', openInModal);
+    }
+
+    r.appendChild(btn);
+    panel.appendChild(r);
 }
 
 function buildTransferExpansion(legs, fromLeg, toLeg, feeLeg, fromAcct, toAcct) {
@@ -1621,11 +1738,13 @@ async function openPaymentModal(p) {
     document.getElementById('pmt-form-error').classList.add('hidden');
     // Delete button: only visible when editing a real (saved) payment.
     document.getElementById('pmt-form-delete').classList.toggle('hidden', !editingId);
-    // Original artifact viewer: only when this payment has one persisted.
-    if (full?.id && full.ai_artifact_path) {
-        renderArtifactViewer(full.id, full.ai_artifact_mime || '');
+    // Original artifact viewer: shown for saved rows that have one persisted,
+    // and for unsaved AI drafts via the path-based preview endpoint.
+    const artifactDescriptor = artifactUrlForPayment(full);
+    if (artifactDescriptor) {
+        renderArtifactViewer(artifactDescriptor, artifactMimeForPayment(full), 'pmt');
     } else {
-        hideArtifactViewer();
+        hideArtifactViewer('pmt');
     }
     document.getElementById('payment-modal').classList.remove('hidden');
     setTimeout(() => document.getElementById('pmt-title').focus(), 50);
@@ -1633,12 +1752,14 @@ async function openPaymentModal(p) {
 
 // Render the "Original" details element with an inline preview of the AI input
 // artifact (image / audio / PDF). The actual fetch goes through our private
-// proxy at /api/transactions/artifact?id=<id>; the bucket itself is not exposed.
-function renderArtifactViewer(paymentId, mime) {
-    const details = document.getElementById('pmt-artifact-details');
-    const body = document.getElementById('pmt-artifact-body');
-    const kind = document.getElementById('pmt-artifact-kind');
-    const url = `${window.MANGOS_API_URL}/transactions/artifact?id=${encodeURIComponent(paymentId)}`;
+// proxy at /api/transactions/artifact?id=<id> (saved rows) or
+// /api/ai/preview-artifact?path=<path> (unsaved AI drafts). The bucket itself
+// is not exposed.
+function renderArtifactViewer(descriptor, mime, prefix = 'pmt') {
+    const details = document.getElementById(`${prefix}-artifact-details`);
+    const body = document.getElementById(`${prefix}-artifact-body`);
+    const kind = document.getElementById(`${prefix}-artifact-kind`);
+    if (!details || !body || !kind) return;
 
     body.textContent = '';
 
@@ -1650,53 +1771,120 @@ function renderArtifactViewer(paymentId, mime) {
         body.appendChild(p);
     };
 
+    // Async preview chain: hit the auth-protected endpoint via api.getBlobUrl,
+    // wrap the bytes in an object URL, then assign to the media element. Plain
+    // <img src=...> can't pass the bearer token so it would 401.
+    const fillMedia = (assignSrc, fallbackOnError = true) => {
+        api.getBlobUrl(descriptor.endpoint, descriptor.params)
+            .then(blobUrl => {
+                if (blobUrl) assignSrc(blobUrl);
+                else if (fallbackOnError) showFallback();
+            })
+            .catch(() => fallbackOnError && showFallback());
+    };
+
     let label = 'archivo';
     if (mime.startsWith('image/')) {
         label = 'imagen';
         const img = document.createElement('img');
-        img.src = url;
         img.alt = 'Original';
-        img.className = 'w-full max-h-64 object-contain rounded-lg bg-dark/5';
+        img.className = 'w-full max-h-64 object-contain rounded-lg bg-dark/5 cursor-zoom-in';
+        img.title = 'Click para ampliar';
         img.addEventListener('error', showFallback);
         body.appendChild(img);
+        fillMedia(blobUrl => {
+            img.src = blobUrl;
+            img.addEventListener('click', () => openImageLightbox(blobUrl));
+        });
     } else if (mime.startsWith('audio/')) {
         label = 'audio';
         const audio = document.createElement('audio');
         audio.controls = true;
-        audio.src = url;
         audio.className = 'w-full';
         audio.addEventListener('error', showFallback);
         body.appendChild(audio);
+        fillMedia(blobUrl => { audio.src = blobUrl; });
     } else if (mime === 'application/pdf') {
         label = 'PDF';
         const link = document.createElement('a');
-        link.href = url;
         link.target = '_blank';
         link.rel = 'noopener';
         link.className = 'inline-flex items-center gap-2 text-sm text-accent hover:underline';
         link.textContent = 'Abrir PDF en pestaña nueva';
         body.appendChild(link);
+        fillMedia(blobUrl => { link.href = blobUrl; }, false);
     } else {
         const link = document.createElement('a');
-        link.href = url;
         link.target = '_blank';
         link.rel = 'noopener';
         link.className = 'text-sm text-accent hover:underline';
         link.textContent = 'Descargar archivo original';
         body.appendChild(link);
+        fillMedia(blobUrl => { link.href = blobUrl; }, false);
     }
     kind.textContent = `(${label})`;
     details.classList.remove('hidden');
     details.open = false;
 }
 
-function hideArtifactViewer() {
-    const details = document.getElementById('pmt-artifact-details');
+function hideArtifactViewer(prefix = 'pmt') {
+    const details = document.getElementById(`${prefix}-artifact-details`);
     if (!details) return;
     details.classList.add('hidden');
     details.open = false;
-    document.getElementById('pmt-artifact-body').textContent = '';
-    document.getElementById('pmt-artifact-kind').textContent = '';
+    const body = document.getElementById(`${prefix}-artifact-body`);
+    const kind = document.getElementById(`${prefix}-artifact-kind`);
+    if (body) body.textContent = '';
+    if (kind) kind.textContent = '';
+}
+
+// Fullscreen image preview. Click anywhere or Esc to dismiss. The blob URL is
+// reused — the caller already paid the fetch — so this is purely DOM work.
+function openImageLightbox(blobUrl) {
+    const overlay = document.createElement('div');
+    overlay.className = 'fixed inset-0 z-[60] bg-dark/85 flex items-center justify-center p-4 cursor-zoom-out';
+
+    const img = document.createElement('img');
+    img.src = blobUrl;
+    img.alt = 'Original';
+    img.className = 'max-w-full max-h-full object-contain rounded';
+    overlay.appendChild(img);
+
+    const close = () => {
+        overlay.remove();
+        document.removeEventListener('keydown', onKey);
+        document.body.style.overflow = prevOverflow;
+    };
+    const onKey = e => { if (e.key === 'Escape') close(); };
+
+    overlay.addEventListener('click', close);
+    document.addEventListener('keydown', onKey);
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+
+    document.body.appendChild(overlay);
+}
+
+// Resolve the {endpoint, params} for an artifact, depending on whether the
+// row is saved (id-based proxy) or still a draft from the AI flow (path-based
+// preview). Both endpoints sit behind bearer-token auth, so the renderer must
+// fetch via api.getBlobUrl rather than setting a raw <img src>.
+function artifactUrlForPayment(full) {
+    if (full?.id && full.ai_artifact_path) {
+        return { endpoint: '/transactions/artifact', params: { id: full.id } };
+    }
+    if (aiState.artifact && aiState.artifact.path) {
+        return {
+            endpoint: '/ai/preview-artifact',
+            params: { path: aiState.artifact.path, mime: aiState.artifact.mime || '' },
+        };
+    }
+    return null;
+}
+
+function artifactMimeForPayment(full) {
+    if (full?.id && full.ai_artifact_mime) return full.ai_artifact_mime;
+    return aiState.artifact?.mime || '';
 }
 
 // Triggered from inside the edit modal — delegates to the existing delete confirm flow.
@@ -1884,6 +2072,13 @@ async function openIncomeModal(p) {
     document.getElementById('inc-form-error').classList.add('hidden');
     document.getElementById('inc-form-delete').classList.toggle('hidden', !incomeEditingId);
 
+    const artifactDescriptor = artifactUrlForPayment(full);
+    if (artifactDescriptor) {
+        renderArtifactViewer(artifactDescriptor, artifactMimeForPayment(full), 'inc');
+    } else {
+        hideArtifactViewer('inc');
+    }
+
     document.getElementById('income-modal').classList.remove('hidden');
     setTimeout(() => document.getElementById('inc-title').focus(), 50);
 }
@@ -1896,6 +2091,7 @@ function closeIncomeModal() {
         aiState.artifact = null;
         api.post('/ai/discard-artifact', { path }).catch(() => {});
     }
+    hideArtifactViewer('inc');
     document.getElementById('income-modal').classList.add('hidden');
     incomeEditingId = null;
     aiSourceTag = null;
@@ -2476,14 +2672,15 @@ async function submitAIInput() {
         return;
     }
 
-    aiState.draft = result.draft;
-    aiState.matched = result.matched_recurrent || null;
-    aiState.artifact = result.ai_artifact || null;
-    // Capture mode + kind BEFORE closeAIModal — resetAIModal() flips them
-    // back to defaults, which would corrupt downstream tagging/routing.
+    // Capture mode + kind + artifact BEFORE closeAIModal — resetAIModal()
+    // rebuilds aiState from scratch, dropping any keys we don't restore.
     const submittedMode = aiState.mode;
     const submittedKind = result.kind || aiState.kind;
+    const submittedArtifact = result.ai_artifact || null;
     closeAIModal();
+    aiState.draft = result.draft;
+    aiState.matched = result.matched_recurrent || null;
+    aiState.artifact = submittedArtifact;
     if (submittedKind === 'income') {
         openIncomeModalFromAI(result.draft, submittedMode);
     } else {
@@ -2499,7 +2696,9 @@ function showAIError(msg) {
 
 async function openPaymentModalFromAI(draft, matched, submittedMode) {
     const detectedCur = draft.detected_currency || 'ARS';
-    // If AI detected a non-ARS currency, prefer matching it to a same-currency account.
+    // Prefer the account the AI explicitly matched (e.g. user said
+    // "lo pagué con mercado pago"); fall back to currency-match, then default.
+    const aiAccount = draft.suggested_account_id ? accountById(draft.suggested_account_id) : null;
     const matchByCurrency = accounts.find(a => a.currency === detectedCur);
     const synthetic = {
         title: draft.title || '',
@@ -2507,7 +2706,7 @@ async function openPaymentModalFromAI(draft, matched, submittedMode) {
         due_ts: draft.date ? `${draft.date} 12:00:00` : null,
         expense_category_id: draft.suggested_category_id || null,
         card_id: null,
-        account_id: matchByCurrency?.id || defaultAccount()?.id || null,
+        account_id: aiAccount?.id || matchByCurrency?.id || defaultAccount()?.id || null,
         currency: detectedCur,
         is_paid: draft.is_paid ? 1 : 0,
         description: draft.description || '',

@@ -558,12 +558,13 @@ async function analyze() {
 
     drafts = (result.drafts || []).map(d => {
         const detectedCur = d.detected_currency || 'ARS';
+        const aiAccount = d.suggested_account_id ? accounts.find(a => a.id === d.suggested_account_id) : null;
         const matchByCurrency = accounts.find(a => a.currency === detectedCur);
         const kind = d.kind === 'income' ? 'income' : 'expense';
-        // Account preference order: detected-currency match → bulk default →
-        // user's default account. Currency-match still wins because moving a
-        // USD row onto an ARS account silently drops the currency intent.
-        const account_id = matchByCurrency?.id || bulkAccountId || defaultAccount()?.id || null;
+        // Account preference order: AI-suggested account (e.g. "lo pagué con MP")
+        // → detected-currency match → bulk default → user's default. AI hint wins
+        // because it's a stronger signal than just matching currency.
+        const account_id = aiAccount?.id || matchByCurrency?.id || bulkAccountId || defaultAccount()?.id || null;
         const account = accounts.find(a => a.id === account_id);
         return {
             ...d,

@@ -1,0 +1,808 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>mangos · Dashboard — preview</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+tailwind.config = {
+  theme: {
+    extend: {
+      fontFamily: { sans: ['Inter','system-ui','-apple-system','sans-serif'] },
+      colors: {
+        dark:    '#292524',
+        accent:  '#D97706',
+        accent2: '#B45309',
+        light:   '#FFFBF5',
+        muted:   '#8C857D',
+        border:  '#E8E2DA',
+        danger:  '#B91C1C',
+        success: '#15803D',
+        ink:     '#1a1714',
+      },
+    },
+  },
+};
+</script>
+<style>
+  :root{
+    --dark:#292524; --accent:#D97706; --light:#FFFBF5; --muted:#8C857D;
+    --border:#E8E2DA; --success:#15803D; --danger:#B91C1C;
+  }
+  html,body{ background:var(--light); color:var(--dark); }
+  body{ font-feature-settings:"tnum","ss01"; -webkit-font-smoothing:antialiased; }
+  .tnum{ font-variant-numeric: tabular-nums; }
+  .overline{ font-size:10px; font-weight:600; letter-spacing:.18em; text-transform:uppercase; color:var(--accent); }
+  .overline-muted{ font-size:10px; font-weight:600; letter-spacing:.18em; text-transform:uppercase; color:var(--muted); }
+  .hair{ height:1px; background:var(--border); }
+  .card{ background:#fff; border:1px solid var(--border); border-radius:14px; }
+  .chip{ display:inline-flex; align-items:center; gap:6px; font-size:10.5px; font-weight:600; letter-spacing:.06em; text-transform:uppercase; padding:4px 9px 4px 7px; border-radius:999px; border:1px solid var(--border); background:#fff; color:var(--muted); }
+  .chip .dot{ width:5px; height:5px; border-radius:999px; background:var(--accent); }
+  .chip-mixed{ color:var(--accent); border-color:rgba(217,119,6,.30); background:rgba(217,119,6,.06); }
+  .chip-mixed .dot{ background:var(--accent); }
+
+  /* segmented control */
+  .seg{ display:inline-flex; padding:3px; background:#fff; border:1px solid var(--border); border-radius:10px; }
+  .seg button{ font-size:12.5px; font-weight:500; padding:7px 12px; border-radius:7px; color:var(--muted); letter-spacing:.01em; }
+  .seg button.is-active{ background:var(--dark); color:var(--light); }
+  .seg button:hover:not(.is-active){ color:var(--dark); }
+
+  .pill{ display:inline-flex; align-items:center; gap:6px; padding:5px 10px; border-radius:999px; border:1px solid var(--border); background:#fff; font-size:11.5px; font-weight:500; color:var(--dark); }
+  .pill[data-active="true"]{ background:var(--dark); color:var(--light); border-color:var(--dark); }
+
+  /* dotted background — subtle texture under hero */
+  .dotgrid{
+    background-image: radial-gradient(rgba(41,37,36,.07) 1px, transparent 1px);
+    background-size: 14px 14px;
+  }
+
+  /* hero number */
+  .display{ font-size: clamp(44px, 9vw, 84px); font-weight:700; letter-spacing:-.02em; line-height:.95; }
+  .h1{ font-size:28px; font-weight:600; letter-spacing:-.01em; }
+  .h2{ font-size:20px; font-weight:600; letter-spacing:-.005em; }
+  .h3{ font-size:15px; font-weight:600; }
+  .small{ font-size:12.5px; color:var(--muted); }
+  .num-amount{ font-weight:600; font-variant-numeric: tabular-nums; letter-spacing:-.005em; }
+
+  /* horizontal scroll snap for account cards */
+  .h-scroll{ display:flex; gap:14px; overflow-x:auto; scroll-snap-type:x mandatory; padding:2px; margin:-2px; }
+  .h-scroll::-webkit-scrollbar{ display:none; }
+  .h-scroll > *{ scroll-snap-align:start; flex: 0 0 280px; }
+  @media (min-width: 1024px){
+    .h-scroll{ overflow:visible; }
+    .h-scroll > *{ flex: 1 1 0; min-width:0; }
+  }
+
+  /* split bar */
+  .splitbar{ display:flex; height:10px; border-radius:999px; overflow:hidden; background:#F4EFE7; }
+  .splitbar > span{ display:block; height:100%; }
+  .splitbar > span.income{ background:var(--success); }
+  .splitbar > span.expense{ background:var(--accent); }
+  .splitbar > span.transfer{ background:rgba(41,37,36,.45); }
+
+  /* sparklines */
+  .spark{ width:100%; height:36px; }
+
+  /* recurrent row */
+  .row{ display:flex; align-items:center; justify-content:space-between; padding:14px 0; border-bottom:1px solid var(--border); }
+  .row:last-child{ border-bottom:none; }
+  .row .lhs{ display:flex; align-items:center; gap:12px; min-width:0; }
+  .row .meta{ font-size:11.5px; color:var(--muted); margin-top:2px; }
+  .badge{ font-size:9.5px; font-weight:600; letter-spacing:.08em; text-transform:uppercase; padding:3px 7px; border-radius:4px; }
+  .badge.danger{ background:rgba(185,28,28,.09); color:var(--danger); }
+  .badge.warn{ background:rgba(217,119,6,.10); color:var(--accent); }
+  .badge.ok{ background:rgba(21,128,61,.10); color:var(--success); }
+  .badge.muted{ background:rgba(140,133,125,.10); color:var(--muted); }
+
+  .kind-dot{ width:8px; height:8px; border-radius:999px; flex:none; }
+  .kind-dot.expense{ background:var(--accent); }
+  .kind-dot.income{ background:var(--success); }
+  .kind-dot.transfer{ background:rgba(41,37,36,.5); }
+
+  .arrow{ color:var(--muted); font-weight:600; }
+
+  /* nav */
+  .nav-link{ font-size:13px; font-weight:500; color:var(--muted); padding:7px 0; position:relative; }
+  .nav-link.is-active{ color:var(--dark); }
+  .nav-link.is-active::after{ content:""; position:absolute; left:0; right:0; bottom:-12px; height:2px; background:var(--accent); }
+
+  .delta-pos{ color:var(--success); }
+  .delta-neg{ color:var(--danger); }
+  .delta{ font-size:12px; font-weight:600; font-variant-numeric:tabular-nums; }
+
+  .mono-label{ font-size:10px; font-weight:600; letter-spacing:.20em; text-transform:uppercase; color:var(--muted); }
+
+  /* page-frame border for editorial feel */
+  .frame{ border-top:1px solid var(--border); border-bottom:1px solid var(--border); }
+
+  /* ── Unified filter bar ──────────────────────────────────── */
+  .filter-bar{
+    display:grid;
+    grid-template-columns: 1fr 1fr;
+    gap:1px;
+    background:var(--border);
+    border:1px solid var(--border);
+    border-radius:12px;
+    overflow:hidden;
+  }
+  @media (min-width: 768px){
+    .filter-bar{ grid-template-columns: repeat(4, 1fr); }
+  }
+  .filter-cell{
+    background:#fff;
+    padding:11px 16px 12px;
+    display:flex;
+    flex-direction:column;
+    gap:5px;
+    text-align:left;
+    cursor:pointer;
+    transition: background .12s ease;
+    min-width:0;
+  }
+  .filter-cell:hover{ background:#FAF6EE; }
+  .filter-cell .filter-label{
+    font-size:9.5px;
+    font-weight:600;
+    letter-spacing:.20em;
+    text-transform:uppercase;
+    color:var(--muted);
+  }
+  .filter-cell .filter-value{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:8px;
+    font-size:13.5px;
+    font-weight:500;
+    color:var(--dark);
+    letter-spacing:-.005em;
+    min-width:0;
+  }
+  .filter-cell .filter-value > .v{
+    display:flex;
+    align-items:center;
+    gap:7px;
+    min-width:0;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+  }
+  .filter-cell .chev{ flex:none; color:var(--muted); transition: color .12s ease; }
+  .filter-cell:hover .chev{ color:var(--dark); }
+  .filter-cell .pill-tag{
+    flex:none;
+    font-size:8.5px;
+    font-weight:700;
+    letter-spacing:.10em;
+    text-transform:uppercase;
+    padding:2px 6px;
+    border-radius:4px;
+    background:rgba(217,119,6,.10);
+    color:var(--accent);
+  }
+  .filter-cell.is-readonly{ cursor:default; background:#FAF6EE; }
+  .filter-cell.is-readonly:hover{ background:#FAF6EE; }
+  .filter-cell.is-readonly .filter-value{ color:var(--accent); font-variant-numeric:tabular-nums; }
+  .filter-cell.is-readonly .filter-label{ color:var(--accent); opacity:.70; }
+</style>
+</head>
+<body class="font-sans">
+
+<!-- ───────── App header ───────── -->
+<header class="border-b border-border bg-light/95 backdrop-blur sticky top-0 z-30">
+  <div class="max-w-[1240px] mx-auto px-5 lg:px-8 h-[60px] flex items-center justify-between">
+    <a href="#" class="flex items-center gap-3">
+      <svg width="22" height="28" viewBox="0 0 140 190" aria-hidden="true">
+        <path d="M 70 30 C 108 30, 122 70, 122 100 C 122 138, 106 160, 85 172 C 74 178, 62 170, 52 158 C 35 138, 18 118, 18 95 C 18 65, 35 30, 70 30 Z"
+              fill="none" stroke="#292524" stroke-width="6"/>
+      </svg>
+      <span style="letter-spacing:.42em" class="text-[15px] font-semibold">mangos</span>
+    </a>
+    <nav class="hidden md:flex items-center gap-7">
+      <a href="#" class="nav-link is-active">Dashboard</a>
+      <a href="#" class="nav-link">Movimientos</a>
+      <a href="#" class="nav-link">Analytics</a>
+      <a href="#" class="nav-link">Cuentas</a>
+      <a href="#" class="nav-link">Categorías</a>
+    </nav>
+    <div class="flex items-center gap-2">
+      <button class="hidden sm:inline-flex items-center gap-2 text-[12.5px] font-medium text-muted hover:text-dark px-3 py-2 rounded-lg border border-border bg-white">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3-3"/></svg>
+        Buscar
+      </button>
+      <button class="inline-flex items-center gap-2 bg-dark text-light text-[12.5px] font-medium px-3.5 py-2 rounded-lg">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+        Capturar
+      </button>
+    </div>
+  </div>
+</header>
+
+<!-- ───────── Page heading + filters ───────── -->
+<section class="max-w-[1240px] mx-auto px-5 lg:px-8 pt-10 lg:pt-14">
+  <div>
+    <div class="overline mb-3">01 — Resumen</div>
+    <h1 class="h1">Mayo 2026</h1>
+    <p class="small mt-1.5">Tu plata, clara. Quedan 30 días en el período.</p>
+  </div>
+
+  <!-- filter rail -->
+  <div class="mt-7 filter-bar" role="group" aria-label="Filtros del resumen">
+    <button class="filter-cell" type="button">
+      <span class="filter-label">Período</span>
+      <span class="filter-value">
+        <span class="v">Mes actual <span class="text-muted font-normal">· May 2026</span></span>
+        <svg class="chev" width="11" height="11" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m4 6 4 4 4-4"/></svg>
+      </span>
+    </button>
+
+    <button class="filter-cell" type="button">
+      <span class="filter-label">Moneda</span>
+      <span class="filter-value">
+        <span class="v">ARS + USD <span class="pill-tag">Convert</span></span>
+        <svg class="chev" width="11" height="11" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m4 6 4 4 4-4"/></svg>
+      </span>
+    </button>
+
+    <button class="filter-cell" type="button">
+      <span class="filter-label">Comparar con</span>
+      <span class="filter-value">
+        <span class="v">Mes anterior</span>
+        <svg class="chev" width="11" height="11" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m4 6 4 4 4-4"/></svg>
+      </span>
+    </button>
+
+    <div class="filter-cell is-readonly" aria-readonly="true">
+      <span class="filter-label">Cotización</span>
+      <span class="filter-value">
+        <span class="v">1.180 <span class="text-muted text-[11px] font-normal tracking-wide ml-0.5">ARS / USD</span></span>
+      </span>
+    </div>
+  </div>
+</section>
+
+<!-- ───────── HERO — Net cashflow ───────── -->
+<section class="max-w-[1240px] mx-auto px-5 lg:px-8 mt-7">
+  <div class="card relative overflow-hidden">
+    <div class="absolute inset-0 dotgrid opacity-60 pointer-events-none"></div>
+    <div class="relative grid grid-cols-1 lg:grid-cols-[1.6fr_1fr] gap-0">
+      <!-- LEFT: net hero -->
+      <div class="p-6 lg:p-8">
+        <div class="flex items-center justify-between gap-3 flex-wrap">
+          <span class="mono-label">Flujo neto · Mayo</span>
+          <span class="chip chip-mixed"><span class="dot"></span>Incluye USD convertido</span>
+        </div>
+
+        <div class="mt-4 flex items-baseline gap-3 flex-wrap">
+          <span class="display tnum text-success">+$ 412.840</span>
+          <span class="text-muted text-[18px] tnum">ARS</span>
+        </div>
+
+        <div class="mt-3 flex items-center gap-4 flex-wrap">
+          <div class="delta delta-pos flex items-center gap-1.5">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m6 14 6-6 6 6"/></svg>
+            +18,4% vs Abril
+          </div>
+          <span class="text-muted text-[12.5px]">Promedio 12 m: <span class="tnum text-dark font-medium">+$ 287.500</span></span>
+        </div>
+
+        <!-- split bar -->
+        <div class="mt-7">
+          <div class="flex items-center justify-between text-[12px] mb-2">
+            <span class="text-muted">Distribución del mes</span>
+            <button class="text-accent font-medium hover:underline">Ver detalle</button>
+          </div>
+          <div class="splitbar">
+            <span class="income" style="width:58%"></span>
+            <span class="expense" style="width:34%"></span>
+            <span class="transfer" style="width:8%"></span>
+          </div>
+          <div class="mt-3 flex flex-wrap gap-x-6 gap-y-2 text-[12.5px]">
+            <span class="flex items-center gap-2"><span class="kind-dot income"></span><span class="text-muted">Ingresos</span> <span class="num-amount tnum">$ 1.420.500</span></span>
+            <span class="flex items-center gap-2"><span class="kind-dot expense"></span><span class="text-muted">Gastos</span> <span class="num-amount tnum">$ 1.007.660</span></span>
+            <span class="flex items-center gap-2"><span class="kind-dot transfer"></span><span class="text-muted">Transferencias</span> <span class="num-amount tnum">$ 245.000</span></span>
+          </div>
+        </div>
+      </div>
+
+      <!-- RIGHT: side stats -->
+      <div class="border-t lg:border-t-0 lg:border-l border-border p-6 lg:p-8 bg-[rgba(217,119,6,0.025)]">
+        <div class="mono-label mb-4">Composición por moneda</div>
+
+        <div class="space-y-5">
+          <!-- ARS -->
+          <div>
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-2">
+                <span class="text-[11px] font-semibold tracking-wider text-dark">ARS</span>
+                <span class="text-muted text-[11px]">nativo</span>
+              </div>
+              <span class="num-amount tnum text-[15px]">+$ 318.420</span>
+            </div>
+            <div class="mt-1.5 h-[3px] bg-border rounded-full overflow-hidden">
+              <div class="h-full bg-dark" style="width:77%"></div>
+            </div>
+          </div>
+          <!-- USD -->
+          <div>
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-2">
+                <span class="text-[11px] font-semibold tracking-wider text-dark">USD</span>
+                <span class="text-muted text-[11px]">@ 1.180 ARS</span>
+              </div>
+              <span class="num-amount tnum text-[15px]">US$ 80,02 <span class="text-muted text-[11.5px]">≈ $ 94.420</span></span>
+            </div>
+            <div class="mt-1.5 h-[3px] bg-border rounded-full overflow-hidden">
+              <div class="h-full bg-accent" style="width:23%"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="hair my-6"></div>
+
+        <div class="mono-label mb-3">Indicadores</div>
+        <div class="grid grid-cols-2 gap-y-4 gap-x-3 text-[12.5px]">
+          <div>
+            <div class="text-muted">Tasa de ahorro</div>
+            <div class="mt-0.5 num-amount tnum text-[18px]">29,1%</div>
+          </div>
+          <div>
+            <div class="text-muted">Mov. registrados</div>
+            <div class="mt-0.5 num-amount tnum text-[18px]">87</div>
+          </div>
+          <div>
+            <div class="text-muted">Día con más gasto</div>
+            <div class="mt-0.5 text-[14px] font-medium">Mar 12 <span class="text-muted tnum">· $ 64.200</span></div>
+          </div>
+          <div>
+            <div class="text-muted">Recurrentes activos</div>
+            <div class="mt-0.5 num-amount tnum text-[18px]">12</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ───────── Per-account cards ───────── -->
+<section class="max-w-[1240px] mx-auto px-5 lg:px-8 mt-12">
+  <div class="flex items-end justify-between mb-5">
+    <div>
+      <div class="overline mb-2">02 — Cuentas</div>
+      <h2 class="h2">Cada cuenta, en su lugar</h2>
+    </div>
+    <a href="#" class="text-[12.5px] font-medium text-accent hover:underline">Ver todas →</a>
+  </div>
+
+  <div class="h-scroll">
+    <!-- Account 1 -->
+    <article class="card p-5">
+      <div class="flex items-center justify-between">
+        <div class="flex items-center gap-2.5">
+          <span class="w-8 h-8 rounded-lg flex items-center justify-center text-[10px] font-semibold tracking-wider text-light" style="background:#1f2937">GAL</span>
+          <div>
+            <div class="text-[13.5px] font-semibold leading-tight">Galicia</div>
+            <div class="text-[11px] text-muted">Caja de ahorro · ARS</div>
+          </div>
+        </div>
+        <span class="badge muted">Default</span>
+      </div>
+      <div class="mt-5">
+        <div class="text-[11px] text-muted">Saldo</div>
+        <div class="num-amount tnum text-[24px] mt-0.5">$ 942.180</div>
+        <div class="delta delta-pos mt-1">+ $ 64.420 este mes</div>
+      </div>
+      <svg class="spark mt-3" viewBox="0 0 200 36" preserveAspectRatio="none">
+        <polyline fill="none" stroke="#15803D" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"
+                  points="0,28 12,26 24,22 36,24 48,20 60,18 72,21 84,15 96,17 108,12 120,14 132,10 144,12 156,8 168,10 180,6 192,8 200,5"/>
+      </svg>
+      <div class="mt-3 grid grid-cols-2 gap-3 text-[12px]">
+        <div><div class="text-muted">Ingresos</div><div class="num-amount tnum">+$ 540.000</div></div>
+        <div><div class="text-muted">Gastos</div><div class="num-amount tnum">−$ 475.580</div></div>
+      </div>
+    </article>
+
+    <!-- Account 2 -->
+    <article class="card p-5">
+      <div class="flex items-center justify-between">
+        <div class="flex items-center gap-2.5">
+          <span class="w-8 h-8 rounded-lg flex items-center justify-center text-[10px] font-semibold tracking-wider text-light" style="background:#7c3aed">BBK</span>
+          <div>
+            <div class="text-[13.5px] font-semibold leading-tight">Brubank</div>
+            <div class="text-[11px] text-muted">Cuenta digital · ARS</div>
+          </div>
+        </div>
+      </div>
+      <div class="mt-5">
+        <div class="text-[11px] text-muted">Saldo</div>
+        <div class="num-amount tnum text-[24px] mt-0.5">$ 218.940</div>
+        <div class="delta delta-neg mt-1">− $ 32.100 este mes</div>
+      </div>
+      <svg class="spark mt-3" viewBox="0 0 200 36" preserveAspectRatio="none">
+        <polyline fill="none" stroke="#B91C1C" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"
+                  points="0,8 12,10 24,12 36,9 48,14 60,12 72,16 84,18 96,17 108,21 120,19 132,24 144,22 156,26 168,24 180,28 192,26 200,30"/>
+      </svg>
+      <div class="mt-3 grid grid-cols-2 gap-3 text-[12px]">
+        <div><div class="text-muted">Ingresos</div><div class="num-amount tnum">+$ 180.500</div></div>
+        <div><div class="text-muted">Gastos</div><div class="num-amount tnum">−$ 212.600</div></div>
+      </div>
+    </article>
+
+    <!-- Account 3 -->
+    <article class="card p-5">
+      <div class="flex items-center justify-between">
+        <div class="flex items-center gap-2.5">
+          <span class="w-8 h-8 rounded-lg flex items-center justify-center text-[10px] font-semibold tracking-wider text-light" style="background:#0ea5e9">MP</span>
+          <div>
+            <div class="text-[13.5px] font-semibold leading-tight">Mercado Pago</div>
+            <div class="text-[11px] text-muted">Billetera · ARS</div>
+          </div>
+        </div>
+      </div>
+      <div class="mt-5">
+        <div class="text-[11px] text-muted">Saldo</div>
+        <div class="num-amount tnum text-[24px] mt-0.5">$ 76.320</div>
+        <div class="delta delta-pos mt-1">+ $ 8.220 este mes</div>
+      </div>
+      <svg class="spark mt-3" viewBox="0 0 200 36" preserveAspectRatio="none">
+        <polyline fill="none" stroke="#8C857D" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"
+                  points="0,18 12,16 24,20 36,18 48,22 60,17 72,20 84,15 96,18 108,14 120,17 132,15 144,16 156,12 168,15 180,11 192,14 200,10"/>
+      </svg>
+      <div class="mt-3 grid grid-cols-2 gap-3 text-[12px]">
+        <div><div class="text-muted">Ingresos</div><div class="num-amount tnum">+$ 95.000</div></div>
+        <div><div class="text-muted">Gastos</div><div class="num-amount tnum">−$ 86.780</div></div>
+      </div>
+    </article>
+
+    <!-- Account 4 — USD -->
+    <article class="card p-5" style="border-color:rgba(217,119,6,.30); background:rgba(217,119,6,.04)">
+      <div class="flex items-center justify-between">
+        <div class="flex items-center gap-2.5">
+          <span class="w-8 h-8 rounded-lg flex items-center justify-center text-[10px] font-semibold tracking-wider text-light" style="background:#15803D">WSE</span>
+          <div>
+            <div class="text-[13.5px] font-semibold leading-tight">Wise</div>
+            <div class="text-[11px] text-muted">Multimoneda · USD</div>
+          </div>
+        </div>
+        <span class="chip chip-mixed"><span class="dot"></span>USD</span>
+      </div>
+      <div class="mt-5">
+        <div class="text-[11px] text-muted">Saldo</div>
+        <div class="num-amount tnum text-[24px] mt-0.5">US$ 1.284,00</div>
+        <div class="text-[11.5px] text-muted tnum">≈ $ 1.515.120 · @ 1.180</div>
+      </div>
+      <svg class="spark mt-3" viewBox="0 0 200 36" preserveAspectRatio="none">
+        <polyline fill="none" stroke="#D97706" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"
+                  points="0,22 12,20 24,16 36,18 48,12 60,14 72,11 84,13 96,8 108,11 120,7 132,9 144,6 156,9 168,5 180,8 192,4 200,6"/>
+      </svg>
+      <div class="mt-3 grid grid-cols-2 gap-3 text-[12px]">
+        <div><div class="text-muted">Ingresos</div><div class="num-amount tnum">+US$ 320</div></div>
+        <div><div class="text-muted">Gastos</div><div class="num-amount tnum">−US$ 240</div></div>
+      </div>
+    </article>
+  </div>
+</section>
+
+<!-- ───────── Recurrents + Recent transactions ───────── -->
+<section class="max-w-[1240px] mx-auto px-5 lg:px-8 mt-12 grid grid-cols-1 lg:grid-cols-[1.05fr_1fr] gap-5">
+
+  <!-- Recurrents -->
+  <div class="card p-5 lg:p-6">
+    <div class="flex items-end justify-between mb-1">
+      <div>
+        <div class="overline mb-1.5">03 — Recurrentes</div>
+        <h2 class="h2">Lo que viene este mes</h2>
+      </div>
+      <span class="text-[12.5px] text-muted">Total pendiente <span class="num-amount tnum text-dark">$ 312.450</span></span>
+    </div>
+
+    <div class="hair mt-5 mb-1"></div>
+
+    <!-- Overdue group -->
+    <div class="flex items-center justify-between pt-3">
+      <span class="overline-muted">Vencidos</span>
+      <span class="badge danger">2</span>
+    </div>
+
+    <div class="row">
+      <div class="lhs">
+        <span class="kind-dot expense"></span>
+        <div class="min-w-0">
+          <div class="text-[14px] font-medium truncate">Alquiler · Departamento</div>
+          <div class="meta">Vencía el 5 · Galicia</div>
+        </div>
+      </div>
+      <div class="text-right">
+        <div class="num-amount tnum">$ 220.000</div>
+        <button class="text-[11.5px] font-semibold text-accent hover:underline mt-0.5">Marcar pagado</button>
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="lhs">
+        <span class="kind-dot expense"></span>
+        <div class="min-w-0">
+          <div class="text-[14px] font-medium truncate">Prepaga · OSDE</div>
+          <div class="meta">Vencía el 3 · Brubank</div>
+        </div>
+      </div>
+      <div class="text-right">
+        <div class="num-amount tnum">$ 58.450</div>
+        <button class="text-[11.5px] font-semibold text-accent hover:underline mt-0.5">Marcar pagado</button>
+      </div>
+    </div>
+
+    <!-- Upcoming group -->
+    <div class="flex items-center justify-between pt-5">
+      <span class="overline-muted">Próximos · 7 días</span>
+      <span class="badge warn">3</span>
+    </div>
+
+    <div class="row">
+      <div class="lhs">
+        <span class="kind-dot income"></span>
+        <div class="min-w-0">
+          <div class="text-[14px] font-medium truncate">Salario · Wiseutils</div>
+          <div class="meta">Estimado el 15 · Galicia</div>
+        </div>
+      </div>
+      <div class="text-right">
+        <div class="num-amount tnum text-success">+$ 1.250.000</div>
+        <div class="meta">Ingreso recurrente</div>
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="lhs">
+        <span class="kind-dot expense"></span>
+        <div class="min-w-0">
+          <div class="text-[14px] font-medium truncate">Spotify Family</div>
+          <div class="meta">Estimado el 18 · Brubank</div>
+        </div>
+      </div>
+      <div class="text-right">
+        <div class="num-amount tnum">$ 11.999</div>
+        <div class="meta">Servicios</div>
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="lhs">
+        <span class="kind-dot expense"></span>
+        <div class="min-w-0">
+          <div class="text-[14px] font-medium truncate">Claro · Internet + Móvil</div>
+          <div class="meta">Estimado el 22 · Galicia</div>
+        </div>
+      </div>
+      <div class="text-right">
+        <div class="num-amount tnum">$ 22.001</div>
+        <div class="meta">Servicios</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Recent transactions -->
+  <div class="card p-5 lg:p-6">
+    <div class="flex items-end justify-between">
+      <div>
+        <div class="overline mb-1.5">04 — Movimientos</div>
+        <h2 class="h2">Últimos registros</h2>
+      </div>
+      <a href="#" class="text-[12.5px] font-medium text-accent hover:underline">Ver todos →</a>
+    </div>
+
+    <div class="hair mt-5"></div>
+
+    <div class="row">
+      <div class="lhs">
+        <span class="kind-dot income"></span>
+        <div class="min-w-0">
+          <div class="text-[14px] font-medium truncate">Freelance · Consultoría diseño</div>
+          <div class="meta">Hoy · Wise · <span class="text-accent">USD</span></div>
+        </div>
+      </div>
+      <div class="text-right">
+        <div class="num-amount tnum text-success">+US$ 320,00</div>
+        <div class="meta tnum">≈ $ 377.600</div>
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="lhs">
+        <span class="kind-dot expense"></span>
+        <div class="min-w-0">
+          <div class="text-[14px] font-medium truncate">Carrefour · Compra mensual</div>
+          <div class="meta">Hoy · Galicia · Alimentos</div>
+        </div>
+      </div>
+      <div class="text-right">
+        <div class="num-amount tnum">−$ 84.220</div>
+        <div class="meta">Captura masiva</div>
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="lhs">
+        <span class="kind-dot transfer"></span>
+        <div class="min-w-0">
+          <div class="text-[14px] font-medium truncate">Galicia → Mercado Pago</div>
+          <div class="meta">Ayer · Transferencia interna</div>
+        </div>
+      </div>
+      <div class="text-right">
+        <div class="num-amount tnum text-muted">$ 50.000</div>
+        <div class="meta">No afecta totales</div>
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="lhs">
+        <span class="kind-dot expense"></span>
+        <div class="min-w-0">
+          <div class="text-[14px] font-medium truncate">Café · Lattente Palermo</div>
+          <div class="meta">Ayer · Mercado Pago · Ocio</div>
+        </div>
+      </div>
+      <div class="text-right">
+        <div class="num-amount tnum">−$ 4.800</div>
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="lhs">
+        <span class="kind-dot income"></span>
+        <div class="min-w-0">
+          <div class="text-[14px] font-medium truncate">Reembolso · Trabajo</div>
+          <div class="meta">Lun · Galicia · Otros</div>
+        </div>
+      </div>
+      <div class="text-right">
+        <div class="num-amount tnum text-success">+$ 18.500</div>
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="lhs">
+        <span class="kind-dot expense"></span>
+        <div class="min-w-0">
+          <div class="text-[14px] font-medium truncate">SUBE · Recarga</div>
+          <div class="meta">Lun · Mercado Pago · Transporte</div>
+        </div>
+      </div>
+      <div class="text-right">
+        <div class="num-amount tnum">−$ 12.000</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ───────── Transfer activity ───────── -->
+<section class="max-w-[1240px] mx-auto px-5 lg:px-8 mt-12">
+  <div class="card p-5 lg:p-7 relative overflow-hidden">
+    <div class="grid grid-cols-1 lg:grid-cols-[1fr_1.4fr] gap-7 items-start">
+      <div>
+        <div class="overline mb-2">05 — Transferencias</div>
+        <h2 class="h2">Plata movida entre cuentas</h2>
+        <p class="small mt-2 max-w-md">Las transferencias internas <strong class="text-dark font-semibold">no afectan</strong> ingresos ni gastos del período. Las mostramos para que sepas dónde se movió tu plata.</p>
+
+        <div class="mt-6 grid grid-cols-2 gap-x-6 gap-y-4">
+          <div>
+            <div class="mono-label">Volumen total</div>
+            <div class="num-amount tnum text-[26px] mt-1">$ 245.000</div>
+          </div>
+          <div>
+            <div class="mono-label">Operaciones</div>
+            <div class="num-amount tnum text-[26px] mt-1">7</div>
+          </div>
+          <div>
+            <div class="mono-label">Comisiones</div>
+            <div class="num-amount tnum text-[15px] mt-1">$ 0</div>
+          </div>
+          <div>
+            <div class="mono-label">Más activa</div>
+            <div class="text-[14px] font-medium mt-1">Galicia → MP</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Sankey-lite SVG -->
+      <div>
+        <div class="mono-label mb-3">Flujo del mes</div>
+        <svg viewBox="0 0 540 240" class="w-full h-auto" aria-hidden="true">
+          <defs>
+            <pattern id="dot-bg" width="14" height="14" patternUnits="userSpaceOnUse">
+              <circle cx="1" cy="1" r="0.7" fill="rgba(41,37,36,.06)"/>
+            </pattern>
+          </defs>
+          <rect x="0" y="0" width="540" height="240" fill="url(#dot-bg)" opacity=".5"/>
+
+          <!-- left source nodes -->
+          <g font-family="Inter" font-weight="600" fill="#292524">
+            <rect x="20" y="20"  width="140" height="40" rx="8" fill="#fff" stroke="#E8E2DA"/>
+            <text x="34" y="44" font-size="13">Galicia</text>
+            <text x="146" y="44" font-size="12" text-anchor="end" fill="#8C857D" style="font-variant-numeric:tabular-nums">$ 145k</text>
+
+            <rect x="20" y="100" width="140" height="40" rx="8" fill="#fff" stroke="#E8E2DA"/>
+            <text x="34" y="124" font-size="13">Brubank</text>
+            <text x="146" y="124" font-size="12" text-anchor="end" fill="#8C857D" style="font-variant-numeric:tabular-nums">$ 60k</text>
+
+            <rect x="20" y="180" width="140" height="40" rx="8" fill="#fff" stroke="#E8E2DA"/>
+            <text x="34" y="204" font-size="13">Wise</text>
+            <text x="146" y="204" font-size="12" text-anchor="end" fill="#8C857D" style="font-variant-numeric:tabular-nums">$ 40k</text>
+          </g>
+
+          <!-- right destination nodes -->
+          <g font-family="Inter" font-weight="600" fill="#292524">
+            <rect x="380" y="40"  width="140" height="40" rx="8" fill="#fff" stroke="#E8E2DA"/>
+            <text x="394" y="64" font-size="13">Mercado Pago</text>
+            <text x="506" y="64" font-size="12" text-anchor="end" fill="#8C857D" style="font-variant-numeric:tabular-nums">$ 105k</text>
+
+            <rect x="380" y="120" width="140" height="40" rx="8" fill="#fff" stroke="#E8E2DA"/>
+            <text x="394" y="144" font-size="13">Brubank</text>
+            <text x="506" y="144" font-size="12" text-anchor="end" fill="#8C857D" style="font-variant-numeric:tabular-nums">$ 80k</text>
+
+            <rect x="380" y="180" width="140" height="40" rx="8" fill="#fff" stroke="#E8E2DA"/>
+            <text x="394" y="204" font-size="13">Galicia</text>
+            <text x="506" y="204" font-size="12" text-anchor="end" fill="#8C857D" style="font-variant-numeric:tabular-nums">$ 60k</text>
+          </g>
+
+          <!-- flows -->
+          <g fill="none" stroke-linecap="round" opacity=".7">
+            <!-- Galicia → MP $80k -->
+            <path d="M 160 40 C 270 40, 270 60, 380 60" stroke="#D97706" stroke-width="14" opacity=".55"/>
+            <!-- Galicia → Brubank $40k -->
+            <path d="M 160 50 C 270 70, 270 130, 380 140" stroke="#D97706" stroke-width="8" opacity=".40"/>
+            <!-- Galicia → Galicia (return) $25k? -->
+            <path d="M 160 60 C 270 90, 270 200, 380 200" stroke="#D97706" stroke-width="5" opacity=".25"/>
+            <!-- Brubank → MP $25k -->
+            <path d="M 160 110 C 270 80, 270 60, 380 60" stroke="#8C857D" stroke-width="6" opacity=".40"/>
+            <!-- Brubank → Brubank impossible — skip -->
+            <!-- Wise → Brubank $40k -->
+            <path d="M 160 200 C 270 200, 270 140, 380 140" stroke="#15803D" stroke-width="9" opacity=".45"/>
+          </g>
+
+          <!-- amounts on flows -->
+          <g font-family="Inter" font-size="11" font-weight="600" fill="#292524" style="font-variant-numeric:tabular-nums">
+            <text x="270" y="45" text-anchor="middle">$ 80k</text>
+            <text x="270" y="100" text-anchor="middle">$ 40k</text>
+            <text x="270" y="195" text-anchor="middle">$ 25k</text>
+            <text x="270" y="75" text-anchor="middle" fill="#8C857D">$ 25k</text>
+            <text x="270" y="170" text-anchor="middle" fill="#15803D">$ 40k <tspan fill="#8C857D">(USD)</tspan></text>
+          </g>
+        </svg>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ───────── Footer ───────── -->
+<footer class="max-w-[1240px] mx-auto px-5 lg:px-8 mt-16 mb-10">
+  <div class="frame py-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+    <div class="flex items-center gap-3">
+      <svg width="14" height="18" viewBox="0 0 140 190" aria-hidden="true">
+        <path d="M 70 30 C 108 30, 122 70, 122 100 C 122 138, 106 160, 85 172 C 74 178, 62 170, 52 158 C 35 138, 18 118, 18 95 C 18 65, 35 30, 70 30 Z"
+              fill="none" stroke="#D97706" stroke-width="6"/>
+      </svg>
+      <span class="text-[11px] text-muted" style="letter-spacing:.18em">MANGOS · DASHBOARD V2</span>
+    </div>
+    <div class="text-[11px] text-muted tnum">Última sincronización: 01/05/2026 · 14:02</div>
+  </div>
+</footer>
+
+<script>
+  // segmented controls — purely cosmetic for the mockup
+  document.querySelectorAll('.seg').forEach(seg => {
+    seg.addEventListener('click', e => {
+      const btn = e.target.closest('button');
+      if (!btn) return;
+      seg.querySelectorAll('button').forEach(b => b.classList.remove('is-active'));
+      btn.classList.add('is-active');
+    });
+  });
+</script>
+</body>
+</html>

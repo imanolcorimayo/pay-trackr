@@ -67,4 +67,26 @@ window.api = {
   del(endpoint, params) {
     return this.request(endpoint, { method: 'DELETE', params });
   },
+
+  // Authenticated GET that returns an object URL for the response bytes.
+  // Use for <img>/<audio> sources where the underlying endpoint sits behind
+  // bearer-token auth and cannot be loaded via a plain `src` attribute.
+  // Caller is responsible for URL.revokeObjectURL(...) when the element goes
+  // away — for short-lived modals, leaking is fine.
+  async getBlobUrl(endpoint, params) {
+    const token = await window.mangosAuth.getToken();
+    if (!token) {
+      window.location.href = '/login';
+      return null;
+    }
+    let url = `${window.MANGOS_API_URL}${endpoint}`;
+    if (params) {
+      const qs = new URLSearchParams(params).toString();
+      url += `?${qs}`;
+    }
+    const response = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
+    if (!response.ok) return null;
+    const blob = await response.blob();
+    return URL.createObjectURL(blob);
+  },
 };

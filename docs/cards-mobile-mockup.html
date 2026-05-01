@@ -151,6 +151,74 @@ tailwind.config = {
   </section>
 
   <!-- ════════════════════════════════════════════════════════════════ -->
+  <!-- 1.b · Movimiento con adjunto (clip a la derecha del título)       -->
+  <!-- ════════════════════════════════════════════════════════════════ -->
+  <section>
+    <h2 class="text-lg font-semibold mb-1">1.b · Con adjunto</h2>
+    <p class="text-xs text-muted mb-3"><code>/movimientos</code> · Clip 12×12 entre el título y el ⋮ cuando hay imagen / audio / PDF</p>
+
+    <p class="label-final">Final</p>
+    <div class="phone">
+      <div class="card">
+        <!-- imagen adjunta -->
+        <div class="py-3 px-3 border-b border-border">
+          <div class="flex items-center gap-3">
+            <div class="lead-dot" style="background:#D97706"></div>
+            <p class="flex-1 text-[15px] font-medium truncate">Almuerzo con cliente</p>
+            <!-- Clip icon: subtle muted, 12px, marca "tiene original" -->
+            <svg class="w-3 h-3 text-muted flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-label="Tiene adjunto">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"/>
+            </svg>
+            <button class="p-1.5 text-muted -mr-1" aria-label="Más">⋮</button>
+          </div>
+          <div class="flex items-end justify-between gap-3 mt-1 pad-dot">
+            <p class="text-xs text-muted truncate flex-1 min-w-0">29 abr · IA foto</p>
+            <div class="flex items-center gap-2 flex-shrink-0">
+              <span class="text-[15px] font-semibold tabular-nums leading-none">$ 25.400</span>
+              <span class="badge badge-success">Pagado</span>
+            </div>
+          </div>
+        </div>
+        <!-- audio adjunto -->
+        <div class="py-3 px-3 border-b border-border">
+          <div class="flex items-center gap-3">
+            <div class="lead-dot" style="background:#15803D"></div>
+            <p class="flex-1 text-[15px] font-medium truncate">Verdulería esquina</p>
+            <svg class="w-3 h-3 text-muted flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-label="Tiene adjunto">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"/>
+            </svg>
+            <button class="p-1.5 text-muted -mr-1" aria-label="Más">⋮</button>
+          </div>
+          <div class="flex items-end justify-between gap-3 mt-1 pad-dot">
+            <p class="text-xs text-muted truncate flex-1 min-w-0">28 abr · IA audio</p>
+            <div class="flex items-center gap-2 flex-shrink-0">
+              <span class="text-[15px] font-semibold tabular-nums leading-none">$ 4.200</span>
+              <span class="badge badge-success">Pagado</span>
+            </div>
+          </div>
+        </div>
+        <!-- sin adjunto: para contraste -->
+        <div class="py-3 px-3">
+          <div class="flex items-center gap-3">
+            <div class="lead-dot" style="background:#8C857D"></div>
+            <p class="flex-1 text-[15px] font-medium truncate">Café</p>
+            <button class="p-1.5 text-muted -mr-1" aria-label="Más">⋮</button>
+          </div>
+          <div class="flex items-end justify-between gap-3 mt-1 pad-dot">
+            <p class="text-xs text-muted truncate flex-1 min-w-0">28 abr · IA texto</p>
+            <div class="flex items-center gap-2 flex-shrink-0">
+              <span class="text-[15px] font-semibold tabular-nums leading-none">$ 1.800</span>
+              <span class="badge badge-success">Pagado</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ════════════════════════════════════════════════════════════════ -->
   <!-- 2 · Movimiento de un fijo (instancia en /movimientos)             -->
   <!-- ════════════════════════════════════════════════════════════════ -->
   <section>
@@ -422,6 +490,93 @@ tailwind.config = {
               <div class="expansion-row"><span class="k">Comisión</span><span class="v">USD 0,50 · ≈ $ 625</span></div>
               <div class="expansion-row"><span class="k">Tipo de cambio</span><span class="v">implícito $ 1.350 / USD</span></div>
               <div class="expansion-row"><span class="k">Fecha</span><span class="v">29 abr 2026</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Movimiento con adjunto expandido -->
+      <div>
+        <p class="label-ex">Con adjunto — expandido</p>
+        <div class="phone">
+          <div class="card">
+            <div class="py-3 px-3">
+              <div class="flex items-center gap-3">
+                <div class="lead-dot" style="background:#D97706"></div>
+                <p class="flex-1 text-[15px] font-medium truncate">Almuerzo con cliente</p>
+                <svg class="w-3 h-3 text-muted flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"/>
+                </svg>
+                <button class="p-1.5 text-muted -mr-1" aria-label="Más">⋮</button>
+              </div>
+              <div class="flex items-end justify-between gap-3 mt-1 pad-dot">
+                <p class="text-xs text-muted truncate flex-1 min-w-0">29 abr · IA foto</p>
+                <div class="flex items-center gap-2 flex-shrink-0">
+                  <span class="text-[15px] font-semibold tabular-nums leading-none">$ 25.400</span>
+                  <span class="badge badge-success">Pagado</span>
+                </div>
+              </div>
+            </div>
+            <div class="expansion">
+              <div class="expansion-row"><span class="k">Cuenta</span><span class="v">Mercado Pago</span></div>
+              <div class="expansion-row"><span class="k">Categoría</span><span class="v">Comida fuera</span></div>
+              <div class="expansion-row"><span class="k">Origen</span><span class="v">IA · foto</span></div>
+              <!-- Adjunto: thumbnail clickeable que abre el modal con preview completo -->
+              <div class="expansion-row" style="align-items:flex-start">
+                <span class="k" style="padding-top:4px">Adjunto</span>
+                <button type="button"
+                        style="display:flex;align-items:center;gap:.625rem;padding:.375rem;border:1px solid #E8E2DA;border-radius:.5rem;background:#fff;cursor:pointer;max-width:60%">
+                  <!-- thumbnail (en la app real, src apunta al endpoint privado) -->
+                  <img src="https://placehold.co/64x48/E8E2DA/8C857D?text=📷"
+                       alt="Original" style="width:48px;height:36px;object-fit:cover;border-radius:.25rem;flex-shrink:0">
+                  <span style="font-size:11px;color:#8C857D;text-align:left;line-height:1.2">Imagen<br><span style="color:#D97706;font-weight:500">Ver original</span></span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Movimiento con audio expandido -->
+      <div>
+        <p class="label-ex">Audio adjunto — expandido</p>
+        <div class="phone">
+          <div class="card">
+            <div class="py-3 px-3">
+              <div class="flex items-center gap-3">
+                <div class="lead-dot" style="background:#15803D"></div>
+                <p class="flex-1 text-[15px] font-medium truncate">Verdulería esquina</p>
+                <svg class="w-3 h-3 text-muted flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"/>
+                </svg>
+                <button class="p-1.5 text-muted -mr-1" aria-label="Más">⋮</button>
+              </div>
+              <div class="flex items-end justify-between gap-3 mt-1 pad-dot">
+                <p class="text-xs text-muted truncate flex-1 min-w-0">28 abr · IA audio</p>
+                <div class="flex items-center gap-2 flex-shrink-0">
+                  <span class="text-[15px] font-semibold tabular-nums leading-none">$ 4.200</span>
+                  <span class="badge badge-success">Pagado</span>
+                </div>
+              </div>
+            </div>
+            <div class="expansion">
+              <div class="expansion-row"><span class="k">Cuenta</span><span class="v">Mercado Pago</span></div>
+              <div class="expansion-row"><span class="k">Categoría</span><span class="v">Comida casa</span></div>
+              <div class="expansion-row"><span class="k">Origen</span><span class="v">IA · audio</span></div>
+              <!-- Audio: chip con play que abre el modal -->
+              <div class="expansion-row" style="align-items:flex-start">
+                <span class="k" style="padding-top:4px">Adjunto</span>
+                <button type="button"
+                        style="display:inline-flex;align-items:center;gap:.5rem;padding:.375rem .625rem;border:1px solid #E8E2DA;border-radius:.5rem;background:#fff;cursor:pointer">
+                  <svg style="width:14px;height:14px;color:#D97706" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M8 5v14l11-7z"/>
+                  </svg>
+                  <span style="font-size:12px;color:#292524;font-weight:500">Audio</span>
+                  <span style="font-size:11px;color:#8C857D">· 0:14</span>
+                </button>
+              </div>
             </div>
           </div>
         </div>

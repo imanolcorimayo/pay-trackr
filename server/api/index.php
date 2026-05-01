@@ -114,6 +114,11 @@ try {
             require __DIR__ . '/ai.php';
             break;
 
+        case '/ai/preview-artifact':
+            $ai_action = 'preview-artifact';
+            require __DIR__ . '/ai.php';
+            break;
+
         case '/transactions/artifact':
             $transactions_action = 'artifact';
             require __DIR__ . '/transactions.php';
