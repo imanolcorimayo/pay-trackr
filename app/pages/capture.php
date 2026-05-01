@@ -1,3 +1,35 @@
+<style>
+    /* Animated draft-row expansion. grid-template-rows trick gives us a smooth
+       0 → auto transition without measuring panel height. inner needs min-height:0
+       + overflow hidden so it can collapse below intrinsic content size. */
+    .draft-row .row-expand {
+        display: grid;
+        grid-template-rows: 0fr;
+        transition: grid-template-rows .22s ease, opacity .18s ease;
+        opacity: 0;
+    }
+    .draft-row .row-expand > .row-expand-inner {
+        min-height: 0;
+        overflow: hidden;
+    }
+    .draft-row[data-expanded="true"] .row-expand {
+        grid-template-rows: 1fr;
+        opacity: 1;
+    }
+    .draft-row .row-chev { transition: transform .2s ease; }
+    .draft-row[data-expanded="true"] .row-chev { transform: rotate(180deg); }
+
+    /* "override" pill shown next to a row's account label when it differs from
+       the bulk-bar default. */
+    .pill-override {
+        display: inline-flex; align-items: center;
+        font-size: 10px; font-weight: 600;
+        color: #D97706; background: rgba(217,119,6,.1);
+        padding: 1px 6px; border-radius: 999px;
+        text-transform: uppercase; letter-spacing: .04em;
+    }
+</style>
+
 <!-- Page header -->
 <div class="flex items-center justify-between mb-8">
     <div>
@@ -105,6 +137,15 @@
             <button type="button" id="discard-btn" class="text-xs text-muted hover:text-danger">Descartar</button>
         </div>
 
+        <!-- Bulk-account picker. Sets the default account for every row in the
+             batch — typical use: one MP statement → 20 rows on the same MP
+             account. Per-row override happens inside the expanded panel. -->
+        <div class="px-4 py-2.5 border-b border-border flex flex-wrap items-center gap-3 bg-light/50">
+            <span class="text-[11px] font-semibold uppercase tracking-wide text-muted flex-shrink-0">Cuenta para todas</span>
+            <select id="bulk-account" class="input-sm w-full sm:w-auto sm:min-w-[200px]"></select>
+            <span class="text-[11px] text-muted hidden sm:inline">Aplicada por defecto. Override por fila desde "Mas opciones".</span>
+        </div>
+
         <div id="drafts-list" class="divide-y divide-border"></div>
     </div>
 
@@ -133,9 +174,14 @@ let audio = null; // { name, mimeType, base64, durationSec, dataUrl }
 let drafts = [];
 let lastTranscription = null;
 let categories = [];
+let incomeCategories = [];
 let recurrents = [];
 let cards = [];
 let accounts = [];
+// Bulk-account: the user picks one default for the whole batch (typical:
+// reconciling a single bank statement). Per-row override happens in the
+// expanded panel and is detected by `d.account_id !== bulkAccountId`.
+let bulkAccountId = null;
 function defaultAccount() { return accounts.find(a => Number(a.is_default) === 1) || accounts[0] || null; }
 
 // ── Helpers ─────────────────────────────────────────────
@@ -513,16 +559,23 @@ async function analyze() {
     drafts = (result.drafts || []).map(d => {
         const detectedCur = d.detected_currency || 'ARS';
         const matchByCurrency = accounts.find(a => a.currency === detectedCur);
+        const kind = d.kind === 'income' ? 'income' : 'expense';
+        // Account preference order: detected-currency match → bulk default →
+        // user's default account. Currency-match still wins because moving a
+        // USD row onto an ARS account silently drops the currency intent.
+        const account_id = matchByCurrency?.id || bulkAccountId || defaultAccount()?.id || null;
+        const account = accounts.find(a => a.id === account_id);
         return {
             ...d,
+            kind,
             amount: Math.abs(Number(d.amount) || 0),
             date: d.date || '',
             title: d.title || '',
             description: d.description || '',
             suggested_category_id: d.suggested_category_id || null,
             card_id: null,
-            account_id: matchByCurrency?.id || defaultAccount()?.id || null,
-            currency: detectedCur,
+            account_id,
+            currency: account?.currency || detectedCur,
             is_paid: true,
             action: defaultActionFor(d),
             update_recurrent_amount: shouldUpdateRecurrentAmount(d),
@@ -533,6 +586,33 @@ async function analyze() {
     lastTranscription = result.transcription || null;
     persistDrafts(result.unreadable_screenshot_idxs || []);
     renderReview(result.unreadable_screenshot_idxs || []);
+}
+
+function setupBulkAccountBar() {
+    const sel = document.getElementById('bulk-account');
+    sel.textContent = '';
+    accounts.forEach(a => {
+        const o = document.createElement('option');
+        o.value = a.id;
+        o.textContent = `${a.name} (${a.currency})`;
+        if (a.id === bulkAccountId) o.selected = true;
+        sel.appendChild(o);
+    });
+    sel.addEventListener('change', () => {
+        const newId = sel.value || null;
+        const oldId = bulkAccountId;
+        bulkAccountId = newId;
+        // Propagate to rows that were following the previous bulk default.
+        // Rows where the user explicitly picked a different account stay put.
+        drafts.forEach(d => {
+            if (d.account_id === oldId) {
+                d.account_id = newId;
+                const acct = accounts.find(a => a.id === newId);
+                if (acct) d.currency = acct.currency;
+            }
+        });
+        renderReview([]);
+    });
 }
 
 function defaultActionFor(d) {
@@ -627,15 +707,32 @@ function statusInfo(d) {
 
 function buildDraftRow(d, idx) {
     const row = document.createElement('div');
-    row.className = 'px-3 py-2 sm:px-4 sm:py-2.5 hover:bg-dark/[0.02]';
+    // Income rows get a subtle green tint + left-edge accent so kind reads
+    // at a glance even before scanning the chip or amount.
+    const isIncome = d.kind === 'income';
+    row.className = 'draft-row px-3 py-2 sm:px-4 sm:py-2.5 hover:bg-dark/[0.02] border-l-[3px] '
+        + (isIncome ? 'bg-success/[0.04] border-l-success/60' : 'border-l-transparent');
     row.dataset.idx = idx;
+    row.dataset.expanded = d.showOptions ? 'true' : 'false';
     if (d.action === 'skip') row.classList.add('opacity-50');
 
     const status = statusInfo(d);
 
-    // ── First row: include checkbox + title + amount + date + cat + more
+    // Subtitle parts shared between mobile (header strip) and desktop (subtitle row)
+    const subtitleParts = [];
+    if (status.text !== 'Nueva') subtitleParts.push(status.text);
+    if (d.screenshot_idx != null) subtitleParts.push(`captura #${d.screenshot_idx}`);
+    const subtitleText = subtitleParts.join(' · ');
+
+    // ── Outer flex: column on mobile (header above inputs), row on desktop. ──
     const main = document.createElement('div');
-    main.className = 'flex items-center gap-2 sm:gap-2.5';
+    main.className = 'flex flex-col sm:flex-row sm:items-center sm:gap-2.5';
+
+    // ── Header strip: checkbox + dot + kind chip. Mobile pushes subtitle and
+    //    chevron to the right edge of this strip; desktop renders them
+    //    elsewhere (subtitle row + inline chevron). ──
+    const header = document.createElement('div');
+    header.className = 'flex items-center gap-2 mb-2 sm:mb-0';
 
     // Include toggle (checkbox)
     const cbWrap = document.createElement('label');
@@ -650,38 +747,81 @@ function buildDraftRow(d, idx) {
         renderReview([]);
     });
     cbWrap.appendChild(cb);
-    main.appendChild(cbWrap);
+    header.appendChild(cbWrap);
 
     // Status dot
     const dot = document.createElement('span');
     dot.className = `flex-shrink-0 w-2 h-2 rounded-full ${status.dot}`;
     dot.title = status.text;
-    main.appendChild(dot);
+    header.appendChild(dot);
 
-    // Mobile: stack title + grid below. Desktop: all inline.
+    // Kind chip — click to flip expense ↔ income.
+    const kindBtn = document.createElement('button');
+    kindBtn.type = 'button';
+    const refreshKindBtn = () => {
+        const isInc = d.kind === 'income';
+        kindBtn.textContent = isInc ? '+ Ingreso' : '− Gasto';
+        kindBtn.title = isInc ? 'Ingreso (click para cambiar a gasto)' : 'Gasto (click para cambiar a ingreso)';
+        kindBtn.className = 'flex-shrink-0 px-2 py-0.5 rounded text-[11px] font-semibold uppercase tracking-wide transition whitespace-nowrap '
+            + (isInc ? 'bg-success/15 text-success hover:bg-success/25' : 'bg-dark/5 text-muted hover:bg-dark/10');
+    };
+    refreshKindBtn();
+    kindBtn.addEventListener('click', () => {
+        d.kind = d.kind === 'income' ? 'expense' : 'income';
+        // Flipping kind invalidates dedup/recurrent matches and the category
+        // (since each kind has its own taxonomy). Reset cleanly.
+        d.suggested_category_id = null;
+        d.existing_transaction_id = null;
+        d.recurrent_match_id = null;
+        d.recurrent_match_confidence = 'low';
+        d.action = defaultActionFor(d);
+        renderReview([]);
+    });
+    header.appendChild(kindBtn);
+
+    // Mobile-only subtitle (right-aligned in header strip). Hidden on desktop
+    // because the same info appears as a dedicated subtitle row below.
+    if (subtitleText) {
+        const mobileSub = document.createElement('span');
+        mobileSub.className = `text-[11px] truncate ml-auto sm:hidden ${status.tone}`;
+        mobileSub.textContent = subtitleText;
+        header.appendChild(mobileSub);
+    } else {
+        // Spacer so the chevron still pushes to the right edge.
+        const spacer = document.createElement('span');
+        spacer.className = 'ml-auto sm:hidden';
+        header.appendChild(spacer);
+    }
+
+    // Mobile chevron — lives in the header strip on mobile.
+    const mobileChev = makeChevronBtn();
+    mobileChev.classList.add('sm:hidden');
+    header.appendChild(mobileChev);
+
+    main.appendChild(header);
+
+    // ── Inputs container: stacked on mobile (full-width each), grid on desktop. ──
     const fields = document.createElement('div');
-    fields.className = 'flex-1 min-w-0 grid grid-cols-12 gap-2 items-center';
+    fields.className = 'space-y-2 sm:flex-1 sm:min-w-0 sm:space-y-0 sm:grid sm:grid-cols-12 sm:gap-2 sm:items-center';
 
-    // Title — full width on mobile (col-12), 5 on desktop
+    // Title
     const titleInp = document.createElement('input');
     titleInp.type = 'text';
-    titleInp.className = 'input-sm col-span-12 sm:col-span-5';
+    titleInp.className = 'input-sm sm:col-span-5';
     titleInp.value = d.title;
     titleInp.maxLength = 100;
     titleInp.addEventListener('input', () => { d.title = titleInp.value; });
     fields.appendChild(titleInp);
 
-    // Amount — col-5 mobile, 2 desktop. data-amount enables sum-on-input
-    // (e.g. typing "1500+800" resolves to 2300 on blur).
+    // Amount. Green + bold for income. data-amount enables sum-on-input.
     const amtInp = document.createElement('input');
     amtInp.type = 'text';
-    amtInp.className = 'input-sm font-mono col-span-5 sm:col-span-2 text-right';
+    amtInp.className = 'input-sm font-mono text-right sm:col-span-2'
+        + (isIncome ? ' text-success font-semibold' : '');
     amtInp.value = formatAmountForInput(Math.abs(d.amount));
     amtInp.inputMode = 'decimal';
     amtInp.setAttribute('data-amount', '');
     amountInput.attach(amtInp);
-    // recurrentLabelEl is set later when the "Actualizar fijo" subtitle exists;
-    // keeping the ref lets us refresh the "→ <new>" portion without re-rendering.
     let recurrentLabelEl = null;
     let recurrentDiffRef = null;
     amtInp.addEventListener('input', () => {
@@ -694,63 +834,74 @@ function buildDraftRow(d, idx) {
     });
     fields.appendChild(amtInp);
 
-    // Date — col-4 mobile, 2 desktop
+    // Date
     const dateInp = document.createElement('input');
     dateInp.type = 'date';
-    dateInp.className = 'input-sm col-span-4 sm:col-span-2';
+    dateInp.className = 'input-sm sm:col-span-2';
     dateInp.value = d.date;
     dateInp.addEventListener('input', () => { d.date = dateInp.value; });
     fields.appendChild(dateInp);
 
-    // Category — col-3 mobile (icon-ish), 3 desktop
+    // Category — source list depends on kind. Closure helper lets the kind-
+    // toggle handler rebuild the options without rebuilding the whole row
+    // (though kind toggle currently re-renders for tint/color updates).
     const catSel = document.createElement('select');
-    catSel.className = 'input-sm col-span-3 sm:col-span-3';
-    const catEmpty = document.createElement('option');
-    catEmpty.value = '';
-    catEmpty.textContent = '—';
-    catSel.appendChild(catEmpty);
-    categories.forEach(c => {
-        const o = document.createElement('option');
-        o.value = c.id;
-        o.textContent = c.name;
-        if (c.id === d.suggested_category_id) o.selected = true;
-        catSel.appendChild(o);
-    });
+    catSel.className = 'input-sm sm:col-span-3';
+    const repopulateCategoryOptions = () => {
+        catSel.textContent = '';
+        const empty = document.createElement('option');
+        empty.value = '';
+        empty.textContent = '—';
+        catSel.appendChild(empty);
+        const list = d.kind === 'income' ? incomeCategories : categories;
+        list.forEach(c => {
+            const o = document.createElement('option');
+            o.value = c.id;
+            o.textContent = c.name;
+            if (c.id === d.suggested_category_id) o.selected = true;
+            catSel.appendChild(o);
+        });
+    };
+    repopulateCategoryOptions();
     catSel.addEventListener('change', () => { d.suggested_category_id = catSel.value || null; });
     fields.appendChild(catSel);
 
     main.appendChild(fields);
 
-    // More options chevron
-    const moreBtn = document.createElement('button');
-    moreBtn.type = 'button';
-    moreBtn.className = 'flex-shrink-0 p-1.5 rounded text-muted hover:text-dark hover:bg-dark/5 transition-colors';
-    moreBtn.title = d.showOptions ? 'Ocultar opciones' : 'Mas opciones';
-    const chevron = document.createElementNS(SVG_NS, 'svg');
-    chevron.setAttribute('class', 'w-4 h-4 transition-transform' + (d.showOptions ? ' rotate-180' : ''));
-    chevron.setAttribute('fill', 'none');
-    chevron.setAttribute('stroke', 'currentColor');
-    chevron.setAttribute('viewBox', '0 0 24 24');
-    const chPath = document.createElementNS(SVG_NS, 'path');
-    chPath.setAttribute('stroke-linecap', 'round');
-    chPath.setAttribute('stroke-linejoin', 'round');
-    chPath.setAttribute('stroke-width', '2');
-    chPath.setAttribute('d', 'M19 9l-7 7-7-7');
-    chevron.appendChild(chPath);
-    moreBtn.appendChild(chevron);
-    moreBtn.addEventListener('click', () => {
-        d.showOptions = !d.showOptions;
-        renderReview([]);
-    });
-    main.appendChild(moreBtn);
+    // Desktop chevron — lives at the end of the inline row.
+    const desktopChev = makeChevronBtn();
+    desktopChev.classList.add('hidden', 'sm:block');
+    main.appendChild(desktopChev);
 
     row.appendChild(main);
 
-    // ── Second row: status subtitle (only when interesting) + recurrent diff hint
-    const subtitleParts = [];
-    if (status.text !== 'Nueva') subtitleParts.push(status.text);
-    if (d.screenshot_idx != null) subtitleParts.push(`captura #${d.screenshot_idx}`);
+    // Wire both chevrons to the same toggle. CSS-only animation: just flip
+    // data-expanded; the row stays in the DOM, no re-render, no focus loss.
+    function makeChevronBtn() {
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'row-toggle flex-shrink-0 p-1.5 rounded text-muted hover:text-dark hover:bg-dark/5 transition-colors';
+        b.title = 'Mas opciones';
+        const svg = document.createElementNS(SVG_NS, 'svg');
+        svg.setAttribute('class', 'w-4 h-4 row-chev');
+        svg.setAttribute('fill', 'none');
+        svg.setAttribute('stroke', 'currentColor');
+        svg.setAttribute('viewBox', '0 0 24 24');
+        const p = document.createElementNS(SVG_NS, 'path');
+        p.setAttribute('stroke-linecap', 'round');
+        p.setAttribute('stroke-linejoin', 'round');
+        p.setAttribute('stroke-width', '2');
+        p.setAttribute('d', 'M19 9l-7 7-7-7');
+        svg.appendChild(p);
+        b.appendChild(svg);
+        b.addEventListener('click', () => {
+            d.showOptions = !d.showOptions;
+            row.dataset.expanded = d.showOptions ? 'true' : 'false';
+        });
+        return b;
+    }
 
+    // ── Desktop subtitle row + recurrent diff hint (mobile shows subtitle in header). ──
     const recurrentDiff = (() => {
         if (!d.recurrent_match_id || d.action !== 'mark_recurrent_paid') return null;
         const r = recurrents.find(x => x.id === d.recurrent_match_id);
@@ -759,14 +910,18 @@ function buildDraftRow(d, idx) {
         return diff > 0.01 ? r : null;
     })();
 
-    if (subtitleParts.length || recurrentDiff) {
+    if (subtitleText || recurrentDiff) {
         const sub = document.createElement('div');
-        sub.className = 'flex items-center gap-3 text-xs text-muted mt-1 pl-12 sm:pl-12 flex-wrap';
+        // Hidden on mobile when there's no recurrent diff (subtitle already in
+        // the header strip); always visible on desktop.
+        sub.className = recurrentDiff
+            ? 'flex items-center gap-3 text-xs text-muted mt-1 pl-2 sm:pl-12 flex-wrap'
+            : 'hidden sm:flex items-center gap-3 text-xs text-muted mt-1 pl-12 flex-wrap';
 
-        if (subtitleParts.length) {
+        if (subtitleText) {
             const t = document.createElement('span');
-            t.className = status.tone;
-            t.textContent = subtitleParts.join(' · ');
+            t.className = `${status.tone} hidden sm:inline`;
+            t.textContent = subtitleText;
             sub.appendChild(t);
         }
 
@@ -790,12 +945,17 @@ function buildDraftRow(d, idx) {
         row.appendChild(sub);
     }
 
-    // ── Expanded panel (Más opciones)
-    if (d.showOptions) {
-        const more = document.createElement('div');
-        more.className = 'mt-2 pl-12 grid grid-cols-12 gap-2 pb-1';
+    // ── Expanded panel (always rendered so CSS can animate height). ──
+    {
+        const expand = document.createElement('div');
+        expand.className = 'row-expand';
+        const inner = document.createElement('div');
+        inner.className = 'row-expand-inner mt-2 sm:pl-12 grid grid-cols-12 gap-2 pb-1';
+        expand.appendChild(inner);
+        const more = inner; // alias keeps the rest of the function readable
 
-        // Vincular con fijo
+        // Vincular con fijo (expense only — no income recurrents)
+        if (!isIncome) {
         const recWrap = document.createElement('div');
         recWrap.className = 'col-span-12 sm:col-span-6';
         const recLab = document.createElement('label');
@@ -830,8 +990,10 @@ function buildDraftRow(d, idx) {
         });
         recWrap.appendChild(recSel);
         more.appendChild(recWrap);
+        }
 
-        // Tarjeta
+        // Tarjeta (expense only — income doesn't pay with a card)
+        if (!isIncome) {
         const cardWrap = document.createElement('div');
         cardWrap.className = 'col-span-12 sm:col-span-6';
         const cardLab = document.createElement('label');
@@ -854,13 +1016,27 @@ function buildDraftRow(d, idx) {
         cardSel.addEventListener('change', () => { d.card_id = cardSel.value || null; });
         cardWrap.appendChild(cardSel);
         more.appendChild(cardWrap);
+        }
 
-        // Cuenta
+        // Cuenta — shows an "override" pill when this row's account differs
+        // from the bulk-bar default. The pill updates in place when the user
+        // picks a different account from this select.
         const acctWrap = document.createElement('div');
         acctWrap.className = 'col-span-12 sm:col-span-6';
         const acctLab = document.createElement('label');
-        acctLab.className = 'block text-[11px] font-medium text-muted mb-0.5';
-        acctLab.textContent = 'Cuenta';
+        acctLab.className = 'flex items-center gap-2 text-[11px] font-medium text-muted mb-0.5';
+        const acctLabText = document.createElement('span');
+        acctLabText.textContent = 'Cuenta';
+        acctLab.appendChild(acctLabText);
+        const overridePill = document.createElement('span');
+        overridePill.className = 'pill-override';
+        overridePill.textContent = 'override';
+        const refreshOverridePill = () => {
+            overridePill.style.display =
+                (bulkAccountId && d.account_id && d.account_id !== bulkAccountId) ? '' : 'none';
+        };
+        refreshOverridePill();
+        acctLab.appendChild(overridePill);
         acctWrap.appendChild(acctLab);
         const acctSel = document.createElement('select');
         acctSel.className = 'input-sm';
@@ -875,6 +1051,7 @@ function buildDraftRow(d, idx) {
             d.account_id = acctSel.value || null;
             const a = accounts.find(x => x.id === d.account_id);
             if (a) { d.currency = a.currency; curSel.value = a.currency; }
+            refreshOverridePill();
         });
         acctWrap.appendChild(acctSel);
         more.appendChild(acctWrap);
@@ -913,7 +1090,9 @@ function buildDraftRow(d, idx) {
         paidLab.appendChild(paidCb);
         const paidTxt = document.createElement('span');
         paidTxt.className = 'text-sm';
-        paidTxt.textContent = 'Pagado (la fecha del gasto se usa como fecha de pago)';
+        paidTxt.textContent = isIncome
+            ? 'Acreditado (la fecha del ingreso se usa como fecha de acreditacion)'
+            : 'Pagado (la fecha del gasto se usa como fecha de pago)';
         paidLab.appendChild(paidTxt);
         paidWrap.appendChild(paidLab);
         more.appendChild(paidWrap);
@@ -934,7 +1113,7 @@ function buildDraftRow(d, idx) {
         descWrap.appendChild(descInp);
         more.appendChild(descWrap);
 
-        row.appendChild(more);
+        row.appendChild(expand);
     }
 
     return row;
@@ -944,10 +1123,23 @@ function updateFooterSummary() {
     const create = drafts.filter(d => d.action === 'create');
     const markPaid = drafts.filter(d => d.action === 'mark_recurrent_paid');
     const skip = drafts.filter(d => d.action === 'skip');
-    const total = [...create, ...markPaid].reduce((s, d) => s + Math.abs(Number(d.amount) || 0), 0);
+
+    // Split by kind so the total isn't a meaningless mix of magnitudes when
+    // the batch contains both gastos and ingresos.
+    const active = [...create, ...markPaid];
+    const expenseTotal = active
+        .filter(d => d.kind !== 'income')
+        .reduce((s, d) => s + Math.abs(Number(d.amount) || 0), 0);
+    const incomeTotal = active
+        .filter(d => d.kind === 'income')
+        .reduce((s, d) => s + Math.abs(Number(d.amount) || 0), 0);
+
+    const totalParts = [];
+    if (expenseTotal > 0 || incomeTotal === 0) totalParts.push(`Gastos ${formatPrice(expenseTotal)}`);
+    if (incomeTotal > 0) totalParts.push(`Ingresos +${formatPrice(incomeTotal)}`);
 
     document.getElementById('footer-summary').textContent =
-        `${create.length} nuevos · ${markPaid.length} fijos pagados · ${skip.length} saltados · Total ${formatPrice(total)}`;
+        `${create.length} nuevos · ${markPaid.length} fijos pagados · ${skip.length} saltados · ${totalParts.join(' · ')}`;
 }
 
 // ── Persist drafts (localStorage) ───────────────────────
@@ -993,13 +1185,14 @@ async function commit() {
             };
         }
         const isPaid = d.is_paid !== false;
-        return {
+        const isIncome = d.kind === 'income';
+        const row = {
             action: 'create',
+            kind: isIncome ? 'income' : 'expense',
             title: d.title,
             description: d.description || '',
             amount: Number(d.amount) || 0,
-            expense_category_id: d.suggested_category_id,
-            card_id: d.card_id,
+            card_id: isIncome ? null : d.card_id,
             account_id: d.account_id,
             currency: d.currency || 'ARS',
             transaction_type: 'one-time',
@@ -1007,6 +1200,12 @@ async function commit() {
             paid_ts: isPaid ? paid_ts : null,
             due_ts: paid_ts,
         };
+        // Route the suggested category to the right column. Server forces the
+        // opposite side to NULL, but sending only the relevant one keeps
+        // payloads tidy and avoids confusion when reading server logs.
+        if (isIncome) row.income_category_id = d.suggested_category_id;
+        else          row.expense_category_id = d.suggested_category_id;
+        return row;
     });
 
     const btn = document.getElementById('confirm-btn');
@@ -1051,17 +1250,21 @@ function discard() {
 mangosAuth.ready.then(async user => {
     if (!user) return;
 
-    const [cs, rs, cards_, accs] = await Promise.all([
+    const [cs, ics, rs, cards_, accs] = await Promise.all([
         api.get('/categories'),
+        api.get('/categories', { kind: 'income' }),
         api.get('/recurrents'),
         api.get('/cards'),
         api.get('/accounts'),
     ]);
     categories = cs || [];
+    incomeCategories = ics || [];
     recurrents = rs || [];
     cards = cards_ || [];
     accounts = accs || [];
+    bulkAccountId = defaultAccount()?.id || null;
 
+    setupBulkAccountBar();
     setupDropZone();
     setupAudioZone();
     setupModeTabs();

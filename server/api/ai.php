@@ -114,10 +114,14 @@ function handle_parse_transactions(PDO $pdo, string $user_id): void {
         ];
     }, $recurrents_raw);
 
-    // Categories
-    $stmt = $pdo->prepare("SELECT id, name FROM expense_category WHERE user_id = ? ORDER BY name");
+    // Categories — both taxonomies, prompt tells the AI which to pick from
+    // based on each draft's `kind`.
+    $stmt = $pdo->prepare("SELECT id, name FROM expense_category WHERE user_id = ? AND deleted_ts IS NULL ORDER BY name");
     $stmt->execute([$user_id]);
-    $categories = $stmt->fetchAll();
+    $expense_cats = $stmt->fetchAll();
+    $stmt = $pdo->prepare("SELECT id, name FROM income_category WHERE user_id = ? AND deleted_ts IS NULL ORDER BY name");
+    $stmt->execute([$user_id]);
+    $income_cats = $stmt->fetchAll();
 
     // Accounts (for currency detection — Gemini sees the user's wallets and
     // their currencies, which helps it pick `detected_currency` correctly).
@@ -138,7 +142,8 @@ function handle_parse_transactions(PDO $pdo, string $user_id): void {
             'is_paid' => (bool)$p['is_paid'],
         ], $existing),
         'recurrents' => $recurrents,
-        'categories' => array_map(fn($c) => $c['name'], $categories),
+        'expense_categories' => array_map(fn($c) => $c['name'], $expense_cats),
+        'income_categories' => array_map(fn($c) => $c['name'], $income_cats),
         'accounts' => array_map(fn($a) => ['name' => $a['name'], 'currency' => $a['currency']], $accounts),
     ];
 
@@ -169,46 +174,63 @@ function handle_parse_transactions(PDO $pdo, string $user_id): void {
     $drafts = $result['drafts'] ?? [];
     $unreadable = $result['unreadable_screenshot_idxs'] ?? [];
 
-    // Post-process
-    $cat_by_name = [];
-    foreach ($categories as $c) {
-        $cat_by_name[mb_strtolower($c['name'])] = $c['id'];
-    }
+    // Post-process — separate name→id maps per taxonomy so we route based on
+    // each draft's kind. Defaults to 'expense' for back-compat with prompts
+    // that don't return a kind.
+    $expense_cat_by_name = [];
+    foreach ($expense_cats as $c) { $expense_cat_by_name[mb_strtolower($c['name'])] = $c['id']; }
+    $income_cat_by_name = [];
+    foreach ($income_cats as $c)  { $income_cat_by_name[mb_strtolower($c['name'])]  = $c['id']; }
     $existing_ids = array_column($existing, 'id');
     $recurrent_ids = array_column($recurrents, 'id');
 
     foreach ($drafts as &$d) {
+        // Normalize kind. Gemini may return missing/garbage; clamp to expense.
+        $d_kind = $d['kind'] ?? 'expense';
+        if (!in_array($d_kind, ['expense', 'income'], true)) $d_kind = 'expense';
+        $d['kind'] = $d_kind;
+
         $name = $d['suggested_category_name'] ?? null;
-        $d['suggested_category_id'] = $name ? ($cat_by_name[mb_strtolower($name)] ?? null) : null;
+        $map = $d_kind === 'income' ? $income_cat_by_name : $expense_cat_by_name;
+        $d['suggested_category_id'] = $name ? ($map[mb_strtolower($name)] ?? null) : null;
 
-        if (!empty($d['existing_transaction_id']) && !in_array($d['existing_transaction_id'], $existing_ids, true)) {
+        // Existing-match + recurrent-match only apply to expenses (income has
+        // no recurrents, and existing-match is keyed by expense titles in this
+        // batch context — incomes get a fresh draft every time).
+        if ($d_kind === 'income') {
             $d['existing_transaction_id'] = null;
-        }
-        if (!empty($d['recurrent_match_id']) && !in_array($d['recurrent_match_id'], $recurrent_ids, true)) {
             $d['recurrent_match_id'] = null;
-        }
+            $d['recurrent_match_confidence'] = 'low';
+        } else {
+            if (!empty($d['existing_transaction_id']) && !in_array($d['existing_transaction_id'], $existing_ids, true)) {
+                $d['existing_transaction_id'] = null;
+            }
+            if (!empty($d['recurrent_match_id']) && !in_array($d['recurrent_match_id'], $recurrent_ids, true)) {
+                $d['recurrent_match_id'] = null;
+            }
 
-        // Server-side dedup belt: if Gemini missed an existing match
-        if (empty($d['existing_transaction_id'])) {
-            $d_amount = (float)($d['amount'] ?? 0);
-            $d_title = mb_strtolower($d['title'] ?? '');
-            $d_date = $d['date'] ?? '';
-            foreach ($existing as $ex) {
-                $pct = 0;
-                similar_text($d_title, mb_strtolower($ex['title']), $pct);
-                if ($pct < 80) continue;
+            // Server-side dedup belt: if Gemini missed an existing match
+            if (empty($d['existing_transaction_id'])) {
+                $d_amount = (float)($d['amount'] ?? 0);
+                $d_title = mb_strtolower($d['title'] ?? '');
+                $d_date = $d['date'] ?? '';
+                foreach ($existing as $ex) {
+                    $pct = 0;
+                    similar_text($d_title, mb_strtolower($ex['title']), $pct);
+                    if ($pct < 80) continue;
 
-                $ex_amount = (float)$ex['amount'];
-                $amount_diff = $ex_amount > 0 ? abs($d_amount - $ex_amount) / $ex_amount : 1;
-                if ($amount_diff > 0.01) continue;
+                    $ex_amount = (float)$ex['amount'];
+                    $amount_diff = $ex_amount > 0 ? abs($d_amount - $ex_amount) / $ex_amount : 1;
+                    if ($amount_diff > 0.01) continue;
 
-                $ref_date = $ex['due_date'] ?: $ex['paid_date'];
-                if (!$ref_date || !$d_date) continue;
-                $date_diff_days = abs(strtotime($d_date) - strtotime($ref_date)) / 86400;
-                if ($date_diff_days > 2) continue;
+                    $ref_date = $ex['due_date'] ?: $ex['paid_date'];
+                    if (!$ref_date || !$d_date) continue;
+                    $date_diff_days = abs(strtotime($d_date) - strtotime($ref_date)) / 86400;
+                    if ($date_diff_days > 2) continue;
 
-                $d['existing_transaction_id'] = $ex['id'];
-                break;
+                    $d['existing_transaction_id'] = $ex['id'];
+                    break;
+                }
             }
         }
     }
@@ -234,8 +256,8 @@ function build_prompt(array $context): string {
     $mode = $context['mode'] ?? 'image';
 
     $intro = $mode === 'audio'
-        ? "Te paso un audio en español argentino donde el usuario describe UNO O MAS GASTOS (egresos de dinero) que ya hizo o tiene pendientes. Tu objetivo: TRANSCRIBIR el audio completo en el campo 'transcription' y extraer CADA gasto mencionado como un draft separado. Un solo audio puede generar 1, 2, 5 o mas drafts segun cuantos gastos enumere el usuario. NO consolides varios gastos en uno; cada item mencionado va por separado."
-        : "Analiza las capturas de pantalla adjuntas (en orden, indices 0..N-1) y extrae TODAS las transacciones de GASTO (egreso de dinero) que aparezcan. Tu objetivo es ser EXHAUSTIVO: las capturas pueden tener listas densas, recorre cada una de arriba a abajo y NO te saltes ninguna fila de gasto.";
+        ? "Te paso un audio en español argentino donde el usuario describe UNO O MAS MOVIMIENTOS de plata (gastos o ingresos) que ya hizo o tiene pendientes. Tu objetivo: TRANSCRIBIR el audio completo en el campo 'transcription' y extraer CADA movimiento mencionado como un draft separado, clasificado como gasto (kind='expense') o ingreso (kind='income'). Un solo audio puede generar 1, 2, 5 o mas drafts segun cuantos items enumere el usuario. NO consolides varios items en uno; cada uno va por separado."
+        : "Analiza las capturas de pantalla adjuntas (en orden, indices 0..N-1) y extrae TODAS las transacciones que aparezcan, clasificadas como gasto (kind='expense') o ingreso (kind='income'). Tu objetivo es ser EXHAUSTIVO: las capturas pueden tener listas densas (un mix de gastos e ingresos), recorre cada una de arriba a abajo y NO te saltes ninguna fila.";
 
     $source_idx_rule = $mode === 'audio'
         ? "- screenshot_idx: en modo audio dejalo en null (no aplica)."
@@ -244,20 +266,20 @@ function build_prompt(array $context): string {
     $exhaustividad = $mode === 'audio'
         ? <<<TXT
 EXHAUSTIVIDAD:
-- El audio puede listar varios gastos seguidos ("gaste 1500 en el super, 800 en el cafe, 12000 de alquiler"). Cada uno es un draft.
-- Si el usuario menciona el mismo gasto dos veces, devuelvelo una sola vez.
-- Si el usuario habla de algo que NO es un gasto (anecdota, recordatorio futuro sin monto, ingreso), ignoralo.
+- El audio puede listar varios movimientos seguidos ("gaste 1500 en el super, 800 en el cafe, cobre 50000 de Juan"). Cada uno es un draft (con su kind correspondiente).
+- Si el usuario menciona el mismo item dos veces, devuelvelo una sola vez.
+- Si el usuario habla de algo que NO es un movimiento de plata concreto (anecdota, recordatorio futuro sin monto), ignoralo.
 TXT
         : <<<TXT
 EXHAUSTIVIDAD:
-- Cada captura puede contener 5-30 filas. Extrae cada GASTO sin omitir ninguno.
+- Cada captura puede contener 5-30 filas. Extrae CADA fila (gasto o ingreso) sin omitir ninguna.
 - Las capturas pueden solaparse: la misma transaccion puede aparecer en varias. Usa duplicate_in_batch_idx para señalarlo, no la omitas en la primera aparicion.
 - "Saldo del dia" NO es una transaccion, es un saldo. Ignoralo.
 TXT;
 
     $unreadable_rule = $mode === 'audio'
-        ? "AUDIO NO PROCESABLE:\n- Si el audio no describe ningun gasto concreto (silencio, ruido, charla sin importes), devolve drafts=[] y dejalo asi. No uses unreadable_screenshot_idxs (queda vacio en modo audio)."
-        : "CAPTURAS NO LEIBLES:\n- Si una captura no se puede leer, no muestra transacciones, o solo muestra ingresos/saldos, agrega su indice a \"unreadable_screenshot_idxs\".";
+        ? "AUDIO NO PROCESABLE:\n- Si el audio no describe ningun movimiento concreto (silencio, ruido, charla sin importes), devolve drafts=[] y dejalo asi. No uses unreadable_screenshot_idxs (queda vacio en modo audio)."
+        : "CAPTURAS NO LEIBLES:\n- Si una captura no se puede leer o no muestra transacciones, agrega su indice a \"unreadable_screenshot_idxs\".";
 
     $transcription_rule = $mode === 'audio'
         ? "TRANSCRIPCION:\n- transcription: el texto completo de lo que dice el audio (en español argentino). Obligatorio en modo audio."
@@ -266,41 +288,49 @@ TXT;
     $parsing_rules = $mode === 'audio'
         ? <<<TXT
 REGLAS DE PARSEO:
-- amount: numero (no string). El usuario suele decir cifras como "mil quinientos" (1500), "doce mil" (12000), "veinticinco mil pesos" (25000). Convertilo a numero.
-- title: max 80 chars. Usa el comercio o concepto que mencione el usuario (ej: "Coto", "cafe con juan", "alquiler"). Si dice nombre + apellido, usalo en mayusculas.
+- kind: "expense" para gastos, "income" para ingresos. Ver clasificacion abajo.
+- amount: numero positivo siempre (la magnitud). El sistema le pone signo segun kind. "mil quinientos" = 1500, "doce mil" = 12000.
+- title: max 80 chars. Para gastos usa el comercio/concepto ("Coto", "cafe con juan", "alquiler"); para ingresos usa el emisor o concepto ("sueldo abril", "pago freelance Juan").
 - date: YYYY-MM-DD. Si no menciona fecha, usa $today. "ayer" = $today − 1, "anteayer" = $today − 2, "el lunes" se interpreta respecto a $today.
 - description: detalle adicional si el usuario lo dice (ej: "milanesa con gaseosa"), o null.
-- suggested_category_name: una EXACTA de la lista "categories" o null. NO inventes.
+- suggested_category_name: una EXACTA de la lista correspondiente — "expense_categories" si kind=expense, "income_categories" si kind=income. NO inventes.
 $source_idx_rule
 TXT
         : <<<TXT
 REGLAS DE PARSEO:
+- kind: "expense" para gastos, "income" para ingresos. Ver clasificacion abajo.
 - Argentina: el punto es separador de miles. "\$67.506" = 67506. "\$67.506,08" o "\$67.506⁰⁸" = 67506.08. Decimales pueden aparecer en superindice o tamaño chico al lado del monto principal.
+- amount: SIEMPRE positivo (la magnitud). El sistema le pone signo segun kind.
 - Si la transaccion no muestra año, asumi $today.
-- title: max 80 chars. Usa el NOMBRE DEL DESTINATARIO/COMERCIO si existe (ej: "NAVARRO AMADEO ANDRES", "MINIMERCADO MAURI"). Si no, usa el concepto.
+- title: max 80 chars. Usa el NOMBRE DEL DESTINATARIO/COMERCIO o EMISOR si existe (ej: "NAVARRO AMADEO ANDRES", "MINIMERCADO MAURI"). Si no, usa el concepto.
 - date: YYYY-MM-DD. Buscala en el encabezado de la seccion de la fila.
-- suggested_category_name: una EXACTA de la lista "categories" o null.
+- suggested_category_name: una EXACTA de la lista correspondiente — "expense_categories" si kind=expense, "income_categories" si kind=income. NO inventes.
 $source_idx_rule
 TXT;
 
     $income_rule = $mode === 'audio'
-        ? "DETECCION DE GASTO vs INGRESO:\n- Solo extraer egresos de dinero. Si el usuario dice \"cobre\", \"me transfirieron\", \"me devolvieron\", IGNORALO (no es gasto)."
+        ? <<<TXT
+CLASIFICACION GASTO vs INGRESO:
+- kind="expense" cuando el usuario gasto plata: "gaste", "pague", "compre", "transferi a", "le di plata a".
+- kind="income" cuando el usuario recibio plata: "cobre", "me transfirieron", "me devolvieron", "sueldo", "pago recibido", "reembolso", "rendimientos".
+- Si el usuario habla de algo sin signo claro, asumi gasto.
+TXT
         : <<<TXT
-DETECCION DE GASTO vs INGRESO (CRITICO):
+CLASIFICACION GASTO vs INGRESO (CRITICO):
 
-GASTO (SI extraer) — indicadores visuales:
+GASTO (kind="expense") — indicadores visuales:
 - Texto en NEGRO o ROJO
 - Signo "-" o "$ -" antes del monto
 - Flecha hacia ABAJO o icono de tarjeta saliente
 - Texto: "Transferencia enviada", "Pago", "Pago de servicio", "Pago con QR", "Compra", "Debito", "Extraccion"
 
-INGRESO (NO extraer, IGNORAR ABSOLUTAMENTE):
+INGRESO (kind="income") — indicadores visuales:
 - Texto en VERDE
 - Signo "+" o "$ +" antes del monto
 - Flecha hacia ARRIBA o icono de entrada
-- Texto: "Transferencia recibida", "Rendimientos", "Ingreso", "Cobro recibido", "Devolucion", "Reintegro", "Acreditacion"
+- Texto: "Transferencia recibida", "Rendimientos", "Ingreso", "Cobro recibido", "Devolucion", "Reintegro", "Acreditacion", "Pago recibido", "Sueldo"
 
-Si tenes duda sobre si una linea es gasto o ingreso, observa el COLOR y el SIGNO. Verde con "+" SIEMPRE es ingreso; negro/rojo con "-" SIEMPRE es gasto.
+Si tenes duda, observa COLOR y SIGNO. Verde con "+" → income; negro/rojo con "-" → expense. NUNCA mezcles signos.
 TXT;
 
     return <<<PROMPT
@@ -316,7 +346,7 @@ $parsing_rules
 MONEDA:
 - detected_currency: una de "ARS", "USD", "USDT". Detecta la moneda del gasto a partir de signos visuales o textuales: "USD", "U\$D", "u\$s", "dolares", "USDT", "tether" → no-ARS. Default a "ARS" si no hay señal explicita. La lista "accounts" muestra las cuentas del usuario con su moneda; si el gasto coincide con una cuenta no-ARS, usa esa moneda.
 
-DEDUPLICACION Y MATCHING:
+DEDUPLICACION Y MATCHING (solo aplica a gastos — drafts con kind=income siempre llevan existing_transaction_id=null y recurrent_match_id=null):
 - existing_transaction_id: si este gasto ya esta en "existing_transactions_recent" (titulo similar + monto cercano + fecha cercana), poner el id; si no, null.
 - recurrent_match_id: si el destinatario o concepto coincide con el "title" O CUALQUIERA de los "aliases" de un recurrent, poner el id de ese recurrent. EJEMPLO: si un recurrent tiene title "Clases de running" y aliases ["NAVARRO AMADEO ANDRES"], y la transaccion es "Transferencia enviada NAVARRO AMADEO ANDRES", DEBE matchear ese recurrent_id. El monto puede variar ±20% (no exigir match exacto en plata).
 - recurrent_match_confidence: "high" si el destinatario coincide casi exacto con title/alias. "medium" si es similar. "low" si solo coincide parcialmente o por monto.
@@ -340,6 +370,7 @@ function build_schema(): array {
                 'items' => [
                     'type' => 'OBJECT',
                     'properties' => [
+                        'kind' => ['type' => 'STRING', 'enum' => ['expense', 'income']],
                         'screenshot_idx' => ['type' => 'INTEGER', 'nullable' => true],
                         'title' => ['type' => 'STRING'],
                         'amount' => ['type' => 'NUMBER'],
@@ -352,7 +383,7 @@ function build_schema(): array {
                         'duplicate_in_batch_idx' => ['type' => 'INTEGER', 'nullable' => true],
                         'detected_currency' => ['type' => 'STRING', 'enum' => ['ARS', 'USD', 'USDT']],
                     ],
-                    'required' => ['title', 'amount', 'date', 'recurrent_match_confidence', 'detected_currency'],
+                    'required' => ['kind', 'title', 'amount', 'date', 'recurrent_match_confidence', 'detected_currency'],
                 ],
             ],
             'unreadable_screenshot_idxs' => [
@@ -403,6 +434,10 @@ function handle_commit_transactions(PDO $pdo, string $user_id): void {
                 if (empty($row['title']) || !isset($row['amount'])) {
                     throw new RuntimeException("Row $i: title and amount required");
                 }
+                $row_kind = $row['kind'] ?? 'expense';
+                if (!in_array($row_kind, ['expense', 'income'], true)) {
+                    throw new RuntimeException("Row $i: kind must be expense or income");
+                }
                 $id = bin2hex(random_bytes(14));
                 $is_paid = !empty($row['is_paid']) ? 1 : 0;
                 $paid_ts = $is_paid ? ($row['paid_ts'] ?? date('Y-m-d H:i:s')) : null;
@@ -411,23 +446,33 @@ function handle_commit_transactions(PDO $pdo, string $user_id): void {
                     $pdo, $user_id, $row['account_id'] ?? null, $row['currency'] ?? null
                 );
 
+                // Sign + category column routing follow the row's kind.
+                $signed_amount = $row_kind === 'income'
+                    ? abs((float)$row['amount'])
+                    : -abs((float)$row['amount']);
+                $expense_cat = $row_kind === 'expense' ? ($row['expense_category_id'] ?? null) : null;
+                $income_cat  = $row_kind === 'income'  ? ($row['income_category_id']  ?? null) : null;
+
                 $stmt = $pdo->prepare(
                     "INSERT INTO `transaction` (id, user_id, title, description, amount, currency, expense_category_id,
-                     is_paid, paid_ts, recurrent_id, card_id, account_id, transaction_type, due_ts, source, status)
-                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, ?, ?, ?, ?, ?, 'reviewed')"
+                     income_category_id, is_paid, paid_ts, recurrent_id, card_id, account_id, transaction_type, due_ts,
+                     kind, source, status)
+                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, ?, ?, ?, ?, ?, ?, 'reviewed')"
                 );
                 $stmt->execute([
                     $id, $user_id,
                     $row['title'],
                     $row['description'] ?? '',
-                    -abs((float)$row['amount']),
+                    $signed_amount,
                     $currency,
-                    $row['expense_category_id'] ?? null,
+                    $expense_cat,
+                    $income_cat,
                     $is_paid, $paid_ts,
                     $row['card_id'] ?? null,
                     $account_id,
                     $row['transaction_type'] ?? 'one-time',
                     $row['due_ts'] ?? null,
+                    $row_kind,
                     $source,
                 ]);
                 $transaction_ids[] = $id;
