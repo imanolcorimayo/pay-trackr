@@ -13,7 +13,6 @@
 <!-- Page header (desktop only — mobile topbar shows the page title) -->
 <div class="hidden lg:flex items-end justify-between mb-6">
     <div>
-        <div class="overline mb-2">01 — Resumen</div>
         <h1 class="text-2xl font-semibold" id="period-title">Cargando…</h1>
         <p class="text-sm text-muted mt-1" id="period-sub">&nbsp;</p>
     </div>
@@ -144,16 +143,21 @@
 <!-- ───────── Per-account cards ───────── -->
 <section class="mb-6">
     <div class="flex items-end justify-between mb-3 lg:mb-4">
-        <div>
-            <div class="overline mb-1.5">02 — Cuentas</div>
-            <h2 class="text-lg lg:text-xl font-semibold">Cada cuenta, en su lugar</h2>
-        </div>
+        <h2 class="text-lg lg:text-xl font-semibold">Cuentas</h2>
         <a href="/cuentas" class="text-xs lg:text-sm font-medium text-accent hover:underline">Ver todas →</a>
     </div>
-    <div class="h-scroll" id="account-cards">
-        <div class="card p-5"><span class="skeleton block w-full h-24"></span></div>
-        <div class="card p-5"><span class="skeleton block w-full h-24"></span></div>
-        <div class="card p-5"><span class="skeleton block w-full h-24"></span></div>
+    <div class="carousel-wrap">
+        <button type="button" class="carousel-nav prev" id="account-prev" aria-label="Anterior">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+        </button>
+        <div class="h-scroll" id="account-cards">
+            <div class="card p-5"><span class="skeleton block w-full h-24"></span></div>
+            <div class="card p-5"><span class="skeleton block w-full h-24"></span></div>
+            <div class="card p-5"><span class="skeleton block w-full h-24"></span></div>
+        </div>
+        <button type="button" class="carousel-nav next" id="account-next" aria-label="Siguiente">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+        </button>
     </div>
 </section>
 
@@ -163,10 +167,7 @@
     <!-- Recurrents -->
     <div class="card p-5 lg:p-6">
         <div class="flex items-end justify-between mb-1">
-            <div>
-                <div class="overline mb-1.5">03 — Recurrentes</div>
-                <h2 class="text-base lg:text-xl font-semibold">Lo que viene este mes</h2>
-            </div>
+            <h2 class="text-base lg:text-xl font-semibold">Recurrentes</h2>
             <span class="text-xs text-muted">Pendiente <span class="font-semibold tabular-nums text-dark" id="recurrent-pending-total">—</span></span>
         </div>
 
@@ -197,10 +198,7 @@
     <!-- Recent transactions -->
     <div class="card p-5 lg:p-6">
         <div class="flex items-end justify-between">
-            <div>
-                <div class="overline mb-1.5">04 — Movimientos</div>
-                <h2 class="text-base lg:text-xl font-semibold">Últimos registros</h2>
-            </div>
+            <h2 class="text-base lg:text-xl font-semibold">Movimientos</h2>
             <a href="/movimientos" class="text-xs lg:text-sm font-medium text-accent hover:underline">Ver todos →</a>
         </div>
 
@@ -219,8 +217,7 @@
     <div class="card p-5 lg:p-7 relative overflow-hidden">
         <div class="grid grid-cols-1 lg:grid-cols-[1fr_1.4fr] gap-6 lg:gap-7 items-start">
             <div>
-                <div class="overline mb-1.5">05 — Transferencias</div>
-                <h2 class="text-base lg:text-xl font-semibold">Plata movida entre cuentas</h2>
+                <h2 class="text-base lg:text-xl font-semibold">Transferencias</h2>
                 <p class="text-xs text-muted mt-2 max-w-md">Las transferencias internas <strong class="text-dark font-semibold">no afectan</strong> ingresos ni gastos del período.</p>
 
                 <div class="mt-5 grid grid-cols-2 gap-x-5 gap-y-4">
@@ -886,6 +883,37 @@ async function markPaymentPaid(payment, btn) {
     loadAll();
 }
 
+// ── Account carousel (desktop prev/next) ──────────────────────────────
+function bindAccountCarousel() {
+    const scroller = document.getElementById('account-cards');
+    const prev = document.getElementById('account-prev');
+    const next = document.getElementById('account-next');
+    if (!scroller || !prev || !next) return;
+
+    const stepSize = () => {
+        const first = scroller.firstElementChild;
+        if (!first) return 280;
+        const style = getComputedStyle(scroller);
+        const gap = parseFloat(style.columnGap || style.gap || '0') || 0;
+        return first.getBoundingClientRect().width + gap;
+    };
+    const updateNav = () => {
+        const max = scroller.scrollWidth - scroller.clientWidth - 1;
+        const overflows = max > 1;
+        prev.disabled = !overflows || scroller.scrollLeft <= 1;
+        next.disabled = !overflows || scroller.scrollLeft >= max;
+    };
+
+    prev.addEventListener('click', () => scroller.scrollBy({ left: -stepSize(), behavior: 'smooth' }));
+    next.addEventListener('click', () => scroller.scrollBy({ left:  stepSize(), behavior: 'smooth' }));
+    scroller.addEventListener('scroll', updateNav, { passive: true });
+    window.addEventListener('resize', updateNav);
+
+    // Re-evaluate after the dynamic cards render
+    new MutationObserver(updateNav).observe(scroller, { childList: true });
+    updateNav();
+}
+
 // ── Filter bar interactions ───────────────────────────────────────────
 function bindFilterInteractions() {
     document.getElementById('f-period').addEventListener('click', () => {
@@ -954,6 +982,7 @@ async function loadAll() {
 mangosAuth.ready.then((user) => {
     if (!user) return;
     bindFilterInteractions();
+    bindAccountCarousel();
     loadAll();
 });
 </script>

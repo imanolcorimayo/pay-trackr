@@ -12,8 +12,7 @@
 <!-- Page header (desktop only — mobile topbar shows the page title) -->
 <div class="hidden lg:flex items-end justify-between mb-6">
     <div>
-        <div class="overline mb-2" id="analytics-overline">Analytics</div>
-        <h1 class="text-2xl font-semibold">Cómo se movió tu plata</h1>
+        <h1 class="text-2xl font-semibold">Análisis</h1>
         <p class="text-sm text-muted mt-1">Tendencias, categorías, cuentas y transferencias del último año.</p>
     </div>
 </div>
@@ -61,10 +60,7 @@
 <!-- ───────── Section 01 — Time series ───────── -->
 <section class="mb-6">
     <div class="flex items-end justify-between mb-3 lg:mb-4 flex-wrap gap-3">
-        <div>
-            <div class="overline mb-1.5">01 — Tendencia</div>
-            <h2 class="text-base lg:text-xl font-semibold">Ingresos vs Gastos</h2>
-        </div>
+        <h2 class="text-base lg:text-xl font-semibold">Tendencia</h2>
         <div class="flex items-center gap-3 lg:gap-4 flex-wrap">
             <!-- Series legend -->
             <div class="flex items-center gap-3 text-xs">
@@ -137,10 +133,7 @@
     <!-- Categorías -->
     <div class="card p-5 lg:p-7">
         <div class="flex items-end justify-between flex-wrap gap-3">
-            <div>
-                <div class="overline mb-1.5">02 — Categorías</div>
-                <h2 class="text-base lg:text-xl font-semibold">Distribución por categoría</h2>
-            </div>
+            <h2 class="text-base lg:text-xl font-semibold">Categorías</h2>
             <!-- Income/Expense toggle pill -->
             <div class="inline-flex p-[3px] bg-white border border-border rounded-full text-[11.5px]" role="tablist" id="cat-toggle">
                 <button type="button" class="px-3.5 py-1.5 rounded-full font-medium is-active" data-kind="expense">Gastos</button>
@@ -180,10 +173,7 @@
     <!-- Cuentas -->
     <div class="card p-5 lg:p-7">
         <div class="flex items-end justify-between flex-wrap gap-3">
-            <div>
-                <div class="overline mb-1.5">03 — Cuentas</div>
-                <h2 class="text-base lg:text-xl font-semibold">Cómo se mueve cada cuenta</h2>
-            </div>
+            <h2 class="text-base lg:text-xl font-semibold">Cuentas</h2>
             <div class="flex items-center gap-2.5 text-[11px]">
                 <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-sm bg-success"></span>Ingreso</span>
                 <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-sm bg-accent"></span>Gasto</span>
@@ -203,8 +193,7 @@
 <section class="mb-6">
     <div class="flex items-end justify-between mb-3 lg:mb-4 flex-wrap gap-3">
         <div>
-            <div class="overline mb-1.5">04 — Transferencias</div>
-            <h2 class="text-base lg:text-xl font-semibold">Plata movida entre cuentas</h2>
+            <h2 class="text-base lg:text-xl font-semibold">Transferencias</h2>
             <p class="text-xs text-muted mt-1.5 max-w-xl">No afectan ingresos ni gastos. Mostramos hacia dónde se movió la plata.</p>
         </div>
         <div class="flex items-center gap-3 text-xs text-muted">
@@ -240,7 +229,6 @@
     <div class="card p-5 lg:p-7">
         <div class="grid grid-cols-1 lg:grid-cols-[1fr_1.5fr] gap-6 lg:gap-7 items-start">
             <div>
-                <div class="overline mb-1.5">05 — Higiene</div>
                 <h2 class="text-base lg:text-xl font-semibold">Demora de anotación</h2>
                 <p class="text-xs text-muted mt-2 max-w-md">Cuántos días tardás en cargar tus movimientos. Menos demora = mejor memoria, totales más confiables.</p>
                 <div class="mt-5 flex items-baseline gap-2.5">

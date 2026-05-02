@@ -195,14 +195,39 @@
     display: flex; gap: 12px;
     overflow-x: auto;
     scroll-snap-type: x mandatory;
+    scroll-behavior: smooth;
     padding: 2px; margin: -2px;
     scrollbar-width: none;
   }
   .h-scroll::-webkit-scrollbar { display: none; }
   .h-scroll > * { scroll-snap-align: start; flex: 0 0 270px; }
   @media (min-width: 1024px) {
-    .h-scroll { overflow: visible; gap: 14px; }
-    .h-scroll > * { flex: 1 1 0; min-width: 0; }
+    .h-scroll { gap: 14px; }
+    .h-scroll > * { flex: 0 0 280px; }
+  }
+
+  /* ─── Carousel wrapper (prev/next nav for h-scroll) ───────────────── */
+  .carousel-wrap { position: relative; }
+  .carousel-nav {
+    position: absolute; top: 50%; transform: translateY(-50%);
+    z-index: 5;
+    width: 36px; height: 36px;
+    display: none;
+    align-items: center; justify-content: center;
+    background: white;
+    border: 1px solid #E7E1D6;
+    border-radius: 999px;
+    color: #292524;
+    box-shadow: 0 2px 6px rgba(41,37,36,.08);
+    cursor: pointer;
+    transition: opacity .15s, background .15s;
+  }
+  .carousel-nav:hover { background: #FAF7F1; }
+  .carousel-nav:disabled { opacity: 0; pointer-events: none; }
+  .carousel-nav.prev { left: -10px; }
+  .carousel-nav.next { right: -10px; }
+  @media (min-width: 1024px) {
+    .carousel-nav { display: inline-flex; }
   }
 
   /* ─── Editorial split bar (income/expense/transfer in one row) ───── */
