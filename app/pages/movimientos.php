@@ -836,6 +836,11 @@ function monthLabel(d) {
     const s = d.toLocaleDateString('es-AR', { month: 'long', year: 'numeric' });
     return s.charAt(0).toUpperCase() + s.slice(1);
 }
+function parseLocalDate(s) {
+    if (!s) return null;
+    const m = String(s).match(/^(\d{4})-(\d{2})-(\d{2})/);
+    return m ? new Date(+m[1], +m[2]-1, +m[3]) : null;
+}
 function svgIcon(pathD, cls = 'w-4 h-4') {
     const svg = document.createElementNS(SVG_NS, 'svg');
     svg.setAttribute('class', cls);
