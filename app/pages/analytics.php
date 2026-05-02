@@ -122,7 +122,13 @@
 
         <!-- Chart (horizontal scroll on mobile so labels stay readable) -->
         <div class="overflow-x-auto -mx-2 px-2" id="chart-scroll">
-            <svg viewBox="0 0 920 320" class="w-full h-auto block" style="min-width:680px" id="trend-chart" role="img" aria-label="Ingresos, gastos y neto"></svg>
+            <div class="relative" id="trend-wrap" style="min-width:680px">
+                <svg viewBox="0 0 920 320" class="w-full h-auto block" id="trend-chart" role="img" aria-label="Ingresos, gastos y neto"></svg>
+                <!-- Tooltip is positioned in % over the wrapper. JS sets left/top + visibility. -->
+                <div id="trend-tooltip"
+                     class="absolute hidden pointer-events-none z-10 bg-dark text-light text-xs rounded-lg shadow-lg px-3.5 py-2.5 whitespace-nowrap min-w-[180px]"
+                     style="transform: translate(-50%, calc(-100% - 10px));"></div>
+            </div>
         </div>
     </div>
 </section>
@@ -398,6 +404,66 @@ function txPassesAllFilters(tx) {
 }
 
 // ── Time-series chart ─────────────────────────────────────────────────
+// Tooltip uses % positioning over the wrapper so it stays aligned with the
+// chart no matter how the SVG scales. W/H must match the SVG viewBox.
+function buildTipRow(label, value, opts) {
+    opts = opts || {};
+    const row = el('div', { className: 'flex justify-between items-baseline gap-6 py-0.5' + (opts.divider ? ' border-t border-light/20 mt-1.5 pt-2' : '') });
+    appendAll(row,
+        el('span', { className: 'opacity-70', text: label }),
+        el('span', { className: 'tabular-nums' + (opts.bold ? ' font-semibold' : ''), text: value }),
+    );
+    return row;
+}
+function showTrendTooltip(i, m, xCoord, yScale, yoy) {
+    const tip = document.getElementById('trend-tooltip');
+    if (!tip) return;
+    const W = 920, H = 320;
+    const net = m.income - m.expense;
+    tip.textContent = '';
+    appendAll(tip,
+        el('div', { className: 'font-semibold text-[13px] mb-2 pb-1.5 border-b border-light/20', text: `${m.label} ${m.year}` }),
+        buildTipRow('Ingresos', fmtArs(m.income)),
+        buildTipRow('Gastos',   fmtArs(m.expense)),
+        buildTipRow('Neto', (net >= 0 ? '+' : '−') + fmtArs(Math.abs(net)), { divider: true, bold: true }),
+    );
+    // YoY ghost-line value — only the series the toggle is showing.
+    if (yoy && yoy.mode && yoy.mode !== 'off') {
+        let label, value;
+        const ym = yoy.monthData;
+        if (yoy.mode === 'ingresos') { label = `Ingresos ${yoy.year}`; value = fmtArs(ym.income); }
+        else if (yoy.mode === 'gastos') { label = `Gastos ${yoy.year}`; value = fmtArs(ym.expense); }
+        else { const ynet = ym.income - ym.expense; label = `Neto ${yoy.year}`; value = (ynet >= 0 ? '+' : '−') + fmtArs(Math.abs(ynet)); }
+        appendAll(tip, buildTipRow(label, value, { divider: true }));
+    }
+    const yTop = Math.min(yScale(m.income), yScale(m.expense));
+    const yBot = Math.max(yScale(m.income), yScale(m.expense));
+    tip.style.left = (xCoord / W * 100) + '%';
+    tip.style.top  = (yTop   / H * 100) + '%';
+    tip.style.transform = 'translate(-50%, calc(-100% - 10px))';
+    tip.classList.remove('hidden');
+    // After the tooltip is laid out, check whether it overflows the chart's
+    // top edge. If so, flip it below the lower dot. Done after `remove('hidden')`
+    // because hidden elements have no bounding rect.
+    const wrap = document.getElementById('trend-wrap');
+    if (wrap) {
+        const wrapTop = wrap.getBoundingClientRect().top;
+        const tipTop  = tip.getBoundingClientRect().top;
+        if (tipTop < wrapTop) {
+            tip.style.top = (yBot / H * 100) + '%';
+            tip.style.transform = 'translate(-50%, 10px)';
+        }
+    }
+}
+function hideTrendTooltip() {
+    const tip = document.getElementById('trend-tooltip');
+    if (tip) tip.classList.add('hidden');
+}
+document.addEventListener('click', e => {
+    const wrap = document.getElementById('trend-wrap');
+    if (wrap && !wrap.contains(e.target)) hideTrendTooltip();
+});
+
 function renderTrend(txs) {
     const range = periodRange();
     const monthCount = range.months;
@@ -594,6 +660,25 @@ function renderTrend(txs) {
             stroke: '#15803D', 'stroke-width': '1',
         }}));
     }
+
+    // Per-month hit zones (transparent, full chart height) — clicking/tapping
+    // any column shows a tooltip with the exact amounts for that month.
+    months.forEach((m, i) => {
+        const x0 = i === 0 ? 0 : (xs[i-1] + xs[i]) / 2;
+        const x1 = i === months.length - 1 ? W : (xs[i] + xs[i+1]) / 2;
+        const hit = elNS('rect', { attrs: {
+            x: x0, y: 0, width: x1 - x0, height: H,
+            fill: 'transparent', style: 'cursor: pointer;',
+        }});
+        const yoy = yoyActive
+            ? { mode: STATE.yoyMode, year: yoyMonths[i].year, monthData: yoyMonths[i] }
+            : null;
+        const show = () => showTrendTooltip(i, m, xs[i], yScale, yoy);
+        hit.addEventListener('mouseenter', show);
+        hit.addEventListener('click', show);
+        hit.addEventListener('touchstart', show, { passive: true });
+        svg.appendChild(hit);
+    });
 
     // KPIs above chart
     const totalIncome  = months.reduce((s, m) => s + m.income, 0);
