@@ -30,8 +30,8 @@
     }
 </style>
 
-<!-- Page header -->
-<div class="flex items-center justify-between mb-8">
+<!-- Page header — desktop only; mobile uses the topbar title -->
+<div class="hidden lg:flex items-center justify-between mb-8">
     <div>
         <h1 class="text-2xl font-semibold">Carga masiva</h1>
         <p class="text-sm text-muted mt-1">Sube capturas o un audio y la IA arma los movimientos por vos</p>
@@ -149,7 +149,7 @@
         <div id="drafts-list" class="divide-y divide-border"></div>
     </div>
 
-    <div class="sticky bottom-3 z-10">
+    <div class="sticky bottom-[calc(5rem+env(safe-area-inset-bottom))] lg:bottom-3 z-10">
         <div class="bg-white border border-border rounded-xl shadow-lg px-4 py-2.5 flex items-center justify-between gap-3 flex-wrap">
             <div class="text-xs sm:text-sm">
                 <span id="footer-summary" class="text-muted">--</span>

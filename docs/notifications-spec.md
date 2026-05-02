@@ -41,6 +41,7 @@ Each row = one notification kind. Bundling, copy and routing get refined as we s
 | `fijo-overdue`  | recurrent due in past month, no transaction| "N fijos vencidos · $T"     | "Tocá para revisar"             | `/fijos?filter=overdue`               | `(user, fijo-overdue, ym)`         | 24h          |
 | `weekly-digest` | weekly cron, Sunday morning                | "Resumen <date_range>"      | <AI narrative>                  | `/analisis`                           | `(user, weekly-digest, iso_week)`  | 7d           |
 | `anomaly-spend` | category spend ≥1.5× 4-week avg            | "<categoría> +<pct>%"       | "Esta semana: <amount>"         | `/analisis?category=<id>`             | `(user, anomaly-spend, cat_id, w)` | 7d           |
+| `fijo-amount-anomaly` | recurrent-typed tx whose paid amount diverges from its template by ≥2× or ≤0.5× (and is non-zero on either side) | "<title> · monto inusual" | "Pagaste <actual> · esperado <template>" | `/movimientos?open=<tx_id>` | `(user, fijo-amount-anomaly, tx_id)` | once / tx |
 | `account-low`   | account balance below user-set threshold   | "<account>: $<balance>"     | "Saldo bajo en <account>"       | `/cuentas?id=<account_id>`            | `(user, account-low, acct_id, d)`  | 24h          |
 
 ## Implementation notes
@@ -56,3 +57,14 @@ Each row = one notification kind. Bundling, copy and routing get refined as we s
 - [x] PR2: daily fijo reminders endpoint (`POST /api/notifications/daily`) + droplet cron template at `deploy/cron.d/mangos`.
 - [ ] PR3: weekly AI digest.
 - [ ] Later: anomaly alerts + low-balance alerts.
+
+## Notes — `fijo-amount-anomaly`
+
+Caught in the wild on 2026-05-02: an AI-ingested credit card statement was fuzzy-matched to the "Apple pay - Youtube premium" recurrent and committed at $899.807; template was $9.460 — ~$890K of misclassified spend hid under `Fijos` for ~3 weeks before a /fijos vs /movimientos sanity check exposed it.
+
+Implementation hints when this lands:
+- Run on the existing `anomaly-check` 14:00 ART cron — no new cron slot needed.
+- Scan `transaction` rows where `transaction_type='recurrent'` AND `created_ts` (or `updated_ts`) within the last 24–48h, joined to `recurrent` by `recurrent_id`. Skip rows where the recurrent has been deleted (orphans) — a separate kind could cover those if useful.
+- Threshold: `ABS(tx.amount) ≥ 2 × ABS(rec.amount)` OR (`tx.amount = 0` AND `rec.amount ≠ 0`) OR (`ABS(tx.amount) ≤ 0.5 × ABS(rec.amount)` AND `rec.amount ≠ 0`). Skip when both are zero. Currency mismatch should also fire (rare but informative).
+- Dedup is per-tx, no time window — once the user has seen the alert, never re-fire even if the row is edited later.
+- Bonus prevention (orthogonal, in `api/ai.php`): the AI's `recurrent_match_id` step should refuse a fuzzy-match when the candidate's amount is >50× the recurrent's template — bias should be against silent matching, not for it.

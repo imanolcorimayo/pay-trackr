@@ -579,13 +579,18 @@ function summaryBuckets() {
 
     const buckets = {};
     applyFilters(recurrents).forEach(r => {
+        // Yearly off-months don't bill this month — exclude from all buckets.
+        // Without this, a yearly recurrent leaks into Pendientes every month
+        // it isn't due, showing nonsense small amounts on /fijos summary.
+        const dueMonth = recurrentDueMonth(r);
+        if (dueMonth !== null && dueMonth !== VIEW.month) return;
+
         const cur = r.currency || 'ARS';
         const b = buckets[cur] || (buckets[cur] = { total: 0, paid: 0, unpaid: 0 });
-        // Annualize yearly: amount/12 contributes to the monthly total
-        const monthlyEquivalent = r.time_period === 'yearly' ? Number(r.amount) / 12 : Number(r.amount);
-        b.total += monthlyEquivalent;
-        if (paidRecIds.has(r.id)) b.paid += monthlyEquivalent;
-        else b.unpaid += monthlyEquivalent;
+        const amt = Number(r.amount);
+        b.total += amt;
+        if (paidRecIds.has(r.id)) b.paid += amt;
+        else b.unpaid += amt;
     });
     return buckets;
 }

@@ -1370,6 +1370,23 @@ function buildPaymentRow(p, isPaid, isOverdue, isLast) {
     right.className = 'flex items-center gap-2 flex-shrink-0';
     right.appendChild(buildAmountStack(p));
 
+    // Cross-month chip: when the cash actually moved in a month different from
+    // the row's due_ts month, surface that here so the row's "address" doesn't
+    // trick the eye into thinking the money moved this month. Tier 1 of the
+    // due_ts-vs-paid_ts harmonisation — totals stay due-bucketed for now.
+    if (isPaid && p.paid_ts && p.due_ts) {
+        const due = parseLocalDate(p.due_ts);
+        const paid = parseLocalDate(p.paid_ts);
+        if (due && paid && (due.getFullYear() !== paid.getFullYear() || due.getMonth() !== paid.getMonth())) {
+            const moShort = paid.toLocaleDateString('es-AR', { month: 'short' }).replace('.', '');
+            const chip = document.createElement('span');
+            chip.className = 'inline-flex items-center text-[10px] font-semibold tracking-wide uppercase rounded px-1.5 py-0.5 bg-accent/10 text-accent whitespace-nowrap';
+            chip.textContent = `→ ${moShort}`;
+            chip.title = `Vence ${formatDate(p.due_ts)} · cobrado ${formatDate(p.paid_ts)}`;
+            right.appendChild(chip);
+        }
+    }
+
     const badge = document.createElement('button');
     badge.type = 'button';
     let badgeColor;
