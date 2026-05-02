@@ -341,7 +341,7 @@ REGLAS DE PARSEO:
 - Argentina: el punto es separador de miles. "\$67.506" = 67506. "\$67.506,08" o "\$67.506⁰⁸" = 67506.08. Decimales pueden aparecer en superindice o tamaño chico al lado del monto principal.
 - amount: SIEMPRE positivo (la magnitud). El sistema le pone signo segun kind.
 - Si la transaccion no muestra año, asumi $today.
-- title: max 80 chars. Usa el NOMBRE DEL DESTINATARIO/COMERCIO o EMISOR si existe (ej: "NAVARRO AMADEO ANDRES", "MINIMERCADO MAURI"). Si no, usa el concepto.
+- title: max 80 chars. Usa el NOMBRE DEL DESTINATARIO/COMERCIO o EMISOR si existe (ej: "GIMNASIO TORRES SA", "MINIMERCADO MAURI"). Si no, usa el concepto.
 - date: YYYY-MM-DD. Buscala en el encabezado de la seccion de la fila.
 - suggested_category_name: una EXACTA de la lista correspondiente — "expense_categories" si kind=expense, "income_categories" si kind=income. NO inventes.
 $source_idx_rule
@@ -392,7 +392,7 @@ CUENTA (suggested_account_name):
 
 DEDUPLICACION Y MATCHING (solo aplica a gastos — drafts con kind=income siempre llevan existing_transaction_id=null y recurrent_match_id=null):
 - existing_transaction_id: si este gasto ya esta en "existing_transactions_recent" (titulo similar + monto cercano + fecha cercana), poner el id; si no, null.
-- recurrent_match_id: si el destinatario o concepto coincide con el "title" O CUALQUIERA de los "aliases" de un recurrent, poner el id de ese recurrent. EJEMPLO: si un recurrent tiene title "Clases de running" y aliases ["NAVARRO AMADEO ANDRES"], y la transaccion es "Transferencia enviada NAVARRO AMADEO ANDRES", DEBE matchear ese recurrent_id. El monto puede variar ±20% (no exigir match exacto en plata).
+- recurrent_match_id: si el destinatario o concepto coincide con el "title" O CUALQUIERA de los "aliases" de un recurrent, poner el id de ese recurrent. EJEMPLO: si un recurrent tiene title "Clases de running" y aliases ["GIMNASIO TORRES SA"], y la transaccion es "Transferencia enviada GIMNASIO TORRES SA", DEBE matchear ese recurrent_id. El monto puede variar ±20% (no exigir match exacto en plata).
 - recurrent_match_confidence: "high" si el destinatario coincide casi exacto con title/alias. "medium" si es similar. "low" si solo coincide parcialmente o por monto.
 - duplicate_in_batch_idx: si esta misma transaccion ya aparece en un draft anterior de esta respuesta (mismo monto + fecha + destinatario), poner el indice del draft anterior; si no, null.
 - Si una transaccion coincide con AMBOS (existing_transaction_id Y recurrent_match_id), prioriza existing_transaction_id (ya esta en la tabla).
@@ -1201,7 +1201,7 @@ $context_json
 REGLAS DE PARSEO:
 - Argentina: el punto separa miles. "\$67.506" = 67506. "\$1.234,56" = 1234.56. Decimales pueden aparecer en superindice o tamaño chico.
 - amount: numero (no string). Si una imagen muestra un ticket con varios items, suma sus subtotales para el total.
-- title: max 80 chars. Si hay destinatario o comercio, usalo (ej: "NAVARRO AMADEO ANDRES", "Coto"). Si es texto libre tipo "cafe con juan", usa eso.
+- title: max 80 chars. Si hay destinatario o comercio, usalo (ej: "GIMNASIO TORRES SA", "Coto"). Si es texto libre tipo "cafe con juan", usa eso.
 - date: YYYY-MM-DD. Si no aparece, usa $today. "ayer", "anteayer", nombres de dias se interpretan respecto a $today.
 - description: detalle util adicional (ej. "milanesa + gaseosa", concepto de la transferencia), o null si no hay nada relevante.
 - is_paid: true por defecto (la mayoria de los inputs son gastos ya hechos). Solo false si el texto/audio dice claramente que es un gasto FUTURO ("la semana que viene", "voy a pagar", "tengo que pagar").

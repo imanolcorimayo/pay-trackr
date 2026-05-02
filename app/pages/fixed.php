@@ -41,18 +41,51 @@
 <!-- FX rate strip (shown once rates load; hidden when only ARS is in use) -->
 <p id="fx-strip" class="hidden text-xs text-muted mb-3"></p>
 
-<!-- Month picker — drives summary, badges, mini-track and inline historial -->
-<div class="flex items-center justify-center gap-2 mb-4">
-    <button type="button" id="month-prev" class="p-2 rounded-lg border border-border text-dark hover:bg-dark/5 active:scale-95 transition disabled:opacity-30 disabled:cursor-not-allowed" aria-label="Mes anterior">
-        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M15 18l-6-6 6-6"/></svg>
-    </button>
-    <button type="button" id="month-label" class="text-base font-semibold tabular-nums px-4 py-1.5 rounded-lg hover:bg-dark/5 active:scale-95 transition min-w-[160px]" title="Volver al mes actual">
-        <span id="month-label-text">—</span>
-        <span id="month-label-hint" class="hidden text-[10px] font-medium tracking-wide uppercase text-accent ml-2">Volver</span>
-    </button>
-    <button type="button" id="month-next" class="p-2 rounded-lg border border-border text-dark hover:bg-dark/5 active:scale-95 transition disabled:opacity-30 disabled:cursor-not-allowed" aria-label="Mes siguiente">
-        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M9 18l6-6-6-6"/></svg>
-    </button>
+<!-- Filter bar — mirrors /movimientos: month nav · status tabs · account · category · search -->
+<div class="card mb-4 flex flex-col sm:flex-row sm:items-center gap-3">
+    <!-- Month nav -->
+    <div class="flex items-center justify-center sm:justify-start gap-2 flex-shrink-0">
+        <button type="button" id="month-prev" class="p-2 sm:p-1.5 rounded-lg text-muted hover:text-dark hover:bg-dark/5 active:scale-95 transition" aria-label="Mes anterior">
+            <svg class="w-5 h-5 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+            </svg>
+        </button>
+        <span id="month-label" class="text-sm font-medium min-w-[140px] text-center">--</span>
+        <button type="button" id="month-next" class="p-2 sm:p-1.5 rounded-lg text-muted hover:text-dark hover:bg-dark/5 active:scale-95 transition" aria-label="Mes siguiente">
+            <svg class="w-5 h-5 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+            </svg>
+        </button>
+    </div>
+
+    <div class="hidden sm:block w-px h-6 bg-border"></div>
+
+    <!-- Status tabs (per-row paid status for the viewed month) -->
+    <div class="grid grid-cols-3 sm:flex gap-1 text-sm" id="status-tabs">
+        <button type="button" data-status="all" class="px-3 py-2 sm:py-1.5 rounded-lg transition-colors hover:bg-dark/5">Todos</button>
+        <button type="button" data-status="unpaid" class="px-3 py-2 sm:py-1.5 rounded-lg transition-colors hover:bg-dark/5">Pendientes</button>
+        <button type="button" data-status="paid" class="px-3 py-2 sm:py-1.5 rounded-lg transition-colors hover:bg-dark/5">Pagados</button>
+    </div>
+
+    <div class="hidden sm:block flex-1"></div>
+
+    <!-- Account filter (hidden when ≤1 account) -->
+    <select id="filter-account" class="input sm:max-w-[180px] hidden">
+        <option value="">Todas las cuentas</option>
+    </select>
+
+    <!-- Category filter -->
+    <select id="filter-category" class="input sm:max-w-[200px]">
+        <option value="">Todas las categorias</option>
+    </select>
+
+    <!-- Search filter -->
+    <div class="relative sm:max-w-[220px] flex-1">
+        <svg class="w-4 h-4 absolute left-2.5 top-1/2 -translate-y-1/2 text-muted pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-4.35-4.35M11 19a8 8 0 100-16 8 8 0 000 16z"/>
+        </svg>
+        <input type="search" id="filter-search" class="input pl-8" placeholder="Buscar…" autocomplete="off">
+    </div>
 </div>
 
 <!-- Summary card — each amount stacks one line per currency present -->
@@ -68,16 +101,6 @@
     <div class="card">
         <p class="text-xs font-semibold tracking-wide uppercase text-danger mb-1">Pendientes</p>
         <p class="text-2xl font-bold" id="rec-unpaid"><span class="skeleton inline-block w-28 h-7">&nbsp;</span></p>
-    </div>
-</div>
-
-<!-- Search filter -->
-<div class="card mb-4 py-3">
-    <div class="relative">
-        <svg class="w-4 h-4 absolute left-2.5 top-1/2 -translate-y-1/2 text-muted pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-4.35-4.35M11 19a8 8 0 100-16 8 8 0 000 16z"/>
-        </svg>
-        <input type="search" id="filter-search" class="input pl-8" placeholder="Buscar por titulo, monto, cuenta…" autocomplete="off">
     </div>
 </div>
 
@@ -194,7 +217,7 @@
                         Aliases <span class="text-muted text-xs font-normal">(uno por linea — para que la IA matchee)</span>
                     </label>
                     <textarea id="rec-aliases" class="input min-h-[64px]" rows="3"
-                              placeholder="NAVARRO AMADEO ANDRES&#10;Navarro Amadeo"></textarea>
+                              placeholder="GIMNASIO TORRES SA&#10;Gimnasio Torres"></textarea>
                 </div>
 
                 <p id="rec-form-error" class="hidden text-sm text-danger">&nbsp;</p>
@@ -274,6 +297,9 @@ const TRACK_MONTHS = 6;
 let editingId = null;
 let pendingDeleteId = null;
 let searchQuery = '';       // free-text substring filter (case-insensitive)
+let statusFilter = 'all';   // 'all' | 'paid' | 'unpaid' — paid status for the viewed month
+let categoryFilter = '';    // expense_category_id; '' = all
+let accountFilter = '';     // account_id; '' = all
 // Per-row currency override. id → currency code. Absent = native (default).
 // Lost on reload — this is a quick "show me the converted amount" affordance.
 const currencyOverrides = new Map();
@@ -292,6 +318,11 @@ function readUrlState() {
     const p = new URLSearchParams(window.location.search);
     if (p.has('q')) searchQuery = p.get('q');
     if (p.has('open')) expandedId = p.get('open');
+    if (p.has('status') && ['all', 'paid', 'unpaid'].includes(p.get('status'))) {
+        statusFilter = p.get('status');
+    }
+    if (p.has('category')) categoryFilter = p.get('category');
+    if (p.has('account')) accountFilter = p.get('account');
     const m = p.get('month');
     if (m && /^\d{4}-\d{2}$/.test(m)) {
         const [y, mo] = m.split('-').map(Number);
@@ -306,6 +337,9 @@ function writeUrlState() {
     const params = new URLSearchParams();
     if (searchQuery) params.set('q', searchQuery);
     if (expandedId) params.set('open', expandedId);
+    if (statusFilter !== 'all') params.set('status', statusFilter);
+    if (categoryFilter) params.set('category', categoryFilter);
+    if (accountFilter) params.set('account', accountFilter);
     if (!viewIsCurrentMonth()) {
         params.set('month', `${VIEW.year}-${String(VIEW.month + 1).padStart(2, '0')}`);
     }
@@ -330,29 +364,27 @@ function shiftView(deltaMonths) {
     loadAll();
 }
 
-function jumpToCurrentMonth() {
-    if (viewIsCurrentMonth()) return;
-    const n = new Date();
-    VIEW.year = n.getFullYear();
-    VIEW.month = n.getMonth();
-    writeUrlState();
-    loadAll();
-}
-
 function renderMonthPicker() {
-    document.getElementById('month-label-text').textContent = viewLabel();
-    const nextBtn = document.getElementById('month-next');
-    const isCurrent = viewIsCurrentMonth();
-    nextBtn.disabled = isCurrent;
-    document.getElementById('month-label-hint').classList.toggle('hidden', isCurrent);
+    document.getElementById('month-label').textContent = viewLabel();
 }
 
 function bindMonthPicker() {
     document.getElementById('month-prev').addEventListener('click', () => shiftView(-1));
-    document.getElementById('month-next').addEventListener('click', () => {
-        if (!viewIsCurrentMonth()) shiftView(1);
+    document.getElementById('month-next').addEventListener('click', () => shiftView(1));
+}
+
+// Highlights the active status tab + applies the same active styling /movimientos uses.
+function setStatusFilter(status) {
+    statusFilter = status;
+    document.querySelectorAll('#status-tabs button').forEach(btn => {
+        const active = btn.dataset.status === status;
+        btn.classList.toggle('bg-accent/10', active);
+        btn.classList.toggle('text-accent', active);
+        btn.classList.toggle('font-medium', active);
     });
-    document.getElementById('month-label').addEventListener('click', jumpToCurrentMonth);
+    writeUrlState();
+    renderSummary();
+    renderRecurrents();
 }
 
 function toggleExpanded(id) {
@@ -395,10 +427,27 @@ function recurrentSearchableText(r) {
     return parts.filter(Boolean).join(' ').toLowerCase();
 }
 
-function applySearchFilter(list) {
+function applyFilters(list) {
     const q = searchQuery.trim().toLowerCase();
-    if (!q) return list;
-    return list.filter(r => recurrentSearchableText(r).includes(q));
+    const paidRecIds = new Set(
+        monthlyPayments.filter(p => p.is_paid == 1 && p.recurrent_id).map(p => p.recurrent_id)
+    );
+    return list.filter(r => {
+        if (categoryFilter && r.expense_category_id !== categoryFilter) return false;
+        if (accountFilter && r.account_id !== accountFilter) return false;
+        if (statusFilter !== 'all') {
+            const dueMonth = recurrentDueMonth(r);
+            const isDueThisMonth = dueMonth === null || dueMonth === VIEW.month;
+            const isPaid = isDueThisMonth && paidRecIds.has(r.id);
+            // Off-month yearly recurrents are excluded from both Pagados/Pendientes —
+            // they don't apply this month.
+            if (!isDueThisMonth) return false;
+            if (statusFilter === 'paid' && !isPaid) return false;
+            if (statusFilter === 'unpaid' && isPaid) return false;
+        }
+        if (q && !recurrentSearchableText(r).includes(q)) return false;
+        return true;
+    });
 }
 
 // ── Helpers ─────────────────────────────────────────────────────────
@@ -496,6 +545,31 @@ function populateDropdowns() {
         mangosPicker.updateChip(document.getElementById('rec-card-chip'));
         mangosPicker.updateChip(document.getElementById('rec-account-chip'));
     }
+
+    // Filter-bar selects (preserve current selection across reloads)
+    const catFilter = document.getElementById('filter-category');
+    const catPrev = catFilter.value;
+    catFilter.textContent = '';
+    catFilter.appendChild(makeOption('', 'Todas las categorias'));
+    categories.forEach(c => catFilter.appendChild(makeOption(c.id, c.name)));
+    catFilter.value = catPrev || categoryFilter;
+
+    // Account filter — hidden when there's only one account, since "filter
+    // by the only account I have" is a no-op and adds visual noise.
+    const acctFilter = document.getElementById('filter-account');
+    const acctPrev = acctFilter.value;
+    acctFilter.textContent = '';
+    acctFilter.appendChild(makeOption('', 'Todas las cuentas'));
+    accounts.forEach(a => acctFilter.appendChild(makeOption(a.id, a.name)));
+    acctFilter.value = acctPrev || accountFilter;
+    acctFilter.classList.toggle('hidden', accounts.length <= 1);
+}
+
+function makeOption(value, label) {
+    const o = document.createElement('option');
+    o.value = value;
+    o.textContent = label;
+    return o;
 }
 
 function summaryBuckets() {
@@ -504,7 +578,7 @@ function summaryBuckets() {
     );
 
     const buckets = {};
-    applySearchFilter(recurrents).forEach(r => {
+    applyFilters(recurrents).forEach(r => {
         const cur = r.currency || 'ARS';
         const b = buckets[cur] || (buckets[cur] = { total: 0, paid: 0, unpaid: 0 });
         // Annualize yearly: amount/12 contributes to the monthly total
@@ -611,7 +685,7 @@ function renderRecurrents() {
         return;
     }
 
-    const filtered = applySearchFilter(recurrents);
+    const filtered = applyFilters(recurrents);
 
     if (filtered.length === 0) {
         const empty = document.createElement('div');
@@ -632,10 +706,13 @@ function renderRecurrents() {
     );
     const now = new Date();
     const isCurrentView = viewIsCurrentMonth();
-    // For past views, every day of the view month is "past" — the row is
-    // either Pagado or Vencido (no Pendiente / future). For the current view,
-    // overdue means due-day already reached and still unpaid.
-    const todayDay = isCurrentView ? now.getDate() : 32;
+    const viewKey = VIEW.year * 12 + VIEW.month;
+    const todayKey = now.getFullYear() * 12 + now.getMonth();
+    const viewIsPast = viewKey < todayKey;
+    // todayDay drives the "Vencido" decision: past view → every day already
+    // passed (32) so unpaid → Vencido; current view → real today; future view →
+    // no day passed (0) so unpaid stays Pendiente, never flips to Vencido.
+    const todayDay = isCurrentView ? now.getDate() : (viewIsPast ? 32 : 0);
 
     sorted.forEach((r, i) => {
         const isLast = i === sorted.length - 1;
@@ -1608,6 +1685,26 @@ mangosAuth.ready.then(user => {
     // amounts switch to the freshly fetched rates.
     fx.ready.then(() => {
         renderFxStrip();
+        renderSummary();
+        renderRecurrents();
+    });
+
+    // Status tabs — initial active state set from URL/default.
+    document.querySelectorAll('#status-tabs button').forEach(btn => {
+        btn.addEventListener('click', () => setStatusFilter(btn.dataset.status));
+    });
+    setStatusFilter(statusFilter);
+
+    document.getElementById('filter-category').addEventListener('change', e => {
+        categoryFilter = e.target.value;
+        writeUrlState();
+        renderSummary();
+        renderRecurrents();
+    });
+
+    document.getElementById('filter-account').addEventListener('change', e => {
+        accountFilter = e.target.value;
+        writeUrlState();
         renderSummary();
         renderRecurrents();
     });
