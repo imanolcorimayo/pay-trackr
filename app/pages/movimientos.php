@@ -323,6 +323,20 @@ $openAIOnLoad = !empty($_GET['ai']);
                     <div id="pmt-artifact-body" class="px-4 pb-4 pt-3 border-t border-border"></div>
                 </details>
 
+                <!-- Bulk-upload batch (multiple images came in together). The
+                     row was created from a bulk AI upload; this panel renders a
+                     thumbnail grid of all the images in that upload, with the
+                     AI-matched one highlighted. Populated in openPaymentModal. -->
+                <details id="pmt-batch-details" class="hidden border border-border rounded-lg">
+                    <summary class="px-4 py-2.5 text-sm font-medium cursor-pointer select-none flex items-center justify-between">
+                        <span>Lote de captura <span id="pmt-batch-kind" class="text-xs text-muted ml-1"></span></span>
+                        <svg class="w-4 h-4 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                        </svg>
+                    </summary>
+                    <div id="pmt-batch-body" class="px-4 pb-4 pt-3 border-t border-border"></div>
+                </details>
+
                 <p id="pmt-form-error" class="hidden text-sm text-danger">&nbsp;</p>
 
                 <div class="flex items-center gap-2 pt-2">
@@ -454,6 +468,17 @@ $openAIOnLoad = !empty($_GET['ai']);
                         </svg>
                     </summary>
                     <div id="inc-artifact-body" class="px-4 pb-4 pt-3 border-t border-border"></div>
+                </details>
+
+                <!-- Bulk-upload batch (mirrors the expense modal). -->
+                <details id="inc-batch-details" class="hidden border border-border rounded-lg">
+                    <summary class="px-4 py-2.5 text-sm font-medium cursor-pointer select-none flex items-center justify-between">
+                        <span>Lote de captura <span id="inc-batch-kind" class="text-xs text-muted ml-1"></span></span>
+                        <svg class="w-4 h-4 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                        </svg>
+                    </summary>
+                    <div id="inc-batch-body" class="px-4 pb-4 pt-3 border-t border-border"></div>
                 </details>
 
                 <p id="inc-form-error" class="hidden text-sm text-danger">&nbsp;</p>
@@ -857,7 +882,12 @@ function categoryForRow(p) {
 // Origin label shown in the row's subline. Keeps 'manual' silent so default
 // rows stay clean. Whatsapp variants collapse to a single label since the
 // distinction (text vs audio vs image) isn't useful at the row level.
-function labelForSource(source) {
+function labelForSource(source, row = null) {
+    // Batch-sourced rows get a distinct label so the user can tell at a glance
+    // that the movement came from a multi-file bulk upload (vs the single-shot
+    // "Nuevo" form). The icon-only signal in the title row isn't enough on its
+    // own — labels survive screen readers and surface in the expanded panel.
+    if (row && row.ai_batch_id) return 'IA lote';
     switch (source) {
         case 'ai-text':  return 'IA texto';
         case 'ai-image': return 'IA foto';
@@ -985,7 +1015,7 @@ function paymentSearchableText(p) {
         p.title,
         p.description,
         p.currency,
-        labelForSource(p.source),
+        labelForSource(p.source, p),
         categoryForRow(p)?.name,
     ];
     const card = cardById(p.card_id);
@@ -1312,7 +1342,8 @@ function buildPaymentRow(p, isPaid, isOverdue, isLast) {
     titleText.className = 'flex-1 text-[15px] font-medium truncate';
     titleText.textContent = p.title;
     titleRow.appendChild(titleText);
-    if (p.ai_artifact_path) titleRow.appendChild(buildArtifactClipIcon());
+    if (p.ai_batch_id) titleRow.appendChild(buildBatchStackIcon());
+    else if (p.ai_artifact_path) titleRow.appendChild(buildArtifactClipIcon());
     titleRow.appendChild(makeRowActions(p));
     header.appendChild(titleRow);
 
@@ -1327,7 +1358,7 @@ function buildPaymentRow(p, isPaid, isOverdue, isLast) {
     if (card) subParts.push(card.name + (card.last_four ? ` ····${card.last_four}` : ''));
     const acct = accountById(p.account_id);
     if (acct && acct.is_default != 1) subParts.push(acct.name);
-    const sourceLabel = labelForSource(p.source);
+    const sourceLabel = labelForSource(p.source, p);
     if (sourceLabel) subParts.push(sourceLabel);
 
     const sub = document.createElement('p');
@@ -1408,13 +1439,14 @@ function buildPaymentExpansion(p) {
         appendKv(exp, 'Equivalente', '≈ ' + formatPrice(arsEquiv, 'ARS'));
     }
 
-    const sourceLabel = labelForSource(p.source);
+    const sourceLabel = labelForSource(p.source, p);
     if (sourceLabel) appendKv(exp, 'Origen', sourceLabel);
 
     if (p.paid_ts) appendKv(exp, 'Pagado el', formatDateLong(p.paid_ts));
     else if (p.due_ts) appendKv(exp, 'Vence', formatDateLong(p.due_ts));
 
-    if (p.ai_artifact_path) appendArtifactRow(exp, p);
+    if (p.ai_batch_id) appendBatchRow(exp, p);
+    else if (p.ai_artifact_path) appendArtifactRow(exp, p);
 
     return exp;
 }
@@ -1429,6 +1461,119 @@ function buildArtifactClipIcon() {
     wrap.title = 'Tiene adjunto';
     wrap.appendChild(svgIcon(ICON_CLIP, 'w-3 h-3'));
     return wrap;
+}
+
+// "Stacked rectangles" icon — distinct from the clip so a glance at the row
+// list tells the user which movements came in via a bulk upload (vs a single
+// AI input or manual entry).
+function buildBatchStackIcon() {
+    const ICON_STACK = 'M4 6h12v12H4z M8 4h12v12';
+    const wrap = document.createElement('span');
+    wrap.className = 'flex-shrink-0 text-accent';
+    wrap.title = 'De carga masiva (lote)';
+    wrap.appendChild(svgIcon(ICON_STACK, 'w-3.5 h-3.5'));
+    return wrap;
+}
+
+// Per-page cache of batch metadata. Many rows in the list typically share the
+// same batch (e.g. a 30-image upload yielded 30 transactions, all linked to
+// one batch). Without this cache, expanding each row would re-fetch the same
+// /ai/batch payload.
+const batchCache = new Map(); // batch_id -> Promise<batch>
+function fetchBatch(batchId) {
+    if (!batchCache.has(batchId)) {
+        batchCache.set(batchId, api.get('/ai/batch', { id: batchId }).catch(() => null));
+    }
+    return batchCache.get(batchId);
+}
+
+// Expansion-panel row for batch-sourced transactions. Mirrors the visual of
+// appendArtifactRow (label on the left, chip on the right that opens the
+// modal), but the chip shows the AI-matched thumbnail with "Lote · N imagenes"
+// underneath. Click opens the modal where the full grid lives.
+function appendBatchRow(panel, p) {
+    const r = document.createElement('div');
+    r.className = 'flex items-start justify-between gap-3 py-1 text-[13px]';
+
+    const k = document.createElement('span');
+    k.className = 'text-muted flex-shrink-0 pt-1';
+    k.textContent = 'Lote';
+    r.appendChild(k);
+
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'flex items-center gap-2.5 p-1.5 border border-border rounded-lg bg-light hover:bg-dark/5 transition-colors max-w-[60%]';
+    btn.title = 'Ver lote completo';
+
+    // Thumbnail slot (filled async with the AI-matched image, or the first
+    // image as fallback). Default-stub keeps the chip from collapsing while
+    // the batch fetch is in flight.
+    const img = document.createElement('img');
+    img.alt = 'Imagen del lote';
+    img.className = 'w-12 h-9 object-cover rounded flex-shrink-0 bg-dark/5';
+    btn.appendChild(img);
+
+    const labels = document.createElement('span');
+    labels.className = 'flex flex-col items-start text-[11px] leading-tight';
+    const top = document.createElement('span');
+    top.className = 'text-muted';
+    top.textContent = 'Lote';
+    labels.appendChild(top);
+    const bottom = document.createElement('span');
+    bottom.className = 'text-accent font-medium';
+    bottom.textContent = 'cargando...';
+    labels.appendChild(bottom);
+    btn.appendChild(labels);
+
+    btn.addEventListener('click', e => {
+        e.stopPropagation();
+        if (p.kind === 'income') openIncomeModal(p);
+        else openPaymentModal(p);
+    });
+
+    r.appendChild(btn);
+    panel.appendChild(r);
+
+    // Hydrate asynchronously: pick the matched image when known, fall back to
+    // idx 0, and update the count line. Audio batches show a play glyph + a
+    // "Audio" label since there's no thumbnail to draw.
+    fetchBatch(p.ai_batch_id).then(batch => {
+        if (!batch || !Array.isArray(batch.files)) {
+            bottom.textContent = 'no disponible';
+            bottom.className = 'text-muted';
+            return;
+        }
+        const isAudio = batch.source === 'ai-audio';
+        const count = batch.files.length;
+
+        if (isAudio) {
+            top.textContent = 'Lote · audio';
+            bottom.textContent = 'Reproducir';
+            // Replace <img> with a play glyph since audio has no thumb.
+            img.remove();
+            const ICON_PLAY = 'M5 3l14 9-14 9V3z';
+            const playWrap = document.createElement('span');
+            playWrap.className = 'w-12 h-9 flex items-center justify-center rounded bg-dark/5 flex-shrink-0';
+            playWrap.appendChild(svgIcon(ICON_PLAY, 'w-3.5 h-3.5 text-accent'));
+            btn.insertBefore(playWrap, labels);
+            return;
+        }
+
+        const target =
+            (p.ai_batch_match_idx != null && batch.files.find(f => f.idx === p.ai_batch_match_idx))
+            || batch.files[0]
+            || null;
+
+        top.textContent = `Lote · ${count} ${count === 1 ? 'imagen' : 'imagenes'}`;
+        bottom.textContent = (p.ai_batch_match_idx != null && target && target.idx === p.ai_batch_match_idx)
+            ? 'Asociada por la IA'
+            : 'Ver lote';
+
+        if (target) {
+            api.getBlobUrl('/ai/preview-artifact', { path: target.path, mime: target.mime || '' })
+                .then(blobUrl => { if (blobUrl) img.src = blobUrl; });
+        }
+    });
 }
 
 // Expansion-panel row: image thumbnail / audio chip / PDF chip → opens the
@@ -1746,6 +1891,11 @@ async function openPaymentModal(p) {
     } else {
         hideArtifactViewer('pmt');
     }
+    if (full?.ai_batch_id) {
+        renderBatchViewer(full.ai_batch_id, full.ai_batch_match_idx, 'pmt');
+    } else {
+        hideBatchViewer('pmt');
+    }
     document.getElementById('payment-modal').classList.remove('hidden');
     setTimeout(() => document.getElementById('pmt-title').focus(), 50);
 }
@@ -1838,6 +1988,146 @@ function hideArtifactViewer(prefix = 'pmt') {
     if (kind) kind.textContent = '';
 }
 
+// Render the "Lote de captura" panel — fetches /ai/batch and shows every file
+// the user uploaded together. The AI-matched file (when known) gets a ring
+// + check badge so the user can spot it without scrolling. Audio batches
+// render the player + transcription instead of a thumbnail grid.
+//
+// All previews go through /ai/preview-artifact (auth-protected), so the
+// loader uses api.getBlobUrl just like renderArtifactViewer.
+async function renderBatchViewer(batchId, matchIdx, prefix) {
+    const details = document.getElementById(`${prefix}-batch-details`);
+    const body = document.getElementById(`${prefix}-batch-body`);
+    const kind = document.getElementById(`${prefix}-batch-kind`);
+    if (!details || !body || !kind) return;
+
+    // Reset + show as loading.
+    body.textContent = '';
+    kind.textContent = '';
+    details.classList.remove('hidden');
+    details.open = false;
+
+    const loading = document.createElement('p');
+    loading.className = 'text-xs text-muted';
+    loading.textContent = 'Cargando lote...';
+    body.appendChild(loading);
+
+    let batch;
+    try {
+        batch = await api.get('/ai/batch', { id: batchId });
+    } catch (e) {
+        body.textContent = '';
+        const p = document.createElement('p');
+        p.className = 'text-xs text-muted';
+        p.textContent = 'Lote ya no disponible.';
+        body.appendChild(p);
+        return;
+    }
+    body.textContent = '';
+
+    const files = Array.isArray(batch?.files) ? batch.files : [];
+    const isAudio = batch.source === 'ai-audio';
+    kind.textContent = isAudio
+        ? '(audio)'
+        : `(${files.length} ${files.length === 1 ? 'imagen' : 'imagenes'})`;
+
+    if (isAudio) {
+        if (batch.transcription) {
+            const t = document.createElement('p');
+            t.className = 'text-xs text-muted whitespace-pre-wrap mb-3';
+            t.textContent = batch.transcription;
+            body.appendChild(t);
+        }
+        const f = files[0];
+        if (f) {
+            const audio = document.createElement('audio');
+            audio.controls = true;
+            audio.className = 'w-full';
+            body.appendChild(audio);
+            api.getBlobUrl('/ai/preview-artifact', { path: f.path, mime: f.mime || '' })
+                .then(blobUrl => { if (blobUrl) audio.src = blobUrl; })
+                .catch(() => {});
+        }
+        return;
+    }
+
+    if (files.length === 0) {
+        const p = document.createElement('p');
+        p.className = 'text-xs text-muted';
+        p.textContent = 'El lote no tiene archivos guardados.';
+        body.appendChild(p);
+        return;
+    }
+
+    const note = document.createElement('p');
+    note.className = 'text-xs text-muted mb-2';
+    note.textContent = matchIdx != null
+        ? 'La IA asocio este movimiento con la imagen marcada. Tocala para ampliar.'
+        : 'Imagenes subidas en el mismo lote. Tocalas para ampliar.';
+    body.appendChild(note);
+
+    const grid = document.createElement('div');
+    grid.className = 'grid grid-cols-3 gap-2';
+    body.appendChild(grid);
+
+    // Sort so the matched image lands first — same intent as a "highlighted"
+    // primary spot, but also helps when there are 6+ thumbs and the panel
+    // would otherwise scroll past the relevant one.
+    const ordered = [...files].sort((a, b) => {
+        if (a.idx === matchIdx) return -1;
+        if (b.idx === matchIdx) return 1;
+        return a.idx - b.idx;
+    });
+
+    ordered.forEach(f => {
+        const cell = document.createElement('button');
+        cell.type = 'button';
+        const isMatch = f.idx === matchIdx;
+        cell.className = 'relative aspect-square overflow-hidden rounded-lg border bg-dark/5 group ' +
+            (isMatch ? 'border-accent ring-2 ring-accent/40' : 'border-border');
+        cell.title = isMatch ? 'Imagen asociada por la IA' : `Imagen #${f.idx}`;
+
+        const img = document.createElement('img');
+        img.alt = isMatch ? 'Imagen asociada' : `Imagen #${f.idx}`;
+        img.className = 'w-full h-full object-cover transition group-hover:scale-105';
+        cell.appendChild(img);
+
+        if (isMatch) {
+            const badge = document.createElement('span');
+            badge.className = 'absolute top-1 left-1 inline-flex items-center justify-center w-5 h-5 rounded-full bg-accent text-white text-[10px] font-bold';
+            badge.textContent = '✓';
+            badge.title = 'Imagen asociada por la IA';
+            cell.appendChild(badge);
+        }
+
+        let cachedBlobUrl = null;
+        api.getBlobUrl('/ai/preview-artifact', { path: f.path, mime: f.mime || '' })
+            .then(blobUrl => {
+                if (!blobUrl) return;
+                cachedBlobUrl = blobUrl;
+                img.src = blobUrl;
+            })
+            .catch(() => {});
+
+        cell.addEventListener('click', () => {
+            if (cachedBlobUrl) openImageLightbox(cachedBlobUrl);
+        });
+
+        grid.appendChild(cell);
+    });
+}
+
+function hideBatchViewer(prefix = 'pmt') {
+    const details = document.getElementById(`${prefix}-batch-details`);
+    if (!details) return;
+    details.classList.add('hidden');
+    details.open = false;
+    const body = document.getElementById(`${prefix}-batch-body`);
+    const kind = document.getElementById(`${prefix}-batch-kind`);
+    if (body) body.textContent = '';
+    if (kind) kind.textContent = '';
+}
+
 // Fullscreen image preview. Click anywhere or Esc to dismiss. The blob URL is
 // reused — the caller already paid the fetch — so this is purely DOM work.
 function openImageLightbox(blobUrl) {
@@ -1910,6 +2200,7 @@ function closePaymentModal() {
     aiSourceTag = null;
     hideRecurrentBanner();
     hideArtifactViewer();
+    hideBatchViewer('pmt');
 }
 
 async function submitPaymentForm(e) {
@@ -2078,6 +2369,11 @@ async function openIncomeModal(p) {
     } else {
         hideArtifactViewer('inc');
     }
+    if (full?.ai_batch_id) {
+        renderBatchViewer(full.ai_batch_id, full.ai_batch_match_idx, 'inc');
+    } else {
+        hideBatchViewer('inc');
+    }
 
     document.getElementById('income-modal').classList.remove('hidden');
     setTimeout(() => document.getElementById('inc-title').focus(), 50);
@@ -2092,6 +2388,7 @@ function closeIncomeModal() {
         api.post('/ai/discard-artifact', { path }).catch(() => {});
     }
     hideArtifactViewer('inc');
+    hideBatchViewer('inc');
     document.getElementById('income-modal').classList.add('hidden');
     incomeEditingId = null;
     aiSourceTag = null;

@@ -41,6 +41,20 @@
 <!-- FX rate strip (shown once rates load; hidden when only ARS is in use) -->
 <p id="fx-strip" class="hidden text-xs text-muted mb-3"></p>
 
+<!-- Month picker — drives summary, badges, mini-track and inline historial -->
+<div class="flex items-center justify-center gap-2 mb-4">
+    <button type="button" id="month-prev" class="p-2 rounded-lg border border-border text-dark hover:bg-dark/5 active:scale-95 transition disabled:opacity-30 disabled:cursor-not-allowed" aria-label="Mes anterior">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M15 18l-6-6 6-6"/></svg>
+    </button>
+    <button type="button" id="month-label" class="text-base font-semibold tabular-nums px-4 py-1.5 rounded-lg hover:bg-dark/5 active:scale-95 transition min-w-[160px]" title="Volver al mes actual">
+        <span id="month-label-text">—</span>
+        <span id="month-label-hint" class="hidden text-[10px] font-medium tracking-wide uppercase text-accent ml-2">Volver</span>
+    </button>
+    <button type="button" id="month-next" class="p-2 rounded-lg border border-border text-dark hover:bg-dark/5 active:scale-95 transition disabled:opacity-30 disabled:cursor-not-allowed" aria-label="Mes siguiente">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M9 18l6-6-6-6"/></svg>
+    </button>
+</div>
+
 <!-- Summary card — each amount stacks one line per currency present -->
 <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
     <div class="card">
@@ -253,6 +267,10 @@ let categories = [];
 let cards = [];
 let accounts = [];
 let monthlyPayments = [];   // transactions for current month, used for paid status
+// Recurrent-typed transactions for the last TRACK_MONTHS months (incl. current).
+// Drives the per-row mini-track and the inline "Historial reciente" list.
+let recentRecurrentTxs = [];
+const TRACK_MONTHS = 6;
 let editingId = null;
 let pendingDeleteId = null;
 let searchQuery = '';       // free-text substring filter (case-insensitive)
@@ -261,6 +279,12 @@ let searchQuery = '';       // free-text substring filter (case-insensitive)
 const currencyOverrides = new Map();
 // Single row open at a time, synced to ?open=<id> in the URL.
 let expandedId = null;
+// Month being viewed. Defaults to the real current month; user can step
+// back/forward via the month picker. Synced to ?month=YYYY-MM.
+const VIEW = (() => {
+    const n = new Date();
+    return { year: n.getFullYear(), month: n.getMonth() };
+})();
 
 const CURRENCY_ORDER = ['ARS', 'USD', 'USDT'];
 
@@ -268,14 +292,67 @@ function readUrlState() {
     const p = new URLSearchParams(window.location.search);
     if (p.has('q')) searchQuery = p.get('q');
     if (p.has('open')) expandedId = p.get('open');
+    const m = p.get('month');
+    if (m && /^\d{4}-\d{2}$/.test(m)) {
+        const [y, mo] = m.split('-').map(Number);
+        if (y >= 2000 && mo >= 1 && mo <= 12) {
+            VIEW.year = y;
+            VIEW.month = mo - 1;
+        }
+    }
 }
 
 function writeUrlState() {
     const params = new URLSearchParams();
     if (searchQuery) params.set('q', searchQuery);
     if (expandedId) params.set('open', expandedId);
+    if (!viewIsCurrentMonth()) {
+        params.set('month', `${VIEW.year}-${String(VIEW.month + 1).padStart(2, '0')}`);
+    }
     const qs = params.toString();
     history.replaceState(null, '', window.location.pathname + (qs ? '?' + qs : ''));
+}
+
+function viewIsCurrentMonth() {
+    const n = new Date();
+    return VIEW.year === n.getFullYear() && VIEW.month === n.getMonth();
+}
+
+function viewLabel() {
+    return `${MONTH_LABEL[VIEW.month]} ${VIEW.year}`;
+}
+
+function shiftView(deltaMonths) {
+    const d = new Date(VIEW.year, VIEW.month + deltaMonths, 1);
+    VIEW.year = d.getFullYear();
+    VIEW.month = d.getMonth();
+    writeUrlState();
+    loadAll();
+}
+
+function jumpToCurrentMonth() {
+    if (viewIsCurrentMonth()) return;
+    const n = new Date();
+    VIEW.year = n.getFullYear();
+    VIEW.month = n.getMonth();
+    writeUrlState();
+    loadAll();
+}
+
+function renderMonthPicker() {
+    document.getElementById('month-label-text').textContent = viewLabel();
+    const nextBtn = document.getElementById('month-next');
+    const isCurrent = viewIsCurrentMonth();
+    nextBtn.disabled = isCurrent;
+    document.getElementById('month-label-hint').classList.toggle('hidden', isCurrent);
+}
+
+function bindMonthPicker() {
+    document.getElementById('month-prev').addEventListener('click', () => shiftView(-1));
+    document.getElementById('month-next').addEventListener('click', () => {
+        if (!viewIsCurrentMonth()) shiftView(1);
+    });
+    document.getElementById('month-label').addEventListener('click', jumpToCurrentMonth);
 }
 
 function toggleExpanded(id) {
@@ -365,19 +442,25 @@ function defaultAccount() {
 
 // ── Loading & rendering ─────────────────────────────────────────────
 async function loadAll() {
-    const now = new Date();
-    const year = now.getFullYear();
-    const month = now.getMonth();
+    renderMonthPicker();
+
+    const year = VIEW.year;
+    const month = VIEW.month;
     const startDate = `${year}-${String(month + 1).padStart(2, '0')}-01`;
     const lastDay = new Date(year, month + 1, 0).getDate();
     const endDate = `${year}-${String(month + 1).padStart(2, '0')}-${lastDay}`;
 
-    const [recs, cats, crds, accs, pays] = await Promise.all([
+    // Track range: TRACK_MONTHS-1 months before VIEW → last day of VIEW
+    const trackStart = new Date(year, month - (TRACK_MONTHS - 1), 1);
+    const trackStartStr = `${trackStart.getFullYear()}-${String(trackStart.getMonth() + 1).padStart(2, '0')}-01`;
+
+    const [recs, cats, crds, accs, pays, recentRec] = await Promise.all([
         api.get('/recurrents'),
         api.get('/categories'),
         api.get('/cards'),
         api.get('/accounts'),
         api.get('/transactions', { start_date: startDate, end_date: endDate }),
+        api.get('/transactions', { start_date: trackStartStr, end_date: endDate, transaction_type: 'recurrent' }),
     ]);
 
     recurrents = recs || [];
@@ -385,6 +468,7 @@ async function loadAll() {
     cards = crds || [];
     accounts = accs || [];
     monthlyPayments = pays || [];
+    recentRecurrentTxs = recentRec || [];
 
     populateDropdowns();
     renderSummary();
@@ -547,13 +631,16 @@ function renderRecurrents() {
         monthlyPayments.filter(p => p.is_paid == 1 && p.recurrent_id).map(p => p.recurrent_id)
     );
     const now = new Date();
-    const todayDay = now.getDate();
-    const todayMonth = now.getMonth();
+    const isCurrentView = viewIsCurrentMonth();
+    // For past views, every day of the view month is "past" — the row is
+    // either Pagado or Vencido (no Pendiente / future). For the current view,
+    // overdue means due-day already reached and still unpaid.
+    const todayDay = isCurrentView ? now.getDate() : 32;
 
     sorted.forEach((r, i) => {
         const isLast = i === sorted.length - 1;
-        const dueMonth = recurrentDueMonth(r);          // null = every month (monthly)
-        const isDueThisMonth = dueMonth === null || dueMonth === todayMonth;
+        const dueMonth = recurrentDueMonth(r);                  // null = monthly
+        const isDueThisMonth = dueMonth === null || dueMonth === VIEW.month;
         const isPaid = isDueThisMonth && paidRecIds.has(r.id);
         const isOverdue = isDueThisMonth && !isPaid && r.due_date_day < todayDay;
         listEl.appendChild(buildRecurrentRow(r, isPaid, isOverdue, isDueThisMonth, dueMonth, isLast));
@@ -625,6 +712,140 @@ function makeRowActions(r) {
 
         rowMenu.open(anchor, sections);
     });
+}
+
+// ── Mini-history track ──────────────────────────────────────────────
+// Returns an array of TRACK_MONTHS month-status entries, oldest first
+// (current month last). Each entry: { year, month, dueDate, tx, status, isCurrent }
+//   status ∈ 'paid' | 'miss' | 'pending' | 'future' | 'off'
+//     paid    — has a paid tx in that month
+//     miss    — past month, no paid tx (and recurrent was due that month)
+//     pending — current month, due-day already reached, not yet paid
+//     future  — current month, due-day not reached yet
+//     off     — month before recurrent's start_date, or off-month for yearly
+function buildTrackData(r) {
+    const now = new Date();
+    const todayDay = now.getDate();
+    const todayMonthKey = now.getFullYear() * 12 + now.getMonth();
+    const items = [];
+    const startDate = r.start_date ? new Date(r.start_date + 'T00:00:00') : null;
+    const startMonthKey = startDate && !isNaN(startDate.getTime())
+        ? startDate.getFullYear() * 12 + startDate.getMonth() : -Infinity;
+    const recDueMonth = recurrentDueMonth(r);  // null = monthly (every month)
+
+    // Anchor: track ends at VIEW, six months back. Status uses real "today".
+    for (let i = TRACK_MONTHS - 1; i >= 0; i--) {
+        const d = new Date(VIEW.year, VIEW.month - i, 1);
+        const y = d.getFullYear(), m = d.getMonth();
+        const monthKey = y * 12 + m;
+        const isCurrentMonth = monthKey === todayMonthKey;
+
+        const beforeStart = monthKey < startMonthKey;
+        const yearlyOff = recDueMonth !== null && recDueMonth !== m;
+        if (beforeStart || yearlyOff) {
+            items.push({ year: y, month: m, status: 'off', isCurrent: isCurrentMonth, tx: null });
+            continue;
+        }
+
+        const lastDay = new Date(y, m + 1, 0).getDate();
+        const dueDay = Math.min(Number(r.due_date_day) || 1, lastDay);
+        const dueDate = new Date(y, m, dueDay);
+
+        const tx = recentRecurrentTxs.find(t => {
+            if (t.recurrent_id !== r.id) return false;
+            if (!t.due_ts) return false;
+            const td = new Date(String(t.due_ts).replace(' ', 'T'));
+            return td.getFullYear() === y && td.getMonth() === m;
+        }) || null;
+        const isPaidMonth = tx && Number(tx.is_paid) === 1;
+
+        let status;
+        if (isPaidMonth) status = 'paid';
+        else if (isCurrentMonth) status = (todayDay >= dueDay) ? 'pending' : 'future';
+        else if (monthKey > todayMonthKey) status = 'future';
+        else status = 'miss';
+
+        items.push({ year: y, month: m, dueDate, tx, status, isCurrent: isCurrentMonth });
+    }
+    return items;
+}
+
+function buildTrackEl(r) {
+    const items = buildTrackData(r);
+    const wrap = document.createElement('span');
+    wrap.className = 'track';
+    wrap.setAttribute('aria-label', `Historial últimos ${TRACK_MONTHS} meses`);
+
+    items.forEach(it => {
+        const dot = document.createElement('span');
+        dot.className = 'tdot ' + it.status;
+        const monthLabel = `${MONTH_LABEL[it.month]} ${it.year}`;
+        const statusLabel = {
+            paid:    'Pagado',
+            miss:    'No pagado',
+            pending: 'Pendiente',
+            future:  'Por vencer',
+            off:     'Sin alta',
+        }[it.status];
+        dot.title = `${monthLabel} · ${statusLabel}`;
+        // Only missed months are tappable from the track — one-tap fix.
+        // To anular a paid month (or finer control), the inline history
+        // list inside the expansion has labeled buttons.
+        if (it.status === 'miss') {
+            dot.classList.add('is-tappable');
+            dot.title += ' · marcar pagada';
+            dot.addEventListener('click', e => {
+                e.stopPropagation();
+                toggleMonthPaid(r, it, dot);
+            });
+        }
+        wrap.appendChild(dot);
+    });
+    return wrap;
+}
+
+// Toggle paid state for an arbitrary (year, month) of a recurrent. Mirrors
+// toggleHistoryOccurrence but works from the inline track. Refreshes the
+// recent-tx cache + the page-level views so dots and badges stay in sync.
+async function toggleMonthPaid(r, occ, dotEl) {
+    const wasTappable = dotEl.classList.contains('is-tappable');
+    if (!wasTappable) return;
+    dotEl.classList.remove('is-tappable');
+
+    try {
+        const { tx } = occ;
+        const wasPaid = tx && Number(tx.is_paid) === 1;
+        let result;
+        if (tx) {
+            result = await api.put('/transactions', { is_paid: !wasPaid }, { id: tx.id });
+        } else {
+            const lastDay = new Date(occ.year, occ.month + 1, 0).getDate();
+            const day = Math.min(Number(r.due_date_day), lastDay);
+            const due_ts = `${occ.year}-${String(occ.month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')} 00:00:00`;
+            result = await api.post('/transactions', {
+                title: r.title,
+                description: r.description || '',
+                amount: r.amount,
+                expense_category_id: r.expense_category_id || null,
+                card_id: r.card_id || null,
+                account_id: r.account_id || null,
+                currency: r.currency || 'ARS',
+                recurrent_id: r.id,
+                transaction_type: 'recurrent',
+                due_ts,
+                is_paid: true,
+            });
+        }
+        if (!result || result.error) {
+            toast(result?.error || 'No se pudo actualizar', 'error');
+            return;
+        }
+        toast(wasPaid ? 'Marcado como pendiente' : 'Marcado como pagado', 'success');
+        await loadAll();
+    } catch (err) {
+        console.error(err);
+        toast('Error de red', 'error');
+    }
 }
 
 // V3 row layout: title on its own line (full width); subline + amount/badge
@@ -713,6 +934,12 @@ function buildRecurrentRow(r, isPaid, isOverdue, isDueThisMonth, dueMonth, isLas
     subRow.appendChild(right);
     header.appendChild(subRow);
 
+    // Mini-history track — third line, indented to match the title.
+    const trackRow = document.createElement('div');
+    trackRow.className = 'mt-1.5 pl-12';
+    trackRow.appendChild(buildTrackEl(r));
+    header.appendChild(trackRow);
+
     wrap.appendChild(header);
 
     if (expandedId === r.id) {
@@ -767,14 +994,174 @@ function buildRecurrentExpansion(r) {
         kv('Equivalente', '≈ ' + formatPrice(arsEquiv, 'ARS'));
     }
 
+    // Inline "Historial reciente" — last TRACK_MONTHS months, newest first
+    exp.appendChild(buildInlineHistory(r));
+
     return exp;
 }
 
-// ── Toggle paid status for the current month ────────────────────────
+// Inline per-month list inside the expansion. Same data as the track,
+// just with badges + a tap-target wide enough for thumbs. Replaces the
+// modal as the primary entry point; the kebab "Historial" still opens the
+// full-history modal for older months.
+function buildInlineHistory(r) {
+    const wrap = document.createElement('div');
+    wrap.style.marginTop = '.65rem';
+    wrap.style.paddingTop = '.6rem';
+    wrap.style.borderTop = '1px solid rgba(232, 226, 218, .7)';
+
+    const heading = document.createElement('p');
+    heading.className = 'overline-muted';
+    heading.style.marginBottom = '.3rem';
+    heading.textContent = 'Historial reciente';
+    wrap.appendChild(heading);
+
+    const items = buildTrackData(r).slice().reverse();   // newest first
+    const visible = items.filter(it => it.status !== 'off');
+    if (visible.length === 0) {
+        const empty = document.createElement('p');
+        empty.className = 'text-xs text-muted py-2';
+        empty.textContent = 'Sin vencimientos en los últimos meses.';
+        wrap.appendChild(empty);
+        return wrap;
+    }
+
+    visible.forEach(it => wrap.appendChild(buildInlineHistoryRow(r, it)));
+
+    const more = document.createElement('div');
+    more.style.marginTop = '.55rem';
+    more.style.paddingTop = '.55rem';
+    more.style.borderTop = '1px solid rgba(232, 226, 218, .7)';
+    more.style.display = 'flex';
+    more.style.alignItems = 'center';
+    more.style.justifyContent = 'space-between';
+    more.style.fontSize = '11.5px';
+    const label = document.createElement('span');
+    label.className = 'text-muted';
+    label.textContent = `Mostrando últimos ${TRACK_MONTHS} meses`;
+    const link = document.createElement('a');
+    link.href = '#';
+    link.className = 'text-accent font-semibold';
+    link.style.textDecoration = 'none';
+    link.textContent = 'Ver más historial →';
+    link.addEventListener('click', e => {
+        e.preventDefault();
+        e.stopPropagation();
+        openRecurrentHistory(r);
+    });
+    more.appendChild(label);
+    more.appendChild(link);
+    wrap.appendChild(more);
+
+    return wrap;
+}
+
+function buildInlineHistoryRow(r, occ) {
+    const row = document.createElement('div');
+    row.className = 'hist-row';
+    row.addEventListener('click', e => e.stopPropagation());  // don't toggle expansion
+
+    const left = document.createElement('div');
+    const m = document.createElement('span');
+    m.className = 'text-dark font-medium';
+    m.textContent = `${MONTH_LABEL[occ.month]} ${occ.year}`;
+    left.appendChild(m);
+    const sub = document.createElement('span');
+    sub.className = 'text-muted';
+    sub.style.fontSize = '11px';
+    sub.style.marginLeft = '.5rem';
+    if (occ.status === 'paid' && occ.tx) {
+        const txAmt = Math.abs(Number(occ.tx.amount));
+        sub.textContent = `Pagado ${formatPrice(txAmt, occ.tx.currency)}`;
+    } else if (occ.status === 'pending') {
+        sub.textContent = `Vence el ${r.due_date_day}`;
+    } else if (occ.status === 'future') {
+        sub.textContent = `Vence el ${r.due_date_day}`;
+    } else {
+        sub.textContent = `Vencía el ${r.due_date_day}`;
+    }
+    left.appendChild(sub);
+
+    const right = document.createElement('div');
+    right.style.display = 'flex';
+    right.style.alignItems = 'center';
+    right.style.gap = '.4rem';
+    right.style.flexShrink = '0';
+
+    const badge = document.createElement('span');
+    let variant, text;
+    if (occ.status === 'paid')          { variant = 'badge-success'; text = 'Pagado'; }
+    else if (occ.status === 'miss')     { variant = 'badge-danger';  text = 'Vencido'; }
+    else if (occ.status === 'pending')  { variant = 'badge-muted';   text = 'Pendiente'; }
+    else                                { variant = 'badge-muted';   text = 'Por vencer'; }
+    badge.className = `badge ${variant}`;
+    badge.textContent = text;
+    right.appendChild(badge);
+
+    if (occ.status !== 'future') {
+        const action = document.createElement('button');
+        action.type = 'button';
+        action.className = 'ha' + (occ.status === 'paid' ? ' undo' : '');
+        action.textContent = occ.status === 'paid' ? 'Anular' : 'Marcar pagada';
+        action.addEventListener('click', e => {
+            e.stopPropagation();
+            toggleInlineHistoryRow(r, occ, action);
+        });
+        right.appendChild(action);
+    }
+
+    row.appendChild(left);
+    row.appendChild(right);
+    return row;
+}
+
+async function toggleInlineHistoryRow(r, occ, btn) {
+    btn.disabled = true;
+    try {
+        const { tx } = occ;
+        const wasPaid = tx && Number(tx.is_paid) === 1;
+        let result;
+        if (tx) {
+            result = await api.put('/transactions', { is_paid: !wasPaid }, { id: tx.id });
+        } else {
+            const lastDay = new Date(occ.year, occ.month + 1, 0).getDate();
+            const day = Math.min(Number(r.due_date_day), lastDay);
+            const due_ts = `${occ.year}-${String(occ.month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')} 00:00:00`;
+            result = await api.post('/transactions', {
+                title: r.title,
+                description: r.description || '',
+                amount: r.amount,
+                expense_category_id: r.expense_category_id || null,
+                card_id: r.card_id || null,
+                account_id: r.account_id || null,
+                currency: r.currency || 'ARS',
+                recurrent_id: r.id,
+                transaction_type: 'recurrent',
+                due_ts,
+                is_paid: true,
+            });
+        }
+        if (!result || result.error) {
+            toast(result?.error || 'No se pudo actualizar', 'error');
+            btn.disabled = false;
+            return;
+        }
+        toast(wasPaid ? 'Marcado como pendiente' : 'Marcado como pagado', 'success');
+        await loadAll();
+    } catch (err) {
+        console.error(err);
+        toast('Error de red', 'error');
+        btn.disabled = false;
+    }
+}
+
+// ── Toggle paid status for the viewed month ────────────────────────
 async function toggleRecurrentPaid(r, btn) {
     btn.disabled = true;
 
-    // Find any existing instance for this recurrent in the current month
+    // Find any existing instance for this recurrent in the *viewed* month.
+    // monthlyPayments is the VIEW-month slice, so any matching tx here is
+    // automatically the right one to flip.
     const instance = monthlyPayments.find(
         p => p.recurrent_id === r.id && p.transaction_type === 'recurrent'
     );
@@ -783,14 +1170,12 @@ async function toggleRecurrentPaid(r, btn) {
     try {
         let result;
         if (instance) {
-            // Flip is_paid on the existing instance (preserves any custom edits)
             result = await api.put('/transactions', { is_paid: !wasPaid }, { id: instance.id });
         } else {
-            // No instance yet -> create a paid one carrying over the recurrent's data.
-            // Clamp due_date_day to the month's last day so e.g. day=31 in February doesn't break.
-            const now = new Date();
-            const y = now.getFullYear();
-            const m = now.getMonth();
+            // No instance yet → create a paid one carrying over the recurrent's data,
+            // anchored to the *viewed* month so past-month fixes land in the right tx.
+            const y = VIEW.year;
+            const m = VIEW.month;
             const lastDay = new Date(y, m + 1, 0).getDate();
             const day = Math.min(r.due_date_day, lastDay);
             const due_ts = `${y}-${String(m + 1).padStart(2, '0')}-${String(day).padStart(2, '0')} 00:00:00`;
@@ -1216,6 +1601,7 @@ async function confirmRecurrentDelete() {
 mangosAuth.ready.then(user => {
     if (!user) return;
     readUrlState();
+    bindMonthPicker();
     loadAll();
 
     // Refresh once FX rates are in so the rate strip and any non-ARS row

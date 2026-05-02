@@ -8,7 +8,12 @@ set_time_limit(120);
 
 require_once __DIR__ . '/../handlers/GeminiHandler.php';
 
-if (method() !== 'POST') json_error('Method not allowed', 405);
+// Most actions are POST, but a few (preview-artifact, get-batch) are GET.
+// Per-handler checks enforce the exact verb each one accepts; this top-level
+// guard just rejects anything that isn't a verb we support.
+if (!in_array(method(), ['GET', 'POST', 'DELETE'], true)) {
+    json_error('Method not allowed', 405);
+}
 
 if ($ai_action === 'parse-transactions') {
     handle_parse_transactions($pdo, $user_id);
@@ -20,6 +25,10 @@ if ($ai_action === 'parse-transactions') {
     handle_discard_artifact($user_id);
 } elseif ($ai_action === 'preview-artifact') {
     handle_preview_artifact($user_id);
+} elseif ($ai_action === 'discard-batch') {
+    handle_discard_batch($pdo, $user_id);
+} elseif ($ai_action === 'get-batch') {
+    handle_get_batch($pdo, $user_id);
 } else {
     json_error('Unknown AI action', 404);
 }
@@ -29,6 +38,7 @@ if ($ai_action === 'parse-transactions') {
 // ──────────────────────────────────────────────────────────────────
 
 function handle_parse_transactions(PDO $pdo, string $user_id): void {
+    if (method() !== 'POST') json_error('Method not allowed', 405);
     $body = get_json_body();
     // Default to 'image' so legacy clients (no `mode` field) keep working.
     $mode = $body['mode'] ?? 'image';
@@ -243,10 +253,32 @@ function handle_parse_transactions(PDO $pdo, string $user_id): void {
     }
     unset($d);
 
+    // Persist the batch (originals on Spaces, metadata in DB) so the movement
+    // view can later show the source files. Failure here is non-fatal — the
+    // user can still review and commit drafts without batch traceability.
+    $batch_id = null;
+    if ($mode === 'image') {
+        $files = array_map(fn($img) => [
+            'mimeType' => $img['mimeType'],
+            'data' => $img['data'],
+        ], $images);
+        $batch_id = create_ai_batch(
+            $pdo, $user_id, 'ai-image', $files,
+            $result['transcription'] ?? null
+        );
+    } else { // audio
+        $batch_id = create_ai_batch(
+            $pdo, $user_id, 'ai-audio',
+            [['mimeType' => $audio['mimeType'], 'data' => $audio['data']]],
+            $result['transcription'] ?? null
+        );
+    }
+
     json_response([
         'drafts' => $drafts,
         'unreadable_screenshot_idxs' => $unreadable,
         'transcription' => $result['transcription'] ?? null,
+        'batch_id' => $batch_id,
         'meta' => [
             'mode' => $mode,
             'image_count' => $mode === 'image' ? count($images) : 0,
@@ -414,6 +446,7 @@ function build_schema(): array {
 // ──────────────────────────────────────────────────────────────────
 
 function handle_commit_transactions(PDO $pdo, string $user_id): void {
+    if (method() !== 'POST') json_error('Method not allowed', 405);
     $body = get_json_body();
     $rows = $body['rows'] ?? [];
     if (!is_array($rows) || empty($rows)) {
@@ -425,6 +458,14 @@ function handle_commit_transactions(PDO $pdo, string $user_id): void {
     $source = $body['source'] ?? 'ai-image';
     if (!in_array($source, ['ai-image', 'ai-audio', 'ai-text', 'ai-pdf'], true)) {
         $source = 'ai-image';
+    }
+
+    // Optional batch link. Validated once here so per-row INSERTs can trust it.
+    $batch_id = $body['batch_id'] ?? null;
+    if ($batch_id !== null) {
+        $stmt = $pdo->prepare("SELECT id FROM ai_batch WHERE id = ? AND user_id = ?");
+        $stmt->execute([$batch_id, $user_id]);
+        if (!$stmt->fetch()) $batch_id = null; // silently drop unknown/foreign batches
     }
 
     $created = 0;
@@ -466,11 +507,15 @@ function handle_commit_transactions(PDO $pdo, string $user_id): void {
                 $expense_cat = $row_kind === 'expense' ? ($row['expense_category_id'] ?? null) : null;
                 $income_cat  = $row_kind === 'income'  ? ($row['income_category_id']  ?? null) : null;
 
+                $match_idx = isset($row['screenshot_idx']) && is_numeric($row['screenshot_idx'])
+                    ? (int)$row['screenshot_idx']
+                    : null;
+
                 $stmt = $pdo->prepare(
                     "INSERT INTO `transaction` (id, user_id, title, description, amount, currency, expense_category_id,
                      income_category_id, is_paid, paid_ts, recurrent_id, card_id, account_id, transaction_type, due_ts,
-                     kind, source, status)
-                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, ?, ?, ?, ?, ?, ?, 'reviewed')"
+                     kind, source, ai_batch_id, ai_batch_match_idx, status)
+                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, ?, ?, ?, ?, ?, ?, ?, ?, 'reviewed')"
                 );
                 $stmt->execute([
                     $id, $user_id,
@@ -487,6 +532,8 @@ function handle_commit_transactions(PDO $pdo, string $user_id): void {
                     $row['due_ts'] ?? null,
                     $row_kind,
                     $source,
+                    $batch_id,
+                    $match_idx,
                 ]);
                 $transaction_ids[] = $id;
                 $created++;
@@ -517,12 +564,23 @@ function handle_commit_transactions(PDO $pdo, string $user_id): void {
                 $stmt->execute([$user_id, $rid, $month]);
                 $current = $stmt->fetch();
 
+                $match_idx = isset($row['screenshot_idx']) && is_numeric($row['screenshot_idx'])
+                    ? (int)$row['screenshot_idx']
+                    : null;
+
                 if ($current) {
                     $sql = "UPDATE `transaction` SET is_paid = 1, paid_ts = ?";
                     $params = [$paid_ts];
                     if ($signed_amount !== null) {
                         $sql .= ", amount = ?";
                         $params[] = $signed_amount;
+                    }
+                    if ($batch_id !== null) {
+                        // Backfill batch link only when the row doesn't already
+                        // belong to a batch — protects audit trail from earlier uploads.
+                        $sql .= ", ai_batch_id = COALESCE(ai_batch_id, ?), ai_batch_match_idx = COALESCE(ai_batch_match_idx, ?)";
+                        $params[] = $batch_id;
+                        $params[] = $match_idx;
                     }
                     $sql .= " WHERE id = ? AND user_id = ?";
                     $params[] = $current['id'];
@@ -544,8 +602,9 @@ function handle_commit_transactions(PDO $pdo, string $user_id): void {
 
                     $stmt = $pdo->prepare(
                         "INSERT INTO `transaction` (id, user_id, title, description, amount, currency, expense_category_id,
-                         is_paid, paid_ts, recurrent_id, card_id, account_id, transaction_type, due_ts, source, status)
-                         VALUES (?, ?, ?, ?, ?, ?, ?, 1, ?, ?, ?, ?, 'recurrent', ?, ?, 'reviewed')"
+                         is_paid, paid_ts, recurrent_id, card_id, account_id, transaction_type, due_ts, source,
+                         ai_batch_id, ai_batch_match_idx, status)
+                         VALUES (?, ?, ?, ?, ?, ?, ?, 1, ?, ?, ?, ?, 'recurrent', ?, ?, ?, ?, 'reviewed')"
                     );
                     $stmt->execute([
                         $id, $user_id,
@@ -560,6 +619,8 @@ function handle_commit_transactions(PDO $pdo, string $user_id): void {
                         $r['account_id'] ?? null,
                         $due_ts,
                         $source,
+                        $batch_id,
+                        $match_idx,
                     ]);
                     $transaction_ids[] = $id;
                     $created++;
@@ -598,6 +659,7 @@ function handle_commit_transactions(PDO $pdo, string $user_id): void {
 // ──────────────────────────────────────────────────────────────────
 
 function handle_parse_single(PDO $pdo, string $user_id): void {
+    if (method() !== 'POST') json_error('Method not allowed', 405);
     $body = get_json_body();
     $mode = $body['mode'] ?? '';
 
@@ -822,6 +884,211 @@ function upload_ai_artifact(string $user_id, string $mode, string $mimeType, str
         error_log('[ai] artifact upload error: ' . $e->getMessage());
         return null;
     }
+}
+
+// ──────────────────────────────────────────────────────────────────
+// AI batch storage (one row per upload session, N files per batch)
+// ──────────────────────────────────────────────────────────────────
+
+/**
+ * Persist a batch of uploaded files.
+ *
+ * Compresses image bytes with GD (max-dim 1600px, JPEG q80). Audio bytes pass
+ * through untouched — re-encoding voice on PHP would be slow and the browser
+ * already shipped opus/m4a. HEIC/HEIF also pass through (GD can't decode
+ * them); they're stored as-is.
+ *
+ * Returns the new batch_id, or null when Spaces is not configured (dev) or
+ * any unrecoverable error occurs. Batch traceability is best-effort: callers
+ * must continue normally on null.
+ *
+ * Each $file is `['mimeType' => ..., 'data' => base64]`. `idx` in the DB row
+ * matches the array index — for image batches this is the same idx Gemini
+ * uses for `screenshot_idx`, so commit-time matching is trivial.
+ */
+function create_ai_batch(PDO $pdo, string $user_id, string $source, array $files, ?string $transcription): ?string {
+    $spaces_conf = $GLOBALS['mangos_config']['spaces'] ?? null;
+    if (!$spaces_conf || empty($spaces_conf['key']) || $spaces_conf['key'] === 'CHANGE_ME') {
+        return null; // dev environments without Spaces
+    }
+    if (empty($files)) return null;
+
+    require_once __DIR__ . '/../handlers/SpacesHandler.php';
+    try {
+        $spaces = new SpacesHandler($spaces_conf);
+    } catch (\Throwable $e) {
+        error_log('[ai-batch] spaces init failed: ' . $e->getMessage());
+        return null;
+    }
+
+    $batch_id = bin2hex(random_bytes(12));
+    $prefix = rtrim($spaces_conf['prefix'], '/') . '/ai-uploads/' . $user_id . '/batches/' . $batch_id;
+
+    // Upload first; only persist DB rows for files that actually landed. If
+    // every file fails we abandon the batch silently.
+    $uploaded = [];
+    foreach ($files as $idx => $f) {
+        $mime = $f['mimeType'] ?? '';
+        $b64  = $f['data'] ?? '';
+        if (!$mime || !$b64) continue;
+        $bytes = base64_decode($b64, true);
+        if ($bytes === false) continue;
+
+        $mode = str_starts_with($mime, 'audio/') ? 'audio' : 'image';
+        [$out_bytes, $out_mime, $ext] = compress_for_storage($bytes, $mime, $mode);
+
+        $key = $prefix . '/' . $idx . '.' . $ext;
+        if (!$spaces->put($key, $out_bytes, $out_mime)) {
+            error_log("[ai-batch] upload failed idx=$idx batch=$batch_id");
+            continue;
+        }
+        $uploaded[] = ['idx' => $idx, 'path' => $key, 'mime' => $out_mime];
+    }
+    if (empty($uploaded)) return null;
+
+    try {
+        $pdo->beginTransaction();
+        $pdo->prepare(
+            "INSERT INTO ai_batch (id, user_id, source, transcription) VALUES (?, ?, ?, ?)"
+        )->execute([$batch_id, $user_id, $source, $transcription]);
+
+        $stmt = $pdo->prepare(
+            "INSERT INTO ai_batch_file (id, batch_id, idx, spaces_path, mime) VALUES (?, ?, ?, ?, ?)"
+        );
+        foreach ($uploaded as $u) {
+            $stmt->execute([bin2hex(random_bytes(12)), $batch_id, $u['idx'], $u['path'], $u['mime']]);
+        }
+        $pdo->commit();
+        return $batch_id;
+    } catch (\Throwable $e) {
+        if ($pdo->inTransaction()) $pdo->rollBack();
+        error_log('[ai-batch] db insert failed: ' . $e->getMessage());
+        // Best-effort cleanup of the just-uploaded objects so we don't strand them.
+        foreach ($uploaded as $u) { $spaces->delete($u['path']); }
+        return null;
+    }
+}
+
+/**
+ * Re-encode an image to JPEG q80 with max-dim 1600px to keep batch storage
+ * cheap. Returns [bytes, mime, ext]. Falls back to the original triple when
+ * GD can't decode (HEIC/HEIF) or any step fails — we'd rather store the raw
+ * bytes than lose the artifact entirely.
+ */
+function compress_for_storage(string $bytes, string $mimeType, string $mode): array {
+    $fallback = [$bytes, $mimeType, ai_artifact_extension($mode, $mimeType)];
+    if ($mode !== 'image' || !function_exists('imagecreatefromstring')) return $fallback;
+
+    $img = @imagecreatefromstring($bytes);
+    if ($img === false) return $fallback;
+
+    try {
+        $w = imagesx($img);
+        $h = imagesy($img);
+        $maxDim = 1600;
+        if (max($w, $h) > $maxDim) {
+            $ratio = $maxDim / max($w, $h);
+            $nw = max(1, (int)round($w * $ratio));
+            $nh = max(1, (int)round($h * $ratio));
+            $resized = imagecreatetruecolor($nw, $nh);
+            // Fill white background — JPEG has no alpha, so PNGs with
+            // transparency would otherwise turn into black blocks.
+            $white = imagecolorallocate($resized, 255, 255, 255);
+            imagefilledrectangle($resized, 0, 0, $nw, $nh, $white);
+            imagecopyresampled($resized, $img, 0, 0, 0, 0, $nw, $nh, $w, $h);
+            imagedestroy($img);
+            $img = $resized;
+        }
+        ob_start();
+        $ok = imagejpeg($img, null, 80);
+        $out = ob_get_clean();
+        if (!$ok || !is_string($out) || $out === '') return $fallback;
+        return [$out, 'image/jpeg', 'jpg'];
+    } finally {
+        if (is_resource($img) || $img instanceof \GdImage) imagedestroy($img);
+    }
+}
+
+// ──────────────────────────────────────────────────────────────────
+// DISCARD BATCH (called by frontend when AI review modal closes
+// without committing — purges Spaces objects + DB rows so we don't
+// pay for orphaned uploads).
+// ──────────────────────────────────────────────────────────────────
+
+function handle_discard_batch(PDO $pdo, string $user_id): void {
+    if (method() !== 'POST' && method() !== 'DELETE') json_error('Method not allowed', 405);
+    $body = get_json_body();
+    $batch_id = $body['batch_id'] ?? ($_GET['batch_id'] ?? '');
+    if (!is_string($batch_id) || $batch_id === '') json_error('batch_id is required');
+
+    $stmt = $pdo->prepare("SELECT id FROM ai_batch WHERE id = ? AND user_id = ?");
+    $stmt->execute([$batch_id, $user_id]);
+    if (!$stmt->fetch()) json_error('Batch not found', 404);
+
+    // Refuse to delete if any transaction already references this batch — the
+    // user committed at least one row, the artifacts are now load-bearing.
+    $stmt = $pdo->prepare("SELECT COUNT(*) FROM `transaction` WHERE ai_batch_id = ? AND user_id = ?");
+    $stmt->execute([$batch_id, $user_id]);
+    if ((int)$stmt->fetchColumn() > 0) {
+        json_response(['deleted' => false, 'reason' => 'batch in use']);
+    }
+
+    $spaces_conf = $GLOBALS['mangos_config']['spaces'] ?? null;
+    $spaces = null;
+    if ($spaces_conf && !empty($spaces_conf['key']) && $spaces_conf['key'] !== 'CHANGE_ME') {
+        require_once __DIR__ . '/../handlers/SpacesHandler.php';
+        $spaces = new SpacesHandler($spaces_conf);
+    }
+
+    $stmt = $pdo->prepare("SELECT spaces_path FROM ai_batch_file WHERE batch_id = ?");
+    $stmt->execute([$batch_id]);
+    $paths = $stmt->fetchAll();
+
+    if ($spaces) {
+        foreach ($paths as $p) { $spaces->delete($p['spaces_path']); }
+    }
+
+    // ai_batch_file rows go away via ON DELETE CASCADE.
+    $pdo->prepare("DELETE FROM ai_batch WHERE id = ? AND user_id = ?")->execute([$batch_id, $user_id]);
+    json_response(['deleted' => true]);
+}
+
+// ──────────────────────────────────────────────────────────────────
+// GET BATCH (movement view fetches this to render thumbnails)
+// ──────────────────────────────────────────────────────────────────
+
+function handle_get_batch(PDO $pdo, string $user_id): void {
+    if (method() !== 'GET') json_error('Method not allowed', 405);
+    $batch_id = $_GET['id'] ?? '';
+    if (!is_string($batch_id) || $batch_id === '') json_error('id is required');
+
+    $stmt = $pdo->prepare("SELECT id, source, transcription, created_ts FROM ai_batch WHERE id = ? AND user_id = ?");
+    $stmt->execute([$batch_id, $user_id]);
+    $batch = $stmt->fetch();
+    if (!$batch) json_error('Batch not found', 404);
+
+    $stmt = $pdo->prepare("SELECT idx, spaces_path, mime FROM ai_batch_file WHERE batch_id = ? ORDER BY idx");
+    $stmt->execute([$batch_id]);
+    $rows = $stmt->fetchAll();
+
+    $files = array_map(function($r) {
+        return [
+            'idx' => (int)$r['idx'],
+            'mime' => $r['mime'],
+            // Path is opaque to the client; preview is fetched through the
+            // existing /ai/preview-artifact proxy (which enforces user-scope
+            // auth on read).
+            'path' => $r['spaces_path'],
+        ];
+    }, $rows);
+
+    json_response([
+        'id' => $batch['id'],
+        'source' => $batch['source'],
+        'transcription' => $batch['transcription'],
+        'created_ts' => $batch['created_ts'],
+        'files' => $files,
+    ]);
 }
 
 function ai_artifact_extension(string $mode, string $mimeType): string {

@@ -77,6 +77,54 @@ tailwind.config = {
 
   .label-final { color:#15803D; font-size:.7rem; font-weight:600; letter-spacing:.05em; text-transform:uppercase; margin-bottom:.5rem; }
   .label-ex    { color:#8C857D; font-size:.7rem; font-weight:600; letter-spacing:.05em; text-transform:uppercase; margin-bottom:.5rem; }
+  .label-iter  { color:#D97706; font-size:.7rem; font-weight:600; letter-spacing:.05em; text-transform:uppercase; margin-bottom:.5rem; }
+
+  /* ── Mini-historial track (iteración /fijos) ────────────────────────
+     6 puntos = últimos 6 meses (más viejo izquierda → mes actual derecha).
+     Se interpretan en orden, separados por gap fijo. */
+  .track { display:inline-flex; gap:6px; align-items:center; }
+  .tdot {
+    width:7px; height:7px; border-radius:9999px;
+    flex:none; cursor:pointer; position:relative;
+    transition: transform .1s;
+  }
+  .tdot:hover { transform: scale(1.4); }
+  .tdot.paid     { background:#15803D; }                   /* mes pagado */
+  .tdot.miss     { background:#B91C1C; }                   /* mes vencido / no pagado */
+  .tdot.pending  { background:#D97706; }                   /* mes actual, aún no pagado */
+  .tdot.future   { background:transparent; border:1px solid #C9C2B7; box-sizing:border-box; cursor:default; }
+  .tdot.off      { width:3px; height:3px; background:#C9C2B7; cursor:default; } /* antes del alta o mes-off de anual */
+
+  /* Inline-en-subline (variante B): el track reemplaza la palabra
+     "Mensual" en la línea de abajo, manteniendo el resto del meta. */
+  .track-inline { gap:5px; }
+  .track-inline .tdot { width:6px; height:6px; }
+  .track-inline .tdot.off { width:3px; height:3px; }
+
+  /* Lista de historial dentro de la expansión (variante 4) — copia
+     prácticamente lo que mostraría el modal, sólo que inline. */
+  .hist-row {
+    display:flex; align-items:center; justify-content:space-between;
+    padding: .35rem 0;
+    font-size:.78rem;
+  }
+  .hist-row + .hist-row { border-top: 1px solid rgba(232,226,218,.7); }
+  .hist-row .hm { color:#292524; font-weight:500; }
+  .hist-row .hs { color:#8C857D; font-size:.7rem; margin-left:.5rem; }
+  .hist-row .ha {
+    background: transparent; border: none; cursor: pointer;
+    color:#D97706; font-size:.72rem; font-weight:600;
+    padding: 2px 6px; border-radius: 4px;
+  }
+  .hist-row .ha:hover { background:rgba(217,119,6,.08); }
+  .hist-row .ha.undo { color:#8C857D; }
+  .hist-more {
+    margin-top: .55rem; padding-top: .55rem;
+    border-top: 1px solid rgba(232,226,218,.7);
+    font-size:.72rem; color:#8C857D;
+    display:flex; align-items:center; justify-content:space-between;
+  }
+  .hist-more a { color:#D97706; font-weight:600; text-decoration:none; }
 </style>
 </head>
 <body class="min-h-screen p-6">
@@ -612,6 +660,295 @@ tailwind.config = {
               <div class="expansion-row"><span class="k">Vigente desde</span><span class="v">enero 2025</span></div>
               <div class="expansion-row"><span class="k">Aliases IA</span><span class="v">"hostinger.com", "h-mail"</span></div>
               <div class="expansion-row"><span class="k">Equivalente</span><span class="v">≈ $ 6.250</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ════════════════════════════════════════════════════════════════ -->
+  <!-- 6 · Iteración: historial visible en /fijos                        -->
+  <!-- ════════════════════════════════════════════════════════════════ -->
+  <section class="mt-12">
+    <h2 class="text-lg font-semibold mb-1">6 · Iteración — historial visible en <code>/fijos</code></h2>
+    <p class="text-xs text-muted mb-4 max-w-2xl">
+      Cada fila muestra un mini-track de los últimos 6 meses (más viejo a la izquierda, mes actual a la derecha).
+      Tocar un punto rojo (vencido / no pagado) lo marca como pagado en línea — sin abrir modal.
+      Dos variantes de ubicación + el estado expandido con historial completo.
+    </p>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+
+      <!-- ─────────── 6.A · Track abajo ─────────── -->
+      <div>
+        <p class="label-iter">A · Track en línea propia (más respirado)</p>
+        <p class="text-[11px] text-muted mb-2">
+          Tercera línea bajo el subline, alineada con el título.
+          Suma ~12px de altura por fila.
+        </p>
+
+        <div class="phone">
+          <div class="card">
+            <!-- Estado: serie limpia, todos pagados -->
+            <div class="py-3 px-3 border-b border-border">
+              <div class="flex items-center gap-3">
+                <div class="lead-date">
+                  <span class="text-[9px] font-semibold uppercase tracking-wide">Día</span>
+                  <span class="text-base font-bold mt-0.5">12</span>
+                </div>
+                <p class="flex-1 text-[15px] font-medium truncate">Netflix</p>
+                <button class="p-1.5 text-muted -mr-1" aria-label="Más">⋮</button>
+              </div>
+              <div class="flex items-end justify-between gap-3 mt-1 pad-date">
+                <p class="text-xs text-muted truncate flex-1 min-w-0">Mensual · Visa ····4421</p>
+                <div class="flex items-center gap-2 flex-shrink-0">
+                  <span class="text-[15px] font-semibold tabular-nums leading-none">$ 8.500</span>
+                  <span class="badge badge-success">Pagado</span>
+                </div>
+              </div>
+              <div class="mt-1.5 pad-date">
+                <span class="track" title="Últimos 6 meses">
+                  <span class="tdot paid" title="Diciembre 2025 · Pagado"></span>
+                  <span class="tdot paid" title="Enero 2026 · Pagado"></span>
+                  <span class="tdot paid" title="Febrero 2026 · Pagado"></span>
+                  <span class="tdot paid" title="Marzo 2026 · Pagado"></span>
+                  <span class="tdot paid" title="Abril 2026 · Pagado"></span>
+                  <span class="tdot paid" title="Mayo 2026 · Pagado (hoy)"></span>
+                </span>
+              </div>
+            </div>
+
+            <!-- Estado: mes pasado quedó sin pagar -->
+            <div class="py-3 px-3 border-b border-border">
+              <div class="flex items-center gap-3">
+                <div class="lead-date">
+                  <span class="text-[9px] font-semibold uppercase tracking-wide">Día</span>
+                  <span class="text-base font-bold mt-0.5">5</span>
+                </div>
+                <p class="flex-1 text-[15px] font-medium truncate">Hostinger email</p>
+                <button class="p-1.5 text-muted -mr-1" aria-label="Más">⋮</button>
+              </div>
+              <div class="flex items-end justify-between gap-3 mt-1 pad-date">
+                <p class="text-xs text-muted truncate flex-1 min-w-0">Mensual · Visa ····4421</p>
+                <div class="flex items-center gap-2 flex-shrink-0">
+                  <span class="text-[15px] font-semibold tabular-nums leading-none">USD 5,00</span>
+                  <span class="badge badge-muted">Pendiente</span>
+                </div>
+              </div>
+              <div class="mt-1.5 pad-date">
+                <span class="track">
+                  <span class="tdot paid" title="Diciembre 2025 · Pagado"></span>
+                  <span class="tdot paid" title="Enero 2026 · Pagado"></span>
+                  <span class="tdot paid" title="Febrero 2026 · Pagado"></span>
+                  <span class="tdot paid" title="Marzo 2026 · Pagado"></span>
+                  <span class="tdot miss" title="Abril 2026 · No pagado · tap para marcar pagada"></span>
+                  <span class="tdot pending" title="Mayo 2026 · Pendiente (mes actual)"></span>
+                </span>
+              </div>
+            </div>
+
+            <!-- Estado: alta reciente -->
+            <div class="py-3 px-3">
+              <div class="flex items-center gap-3">
+                <div class="lead-date">
+                  <span class="text-[9px] font-semibold uppercase tracking-wide">Día</span>
+                  <span class="text-base font-bold mt-0.5">28</span>
+                </div>
+                <p class="flex-1 text-[15px] font-medium truncate">Gimnasio</p>
+                <button class="p-1.5 text-muted -mr-1" aria-label="Más">⋮</button>
+              </div>
+              <div class="flex items-end justify-between gap-3 mt-1 pad-date">
+                <p class="text-xs text-muted truncate flex-1 min-w-0">Mensual · Mercado Pago</p>
+                <div class="flex items-center gap-2 flex-shrink-0">
+                  <span class="text-[15px] font-semibold tabular-nums leading-none">$ 28.000</span>
+                  <span class="badge badge-success">Pagado</span>
+                </div>
+              </div>
+              <div class="mt-1.5 pad-date">
+                <span class="track">
+                  <span class="tdot off" title="Antes del alta"></span>
+                  <span class="tdot off" title="Antes del alta"></span>
+                  <span class="tdot off" title="Antes del alta"></span>
+                  <span class="tdot paid" title="Marzo 2026 · Pagado"></span>
+                  <span class="tdot paid" title="Abril 2026 · Pagado"></span>
+                  <span class="tdot paid" title="Mayo 2026 · Pagado (hoy)"></span>
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ─────────── 6.B · Track inline ─────────── -->
+      <div>
+        <p class="label-iter">B · Track inline (reemplaza "Mensual")</p>
+        <p class="text-[11px] text-muted mb-2">
+          Los puntos se intercalan en el subline. No suma altura.
+          Más denso pero compite con la copia de meta.
+        </p>
+
+        <div class="phone">
+          <div class="card">
+            <!-- Estado: serie limpia -->
+            <div class="py-3 px-3 border-b border-border">
+              <div class="flex items-center gap-3">
+                <div class="lead-date">
+                  <span class="text-[9px] font-semibold uppercase tracking-wide">Día</span>
+                  <span class="text-base font-bold mt-0.5">12</span>
+                </div>
+                <p class="flex-1 text-[15px] font-medium truncate">Netflix</p>
+                <button class="p-1.5 text-muted -mr-1" aria-label="Más">⋮</button>
+              </div>
+              <div class="flex items-end justify-between gap-3 mt-1 pad-date">
+                <p class="text-xs text-muted truncate flex-1 min-w-0 flex items-center gap-1.5">
+                  <span class="track track-inline">
+                    <span class="tdot paid"></span><span class="tdot paid"></span><span class="tdot paid"></span>
+                    <span class="tdot paid"></span><span class="tdot paid"></span><span class="tdot paid"></span>
+                  </span>
+                  <span>· Visa ····4421</span>
+                </p>
+                <div class="flex items-center gap-2 flex-shrink-0">
+                  <span class="text-[15px] font-semibold tabular-nums leading-none">$ 8.500</span>
+                  <span class="badge badge-success">Pagado</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Estado: mes pasado sin pagar -->
+            <div class="py-3 px-3 border-b border-border">
+              <div class="flex items-center gap-3">
+                <div class="lead-date">
+                  <span class="text-[9px] font-semibold uppercase tracking-wide">Día</span>
+                  <span class="text-base font-bold mt-0.5">5</span>
+                </div>
+                <p class="flex-1 text-[15px] font-medium truncate">Hostinger email</p>
+                <button class="p-1.5 text-muted -mr-1" aria-label="Más">⋮</button>
+              </div>
+              <div class="flex items-end justify-between gap-3 mt-1 pad-date">
+                <p class="text-xs text-muted truncate flex-1 min-w-0 flex items-center gap-1.5">
+                  <span class="track track-inline">
+                    <span class="tdot paid"></span><span class="tdot paid"></span><span class="tdot paid"></span>
+                    <span class="tdot paid"></span><span class="tdot miss"></span><span class="tdot pending"></span>
+                  </span>
+                  <span>· Visa ····4421</span>
+                </p>
+                <div class="flex items-center gap-2 flex-shrink-0">
+                  <span class="text-[15px] font-semibold tabular-nums leading-none">USD 5,00</span>
+                  <span class="badge badge-muted">Pendiente</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Estado: alta reciente -->
+            <div class="py-3 px-3">
+              <div class="flex items-center gap-3">
+                <div class="lead-date">
+                  <span class="text-[9px] font-semibold uppercase tracking-wide">Día</span>
+                  <span class="text-base font-bold mt-0.5">28</span>
+                </div>
+                <p class="flex-1 text-[15px] font-medium truncate">Gimnasio</p>
+                <button class="p-1.5 text-muted -mr-1" aria-label="Más">⋮</button>
+              </div>
+              <div class="flex items-end justify-between gap-3 mt-1 pad-date">
+                <p class="text-xs text-muted truncate flex-1 min-w-0 flex items-center gap-1.5">
+                  <span class="track track-inline">
+                    <span class="tdot off"></span><span class="tdot off"></span><span class="tdot off"></span>
+                    <span class="tdot paid"></span><span class="tdot paid"></span><span class="tdot paid"></span>
+                  </span>
+                  <span>· Mercado Pago</span>
+                </p>
+                <div class="flex items-center gap-2 flex-shrink-0">
+                  <span class="text-[15px] font-semibold tabular-nums leading-none">$ 28.000</span>
+                  <span class="badge badge-success">Pagado</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ─────────── 6.C · Expandido con historial inline ─────────── -->
+      <div>
+        <p class="label-iter">C · Expandido con historial inline</p>
+        <p class="text-[11px] text-muted mb-2">
+          Al abrir la fila, además de los datos extra aparece la lista de los últimos meses
+          con un botón rápido de marcar/anular. El modal "Historial" pasa a ser secundario
+          (link "Ver más historial" para meses anteriores a los 6 mostrados).
+        </p>
+
+        <div class="phone">
+          <div class="card">
+            <!-- header con track abajo (usa variante A) -->
+            <div class="py-3 px-3">
+              <div class="flex items-center gap-3">
+                <div class="lead-date">
+                  <span class="text-[9px] font-semibold uppercase tracking-wide">Día</span>
+                  <span class="text-base font-bold mt-0.5">5</span>
+                </div>
+                <p class="flex-1 text-[15px] font-medium truncate">Hostinger email</p>
+                <button class="p-1.5 text-muted -mr-1" aria-label="Más">⋮</button>
+              </div>
+              <div class="flex items-end justify-between gap-3 mt-1 pad-date">
+                <p class="text-xs text-muted truncate flex-1 min-w-0">Mensual · Visa ····4421</p>
+                <div class="flex items-center gap-2 flex-shrink-0">
+                  <span class="text-[15px] font-semibold tabular-nums leading-none">USD 5,00</span>
+                  <span class="badge badge-muted">Pendiente</span>
+                </div>
+              </div>
+              <div class="mt-1.5 pad-date">
+                <span class="track">
+                  <span class="tdot paid"></span><span class="tdot paid"></span><span class="tdot paid"></span>
+                  <span class="tdot paid"></span><span class="tdot miss"></span><span class="tdot pending"></span>
+                </span>
+              </div>
+            </div>
+
+            <div class="expansion">
+              <div class="expansion-row"><span class="k">Descripción</span><span class="v">Casilla de mail comercial</span></div>
+              <div class="expansion-row"><span class="k">Cuenta</span><span class="v">Deel</span></div>
+              <div class="expansion-row"><span class="k">Frecuencia</span><span class="v">Mensual · día 5</span></div>
+              <div class="expansion-row"><span class="k">Equivalente</span><span class="v">≈ $ 6.250</span></div>
+
+              <!-- Historial inline: lista de los últimos meses -->
+              <div style="margin-top:.65rem; padding-top:.6rem; border-top:1px solid rgba(232,226,218,.7);">
+                <p style="font-size:.7rem; color:#8C857D; font-weight:600; letter-spacing:.05em; text-transform:uppercase; margin-bottom:.3rem;">Historial reciente</p>
+
+                <div class="hist-row">
+                  <div><span class="hm">Mayo 2026</span><span class="hs">Vence el 5</span></div>
+                  <div style="display:flex;align-items:center;gap:.4rem">
+                    <span class="badge badge-muted">Pendiente</span>
+                    <button class="ha">Marcar pagada</button>
+                  </div>
+                </div>
+                <div class="hist-row">
+                  <div><span class="hm">Abril 2026</span><span class="hs">Vencía el 5</span></div>
+                  <div style="display:flex;align-items:center;gap:.4rem">
+                    <span class="badge badge-danger">Vencido</span>
+                    <button class="ha">Marcar pagada</button>
+                  </div>
+                </div>
+                <div class="hist-row">
+                  <div><span class="hm">Marzo 2026</span><span class="hs">Pagado USD 5,00</span></div>
+                  <div style="display:flex;align-items:center;gap:.4rem">
+                    <span class="badge badge-success">Pagado</span>
+                    <button class="ha undo">Anular</button>
+                  </div>
+                </div>
+                <div class="hist-row">
+                  <div><span class="hm">Febrero 2026</span><span class="hs">Pagado USD 5,00</span></div>
+                  <div style="display:flex;align-items:center;gap:.4rem">
+                    <span class="badge badge-success">Pagado</span>
+                    <button class="ha undo">Anular</button>
+                  </div>
+                </div>
+
+                <div class="hist-more">
+                  <span>Mostrando últimos 4 meses</span>
+                  <a href="#">Ver más historial →</a>
+                </div>
+              </div>
             </div>
           </div>
         </div>

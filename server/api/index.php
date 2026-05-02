@@ -139,6 +139,16 @@ try {
             require __DIR__ . '/ai.php';
             break;
 
+        case '/ai/discard-batch':
+            $ai_action = 'discard-batch';
+            require __DIR__ . '/ai.php';
+            break;
+
+        case '/ai/batch':
+            $ai_action = 'get-batch';
+            require __DIR__ . '/ai.php';
+            break;
+
         case '/transactions/artifact':
             $transactions_action = 'artifact';
             require __DIR__ . '/transactions.php';

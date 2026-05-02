@@ -173,6 +173,10 @@ let images = [];
 let audio = null; // { name, mimeType, base64, durationSec, dataUrl }
 let drafts = [];
 let lastTranscription = null;
+// Set when the server persists the upload session as a batch (Spaces + DB).
+// Threaded into commit so each created row links back to its source files,
+// and into discard so we don't leave orphan uploads.
+let currentBatchId = null;
 let categories = [];
 let incomeCategories = [];
 let recurrents = [];
@@ -585,6 +589,7 @@ async function analyze() {
     });
 
     lastTranscription = result.transcription || null;
+    currentBatchId = result.batch_id || null;
     persistDrafts(result.unreadable_screenshot_idxs || []);
     renderReview(result.unreadable_screenshot_idxs || []);
 }
@@ -1176,6 +1181,8 @@ async function commit() {
 
         const paid_ts = (d.date ? `${d.date} 00:00:00` : null);
 
+        const screenshot_idx = (typeof d.screenshot_idx === 'number') ? d.screenshot_idx : null;
+
         if (d.action === 'mark_recurrent_paid') {
             return {
                 action: 'mark_recurrent_paid',
@@ -1183,6 +1190,7 @@ async function commit() {
                 amount: Number(d.amount) || 0,
                 paid_ts,
                 update_recurrent_amount: !!d.update_recurrent_amount,
+                screenshot_idx,
             };
         }
         const isPaid = d.is_paid !== false;
@@ -1200,6 +1208,7 @@ async function commit() {
             is_paid: isPaid,
             paid_ts: isPaid ? paid_ts : null,
             due_ts: paid_ts,
+            screenshot_idx,
         };
         // Route the suggested category to the right column. Server forces the
         // opposite side to NULL, but sending only the relevant one keeps
@@ -1215,7 +1224,7 @@ async function commit() {
     let result;
     try {
         const source = mode === 'audio' ? 'ai-audio' : 'ai-image';
-        result = await api.post('/ai/commit-transactions', { rows, source });
+        result = await api.post('/ai/commit-transactions', { rows, source, batch_id: currentBatchId });
     } catch (e) {
         console.error(e);
         toast('Error de red', 'error');
@@ -1230,6 +1239,8 @@ async function commit() {
     }
 
     clearPersistedDrafts();
+    // Once committed the batch is load-bearing for the new rows — never discard it.
+    currentBatchId = null;
 
     const monthStr = new Date().toISOString().slice(0, 7);
     toast(`${result.created} creados, ${result.marked_paid} fijos pagados, ${result.skipped} saltados`, 'success');
@@ -1238,6 +1249,12 @@ async function commit() {
 
 function discard() {
     if (!window.confirm('Vas a descartar la revision actual. Continuar?')) return;
+    // Best-effort cleanup: tell the server to drop the batch (Spaces + DB).
+    // Fire-and-forget; navigation isn't gated on it.
+    if (currentBatchId) {
+        api.post('/ai/discard-batch', { batch_id: currentBatchId }).catch(() => {});
+        currentBatchId = null;
+    }
     drafts = [];
     images = [];
     lastTranscription = null;
